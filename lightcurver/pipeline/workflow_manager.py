@@ -3,6 +3,9 @@ from importlib import resources
 from collections import deque
 import logging
 
+from ..structure.user_config import get_user_config
+from task_definitions import read_convert_skysub_character_catalog
+
 
 class TaskOutcome:
     def __init__(self):
@@ -24,9 +27,8 @@ class TaskOutcome:
 
 
 class WorkflowManager:
-    def __init__(self, user_config, logger=None):
-        with open(user_config, 'r') as file:
-            self.user_config = yaml.safe_load(file)
+    def __init__(self, logger=None):
+        self.user_config = get_user_config()
         with resources.open_text('lightcurver.pipeline', 'pipeline_dependency_graph.yaml') as file:
             self.pipe_config = yaml.safe_load(file)
         self.task_graph = {}
@@ -92,11 +94,12 @@ class WorkflowManager:
 
     def get_task_function(self, task_name):
         # This method needs to map task_name to actual function calls
+        if task_name == 'read_convert_skysub_character_catalog':
+            return read_convert_skysub_character_catalog
         return lambda x: 1
         pass
 
 
-
 if __name__ == "__main__":
-    wf_manager = WorkflowManager('/tmp/wow.yaml')
+    wf_manager = WorkflowManager()
     wf_manager.run()
