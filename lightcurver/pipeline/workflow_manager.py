@@ -3,11 +3,6 @@ from importlib import resources
 from collections import deque
 import logging
 
-# from task_definitions import (read_convert_skysub_character_catalog,
-#                               plate_solving,
-#                               calculate_common_and_total_footprint,
-#                               )
-
 
 class TaskOutcome:
     def __init__(self):

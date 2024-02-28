@@ -5,14 +5,14 @@ from astropy.coordinates import Angle
 from astropy import units as u
 
 
-def calculate_airmass(altitude_radians: np.array) -> np.array:
+def calculate_airmass(altitude_degrees: np.array) -> np.array:
     """
     Calculate the airmass using Rozenberg's empirical relation.
 
     Parameters
     ----------
-    altitude_radians : float or ndarray
-        The apparent altitude of the object in radians. Can be a single value or a NumPy array.
+    altitude_degrees : float or ndarray
+        The apparent altitude of the object in degrees. Can be a single value or a NumPy array.
 
     Returns
     -------
@@ -28,7 +28,7 @@ def calculate_airmass(altitude_radians: np.array) -> np.array:
     where ho is the apparent altitude of the object. This formula is applicable down
     to the horizon (where it gives X = 40).
     """
-    altitude_radians = np.asarray(altitude_radians)
+    altitude_radians = np.radians(np.asarray(altitude_degrees))
     with np.errstate(divide='ignore', invalid='ignore'):
         airmass_values = np.where(
             (altitude_radians < 0),
@@ -42,9 +42,9 @@ def calculate_airmass(altitude_radians: np.array) -> np.array:
     return airmass_values
 
 
-def ephemerides(mjd: float,
-                ra_object: float, dec_object: float,
-                telescope_longitude: float, telescope_latitude: float, telescope_elevation: float) -> dict:
+def ephemeris(mjd: float,
+              ra_object: float, dec_object: float,
+              telescope_longitude: float, telescope_latitude: float, telescope_elevation: float) -> dict:
     """
     This function calculates and returns the ephemerides for a given object at a specific time and location.
 
@@ -66,7 +66,7 @@ def ephemerides(mjd: float,
     """
 
     results = {
-        'astro_conditions': False,
+        'weird_astro_conditions': False,
         'comments': "",
         'target_info': {},
         'moon_info': {},
@@ -97,6 +97,7 @@ def ephemerides(mjd: float,
 
     moon = ephem.Moon()
     moon.compute(telescope)
+    moondist = np.degrees(float(ephem.separation(moon, target)))
 
     sun = ephem.Sun()
     sun.compute(telescope)
@@ -106,7 +107,7 @@ def ephemerides(mjd: float,
 
     airmass = calculate_airmass(target.alt)
     if airmass < 1.0 or airmass > 5.0:
-        results['astro_conditions'] = True
+        results['weird_astro_conditions'] = True
         results['comments'] += f"Target altitude: {target_alt_deg:.2f} degrees (airmass {airmass:.2f})."
 
     moon_distance_deg = np.degrees(ephem.separation(moon, target))
@@ -115,13 +116,14 @@ def ephemerides(mjd: float,
 
     sun_alt_deg = np.degrees(sun.alt)
     if sun_alt_deg > 0.0:
-        results['astro_conditions'] = True
+        results['weird_astro_conditions'] = True
         results['comments'] += f" Sun altitude: {sun_alt_deg:.2f} degrees."
 
     # Fill target, moon, and sun info
     results['target_info'] = {'altitude_deg': target_alt_deg,
                               'azimuth_deg': target_az_deg,
-                              'airmass': airmass}
+                              'airmass': airmass,
+                              'moon_dist': moondist}
     results['moon_info'] = {'distance_deg': moon_distance_deg,
                             'illumination': moon_illumination,
                             'altitude_deg': moon_alt_deg}

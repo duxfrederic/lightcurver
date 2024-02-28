@@ -1,6 +1,6 @@
 # tests/processes/test_frame_characterization.py
 import unittest
-from lightcurver.processes.frame_characterization import ephemerides
+from lightcurver.processes.frame_characterization import ephemeris
 
 
 class EphemeridesTestCase(unittest.TestCase):
@@ -12,7 +12,7 @@ class EphemeridesTestCase(unittest.TestCase):
         latitude = -29.256
         longitude = -70.738
 
-        results = ephemerides(mjd, ra, dec, longitude, latitude, altitude)
+        results = ephemeris(mjd, ra, dec, longitude, latitude, altitude)
 
         # Verify the structure and some key aspects of the results
         self.assertIsInstance(results, dict)

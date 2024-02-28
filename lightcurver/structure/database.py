@@ -1,7 +1,7 @@
 import sqlite3
 import pandas as pd
 
-from ..structure.read_config import get_user_config
+from ..structure.user_config import get_user_config
 
 
 def get_pandas(conditions=None, columns=None):
@@ -75,7 +75,10 @@ def initialize_database():
         "degrees_to_moon REAL DEFAULT NULL",
         "moon_phase REAL DEFAULT NULL",
         "sun_altitude REAL DEFAULT NULL",
-        "seeing_arcsecond REAL DEFAULT NULL"
+        "seeing_pixels REAL DEFAULT NULL"
+        "seeing_arcseconds REAL DEFAULT NULL"
+        "azimuth REAL DEFAULT NULL",
+        "altitude REAL DEFAULT NULL"
         # potential new columns in future here
     ]
 
@@ -152,59 +155,3 @@ def initialize_database():
 
     conn.commit()
     conn.close()
-
-
-def add_frame_to_database(original_image_path, copied_image_path,
-                          frame_fits_header, dictionary_of_keywords,
-                          database_connexion,
-                          telescope_information=None):
-
-    """
-    Adding our new image frame to our sqlite3 database. We will use the table "frames".
-    The columns to be populated are:
-      - filter
-      - mjd
-      - exptime
-      - gain
-      - original_image_path
-      - copied_image_path
-    the translation between database columns and header keywords is done by the dictionary
-    "dictionary_of_keywords"
-    if a 'telescope_information' dictionary is provided, we will also fill in the following columns:
-      - telescope_latitude
-      - telescope_longitude
-      - telescope_altitude
-      - telescope_name
-      - imager_name
-
-    :param original_image_path: Path to the original image
-    :param copied_image_path: Path where the image was copied
-    :param frame_fits_header: FITS header containing frame information
-    :param dictionary_of_keywords: Dictionary translating FITS header keywords to database column names
-    :param database_connexion: SQLite3 connection object to the database
-    :param telescope_information: Optional dictionary with telescope information
-    :return: None
-    """
-    columns = ['original_image_path', 'copied_image_path']
-    values = [original_image_path, copied_image_path]
-
-    for header_keyword, db_column in dictionary_of_keywords.items():
-        columns.append(db_column)  # add the database column name
-        values.append(frame_fits_header.get(header_keyword, None))  # corresponding value from the FITS header
-
-    # if telescope information, add it to the columns and values
-    if telescope_information is not None:
-        for key, value in telescope_information.items():
-            columns.append(key)
-            values.append(value)
-
-    # construct the SQL query based on the columns
-    column_names = ', '.join(columns)
-    placeholders = ', '.join(['?'] * len(columns))
-    query = f'INSERT INTO frames ({column_names}) VALUES ({placeholders})'
-
-    # the query
-    cursor = database_connexion.cursor()
-    cursor.execute(query, values)
-    database_connexion.commit()
-
