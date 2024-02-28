@@ -1,10 +1,58 @@
 import sqlite3
+import pandas as pd
+
+from ..structure.read_config import get_user_config
 
 
-def initialize_database(db_path):
+def get_pandas(conditions=None, columns=None):
+    """
+    Retrieve data from the database based on specified conditions and return as a Pandas DataFrame.
+
+    Parameters:
+        conditions (list of str): The SQL conditions to filter the data, default None.
+        columns (str or list of str, optional): Columns to select from the database. Defaults to None,
+            which selects all columns.
+    Returns:
+        pandas.DataFrame: A DataFrame containing the results of the SQL query.
+    """
+    db_path = get_user_config()['database_path']
+    conn = sqlite3.connect(db_path)
+    if columns is None:
+        columns = '*'
+    request = f"SELECT {columns} FROM frames"
+    if conditions is not None:
+        conditions = ','.join(conditions)
+        request += f" WHERE {conditions}"
+
+    try:
+        df = pd.read_sql_query(request, conn)
+        return df
+    finally:
+        conn.close()
+
+
+def execute_sqlite(command):
+    db_path = get_user_config()['database_path']
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    return cursor.execute(command).fetchall()
+
+
+def get_count_based_on_conditions(conditions):
+    db_path = get_user_config()['database_path']
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+
+    request = f"select count(*) from frames where {conditions}"
+
+    return cursor.execute(request).fetchone()[0]
+
+
+def initialize_database():
     """
     initializes the database we'll be working with to keep track of our images.
     """
+    db_path = get_user_config()['database_path']
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
 
