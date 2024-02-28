@@ -1,18 +1,17 @@
-# tests/processes/test_character.py
+# tests/processes/test_frame_characterization.py
 import unittest
-from lightcurver.processes.character import ephemerides
+from lightcurver.processes.frame_characterization import ephemerides
 
 
 class EphemeridesTestCase(unittest.TestCase):
     def test_ephemerides(self):
-        # Test data
+        # somehow realistic data
         mjd = 60365.13
         ra, dec = 141.23246, 2.32358
         altitude = 2400.0
         latitude = -29.256
         longitude = -70.738
 
-        # Call the function with the test data
         results = ephemerides(mjd, ra, dec, longitude, latitude, altitude)
 
         # Verify the structure and some key aspects of the results

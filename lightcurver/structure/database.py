@@ -8,7 +8,6 @@ def initialize_database(db_path):
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
 
-
     # table of frames
     column_definitions = [
         "id INTEGER PRIMARY KEY",
@@ -145,8 +144,8 @@ def add_frame_to_database(original_image_path, copied_image_path,
         columns.append(db_column)  # add the database column name
         values.append(frame_fits_header.get(header_keyword, None))  # corresponding value from the FITS header
 
-    # if telescope information is provided, add it to the columns and values
-    if telescope_information:
+    # if telescope information, add it to the columns and values
+    if telescope_information is not None:
         for key, value in telescope_information.items():
             columns.append(key)
             values.append(value)
