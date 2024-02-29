@@ -25,7 +25,7 @@ def get_user_config():
     config['database_path'] = config['workdir'] / 'database.sqlite3'
     config['plots_dir'] = config['workdir'] / 'plots'
     config['logs_dir'] = config['workdir'] / 'logs'
-    config['images_dir'] = config['workdir'] / 'images_dir'
+    config['images_dir'] = config['workdir'] / 'images'
     config['regions_path'] = config['workdir'] / 'regions.h5'
     config['psfs_path'] = config['workdir'] / 'psfs.h5'
     for directory in [config['plots_dir'], config['logs_dir'], config['images_dir']]:

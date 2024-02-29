@@ -1,3 +1,6 @@
+# this file wraps around the processes defined in the processes subpackage.
+# the wrapper determine which images / regions / psfs (depending on task) need processing
+# before proceeding.
 import numpy as np
 from astropy.io import fits
 import pandas as pd

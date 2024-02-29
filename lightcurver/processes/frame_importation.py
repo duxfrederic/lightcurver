@@ -1,5 +1,6 @@
 import numpy as np
 import sqlite3
+from pathlib import Path
 from astropy.io import fits
 
 from .background_estimation import subtract_background
@@ -20,7 +21,7 @@ def process_new_frame(fits_file, user_config, header_parser_function):
     """
     trim_vertical = user_config.get('trim_vertical', 0)
     trim_horizontal = user_config.get('trim_horizontal', 0)
-    out_file = user_config['images_dir'] / fits_file.name
+    copied_image_relpath = Path('images') / fits_file.name
     with fits.open(str(fits_file), mode='readonly', ignore_missing_end=True, memmap=True) as hdu:
         hdu_index = 1 if len(hdu) > 1 else 0
         data_shape = hdu[hdu_index].data.shape
@@ -37,7 +38,8 @@ def process_new_frame(fits_file, user_config, header_parser_function):
         # ok, now subtract sky!
         cutout_data_sub, bkg = subtract_background(cutout_data)
         # we can write the file
-        fits.writeto(out_file, cutout_data_sub.astype(np.float32), header=header, overwrite=True)
+        fits.writeto(user_config['workdir'] / copied_image_relpath, cutout_data_sub.astype(np.float32),
+                     header=header, overwrite=True)
         # and find sources
         # (do plots if toggle set)
         do_plot = user_config.get('source_extraction_do_plots', False)
@@ -47,6 +49,11 @@ def process_new_frame(fits_file, user_config, header_parser_function):
                                       detection_threshold=user_config.get('source_extraction_threshold', 3),
                                       min_area=user_config.get('source_extraction_min_area', 10),
                                       debug_plot_path=plot_path)
+
+        # saving the sources in the same dir as the frame itself
+        sources_file_filename = f"{copied_image_relpath.stem}_sources{copied_image_relpath.suffix}"
+        sources_file_relpath = copied_image_relpath.parent / sources_file_filename
+        sources_table.write(user_config['workdir'] / sources_file_relpath, format='fits', overwrite=True)
 
         seeing_pixels = estimate_seeing(sources_table)
         if 'telescope_longitude' in user_config:
@@ -63,8 +70,9 @@ def process_new_frame(fits_file, user_config, header_parser_function):
 
     # now we're ready for registering our new frame!
     conn = sqlite3.connect(user_config['database_path'], timeout=15.0)
-    add_frame_to_database(original_image_path=str(fits_file),
-                          copied_image_path=str(out_file),
+    add_frame_to_database(original_image_path=fits_file,
+                          copied_image_relpath=copied_image_relpath,
+                          sources_file_relpath=sources_file_relpath,
                           mjd=mjd_gain_filter_exptime_dict['mjd'],
                           gain=mjd_gain_filter_exptime_dict['gain'],
                           filter=mjd_gain_filter_exptime_dict['filter'],
@@ -78,13 +86,12 @@ def process_new_frame(fits_file, user_config, header_parser_function):
     return header
 
 
-def add_frame_to_database(original_image_path, copied_image_path,
+def add_frame_to_database(original_image_path, copied_image_relpath, sources_file_relpath,
                           mjd, gain, filter, exptime,
                           seeing_pixels,
                           database_connexion,
                           telescope_information=None,
                           ephemeris_dictionary=None):
-
     """
     Adding our new image frame to our sqlite3 database. We will use the table "frames".
     The columns to be populated are:
@@ -104,8 +111,8 @@ def add_frame_to_database(original_image_path, copied_image_path,
       - imager_name
 
     :param original_image_path: Path to the original image
-    :param copied_image_path: Path where the image was copied
-    :param frame_fits_header: FITS header containing frame information
+    :param copied_image_relpath: Path where the image was copied, relative to workdir
+    :param sources_file_relpath: filename of the file of sources (fits table) as extracted by sep, relative to workdir
     :param mjd: float, mjd of frame
     :param gain: float
     :param filter: string, filter of the observations
@@ -116,8 +123,11 @@ def add_frame_to_database(original_image_path, copied_image_path,
     :param ephemeris_dictionary: dictionary as returned by the ephemerides function of frame_characterization.
     :return: None
     """
-    columns = ['original_image_path', 'copied_image_path', 'seeing_pixels', 'mjd', 'gain', 'filter', 'exptime']
-    values = [original_image_path, copied_image_path, seeing_pixels, mjd, gain, filter, exptime]
+    columns = ['original_image_path', 'image_relpath', 'sources_file_relpath',
+               'seeing_pixels', 'mjd', 'gain', 'filter', 'exptime']
+
+    values = [str(original_image_path), str(copied_image_relpath), str(sources_file_relpath),
+              seeing_pixels, mjd, gain, filter, exptime]
 
     # if telescope information, add it to the columns and values
     if telescope_information is not None:
@@ -149,7 +159,15 @@ def add_frame_to_database(original_image_path, copied_image_path,
 
     # the query
     cursor = database_connexion.cursor()
-    cursor.execute(query, values)
-    database_connexion.commit()
+    try:
+        cursor.execute(query, values)
+        database_connexion.commit()
+    except sqlite3.IntegrityError as IntE:
+        print("Error: most likely, we are inserting an already existing image again in the database.")
+        print("You most likely overwrote an existing file already, leaving us in an inconsistent state.")
+        print("This should not have happened and will take manual fixing. Here was the original error: {IntE}")
+        print("We will raise it again so you can check the traceback.")
+        print("If you see a UNIQUE violation on the image_relpath column, then the above is indeed what happened.")
+        raise IntE
     return frame_info
 
