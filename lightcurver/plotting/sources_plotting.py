@@ -37,7 +37,6 @@ def plot_sources(sources, image, wcs=None, save_path=None, sources_label=None,
         ax.plot(sources['xcentroid'], sources['ycentroid'],
                 label=sources_label,
                 **base_plot_options)
-    plt.legend()
     if save_path is not None:
         plt.tight_layout()
         plt.savefig(save_path, bbox_inches='tight', pad_inches=0.)

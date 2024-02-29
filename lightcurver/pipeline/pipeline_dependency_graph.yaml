@@ -6,9 +6,13 @@
 # - all_frames_at_once     -- process that has to act on all the frames at once, nothing to parallelize here.
 # - all_missing_frames_at_once -- process that has to be run on all the frames that are missing at once.
 tasks:
+  - name: initialize_database
+    description: "Just making sure the database exists, with the right schema."
+    nature: independent
+    dependencies: []
   - name: read_convert_skysub_character_catalog
     description: "reads the images from a directory, converts them to electrons, subtracts the sky, finds sources, measures noise, seeing, calculates ephemerides, records all to database"
-    dependencies: []
+    dependencies: [initialize_database]
     nature: independent_each_frame
   - name: plate_solving
     description: "Uses astrometry.net's solve-field and initial guess of plate scale provided in user config to add a reliable WCS to each image fast. If user config states that images are already plate solved, skip."

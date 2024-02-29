@@ -19,7 +19,7 @@ def get_pandas(conditions=None, columns=None):
     conn = sqlite3.connect(db_path)
     if columns is None:
         columns = '*'
-    request = f"SELECT {columns} FROM frames"
+    request = f"SELECT {','.join(columns)} FROM frames"
     if conditions is not None:
         conditions = ','.join(conditions)
         request += f" WHERE {conditions}"
@@ -75,10 +75,10 @@ def initialize_database():
         "degrees_to_moon REAL DEFAULT NULL",
         "moon_phase REAL DEFAULT NULL",
         "sun_altitude REAL DEFAULT NULL",
-        "seeing_pixels REAL DEFAULT NULL"
-        "seeing_arcseconds REAL DEFAULT NULL"
+        "seeing_pixels REAL DEFAULT NULL",
+        "seeing_arcseconds REAL DEFAULT NULL",
         "azimuth REAL DEFAULT NULL",
-        "altitude REAL DEFAULT NULL"
+        "altitude REAL DEFAULT NULL",
         # potential new columns in future here
     ]
 
@@ -104,7 +104,8 @@ def initialize_database():
                       gmag REAL,
                       rmag REAL,
                       bmag REAL,                      
-                      gaia_id TEXT -- Gaia ID);""")
+                      gaia_id TEXT -- Gaia ID
+                      )""")
 
     # linking stars and frame
     # again, a python process will check the footprint of each image
@@ -114,7 +115,8 @@ def initialize_database():
                       star_id INTEGER,
                       FOREIGN KEY (frame_id) REFERENCES Frames(id),
                       FOREIGN KEY (star_id) REFERENCES Stars(id),
-                      PRIMARY KEY (frame_id, star_id));""")
+                      PRIMARY KEY (frame_id, star_id)
+                      )""")
 
     # PSF is defined in yaml files (which stars compose it), here we keep track of which images have
     # a given PSF.
@@ -128,7 +130,8 @@ def initialize_database():
                       psf_name TEXT, -- reference to the config file given in name
                       hdf5_route TEXT, -- where in the hdf5 file is the PSF,
                       FOREIGN KEY (frame_id) REFERENCES Frames(id),
-                      PRIMARY KEY (id, frame_id);""")
+                      PRIMARY KEY (id, frame_id)
+                      )""")
 
     # very similarly, we keep track of normalization coefficients.
     # these are computed once per image in python.
@@ -141,7 +144,8 @@ def initialize_database():
                       coefficient_uncertainty FLOAT,
                       FOREIGN KEY (frame_id) REFERENCES Frames(id),
                       FOREIGN KEY (psf_id) REFERENCES PSFs(id),
-                      PRIMARY KEY (id, psf_id, frame_id);""")
+                      PRIMARY KEY (id, psf_id, frame_id)
+                      )""")
 
     # zero points are derived from normalization coefficients and are for APPROXIMATE magnitude calibration
     # as we are going to derive them from gaia colors and band conversions.
@@ -151,7 +155,8 @@ def initialize_database():
                       zeropoint FLOAT,
                       zeropoint_uncertainty FLOAT,
                       FOREIGN KEY (norm_coefficient_id) REFERENCES NormalizationCoefficients(id),
-                      PRIMARY KEY (id, norm_coefficient_id);""")
+                      PRIMARY KEY (id, norm_coefficient_id)
+                      )""")
 
     conn.commit()
     conn.close()

@@ -28,5 +28,7 @@ def get_user_config():
     config['images_dir'] = config['workdir'] / 'images_dir'
     config['regions_path'] = config['workdir'] / 'regions.h5'
     config['psfs_path'] = config['workdir'] / 'psfs.h5'
+    for directory in [config['plots_dir'], config['logs_dir'], config['images_dir']]:
+        directory.mkdir(parents=True, exist_ok=True)
     assert 'redo' in config
     return config

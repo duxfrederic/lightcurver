@@ -56,6 +56,7 @@ def extract_stars(image_background_subtracted, background_rms, detection_thresho
     sources.sort('flux', reverse=True)
 
     if debug_plot_path is not None:
-        plot_sources(sources, image_background_subtracted, debug_plot_path)
+        debug_plot_path.parent.mkdir(exist_ok=True)
+        plot_sources(sources=sources, image=image_background_subtracted, save_path=debug_plot_path)
 
     return sources

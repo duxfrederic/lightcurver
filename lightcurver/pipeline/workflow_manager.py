@@ -4,7 +4,8 @@ from collections import deque
 import logging
 
 from ..structure.user_config import get_user_config
-from task_definitions import read_convert_skysub_character_catalog
+from ..structure.database import initialize_database
+from .task_definitions import read_convert_skysub_character_catalog
 
 
 class TaskOutcome:
@@ -88,18 +89,14 @@ class WorkflowManager:
         # Assume task_func is a callable for simplicity
         task_func = self.get_task_function(task['name'])
         print(f"Executing task: {task['name']}")
-        status = task_func(9)
-        if not status:
-            raise RuntimeError
+        task_func()
 
     def get_task_function(self, task_name):
         # This method needs to map task_name to actual function calls
         if task_name == 'read_convert_skysub_character_catalog':
             return read_convert_skysub_character_catalog
-        return lambda x: 1
+        elif task_name == "initialize_database":
+            return initialize_database
+        return lambda: 1
         pass
 
-
-if __name__ == "__main__":
-    wf_manager = WorkflowManager()
-    wf_manager.run()
