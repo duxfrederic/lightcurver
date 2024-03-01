@@ -1,0 +1,7 @@
+raw_dirs:
+  - /storage/COSMOGRAIL/VST_J0248_for_new_pipeline/raw
+workdir: /storage/COSMOGRAIL/VST_J0248_for_new_pipeline/
+redo: 0
+source_extraction_do_plots: 1
+trim_vertical: 1200
+trim_horizontal: 200
