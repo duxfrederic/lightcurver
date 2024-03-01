@@ -2,6 +2,7 @@ import numpy as np
 import sqlite3
 from pathlib import Path
 from astropy.io import fits
+from astropy.wcs import WCS
 
 from .background_estimation import subtract_background
 from .star_extraction import extract_stars
@@ -31,15 +32,31 @@ def process_new_frame(fits_file, user_config, header_parser_function):
                       ]
         cutout_data = cutout_data.astype(float)
         header = hdu[hdu_index].header
+        wcs = WCS(header)
+        # so we cropped our data, thus we need to change the CRPIX of our WCS
+        if wcs.is_celestial:
+            wcs.wcs.crpix[0] -= trim_horizontal
+            wcs.wcs.crpix[1] -= trim_vertical
+
         header['BUNIT'] = "e-/s"
         mjd_gain_filter_exptime_dict = header_parser_function(header)
         cutout_data *= mjd_gain_filter_exptime_dict['gain'] / mjd_gain_filter_exptime_dict['exptime']
 
         # ok, now subtract sky!
         cutout_data_sub, bkg = subtract_background(cutout_data)
-        # we can write the file
+
+        # before we write, let's keep as much as we can from our previous header
+        new_header = wcs.to_header()
+        # then copy non-WCS entries from the original header
+        for key in header:
+            if key not in new_header and not key.startswith('WCSAXES') and not key.startswith(
+                    'CRPIX') and not key.startswith('CRVAL') and not key.startswith('CDELT') and not key.startswith(
+                    'CTYPE') and not key.startswith('CUNIT') and not key.startswith('CD') and key not in ['COMMENT',
+                                                                                                          'HISTORY']:
+                new_header[key] = header[key]
+        # now we can write the file
         fits.writeto(user_config['workdir'] / copied_image_relpath, cutout_data_sub.astype(np.float32),
-                     header=header, overwrite=True)
+                     header=new_header, overwrite=True)
         # and find sources
         # (do plots if toggle set)
         do_plot = user_config.get('source_extraction_do_plots', False)
