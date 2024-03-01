@@ -9,13 +9,9 @@ import pandas as pd
 from pathlib import Path
 
 from ..structure.user_config import get_user_config
-from ..structure.database import get_pandas, execute_sqlite_query
+from ..structure.database import get_pandas
 from ..processes.frame_importation import process_new_frame
 from ..processes.plate_solving import solve_one_image_and_update_database
-# the user defines their header parser, returning a dictionary with {'mjd':, 'gain':, 'filter':, 'exptime':}
-# it needs be located at $workdir/header_parser/parse_header.py
-# the function needs be called parse_header, and it has to accept a fits header as argument and return the
-# dictionary above.
 
 
 def worker_init(log_queue):
@@ -25,11 +21,18 @@ def worker_init(log_queue):
     logger.addHandler(q_handler)
 
 
-def process_new_frame_wrapper(args):
-    frame_id_for_logger = args[-1]
-    logger = logging.getLogger(f"Process-{os.getpid()}")
-    logger.info(f"process_new_frame .... Processing image with ID {frame_id_for_logger}")
-    process_new_frame(*args[:-1])
+def log_process(func):
+    def wrapper(*args, **kwargs):
+        frame_id_for_logger = args[-1]
+        logger = logging.getLogger(f"Process-{os.getpid()}")
+        logger.info(f"{func.__name__} .... Processing image with ID {frame_id_for_logger}")
+        return func(*args[:-1])  # execute original function without the last arg (used for logging)
+    return wrapper
+
+
+@log_process
+def process_new_frame_wrapper(*args):
+    process_new_frame(*args)
 
 
 def read_convert_skysub_character_catalog():
@@ -49,7 +52,8 @@ def read_convert_skysub_character_catalog():
     new_frames = [frame for frame in available_frames if frame.name in new_frames_df['frame_name'].tolist()]
     logger.info(f"Importing {len(new_frames)} new frames.")
 
-    with Pool(initializer=worker_init, initargs=(log_queue,)) as pool:
+    with Pool(processes=user_config['multiprocessing_cpu_count'],
+              initializer=worker_init, initargs=(log_queue,)) as pool:
         pool.map(process_new_frame_wrapper, [
             (new_frame,
              user_config,
@@ -61,11 +65,9 @@ def read_convert_skysub_character_catalog():
     listener.stop()
 
 
-def solve_one_image_and_update_database_wrapper(args):
-    frame_id_for_logger = args[-1]
-    logger = logging.getLogger(f"Process-{os.getpid()}")
-    logger.info(f"solve_one_image .... Processing image with ID {frame_id_for_logger}")
-    solve_one_image_and_update_database(*args[:-1])
+@log_process
+def solve_one_image_and_update_database_wrapper(*args):
+    solve_one_image_and_update_database(*args)
 
 
 def plate_solve_all_images():
@@ -88,7 +90,8 @@ def plate_solve_all_images():
                                    conditions=['plate_solved = 0'])
     logger.info(f"Ready to plate solve {len(frames_to_process)} images.")
 
-    with Pool(initializer=worker_init, initargs=(log_queue,)) as pool:
+    with Pool(processes=user_config['multiprocessing_cpu_count'],
+              initializer=worker_init, initargs=(log_queue,)) as pool:
         pool.map(solve_one_image_and_update_database_wrapper, [
             (workdir / row['image_relpath'],
              workdir / row['sources_relpath'],

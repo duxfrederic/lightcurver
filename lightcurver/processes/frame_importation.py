@@ -8,6 +8,10 @@ from .background_estimation import subtract_background
 from .star_extraction import extract_stars
 from .frame_characterization import ephemeris, estimate_seeing
 from ..structure.user_header_parser import load_custom_header_parser
+# the user defines their header parser, returning a dictionary with {'mjd':, 'gain':, 'filter':, 'exptime':}
+# it needs be located at $workdir/header_parser/parse_header.py
+# the function needs be called parse_header, and it has to accept a fits header as argument and return the
+# dictionary above.
 header_parser_function = load_custom_header_parser()
 
 
