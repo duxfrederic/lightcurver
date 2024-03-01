@@ -5,7 +5,8 @@ import logging
 
 from ..structure.user_config import get_user_config
 from ..structure.database import initialize_database
-from .task_definitions import read_convert_skysub_character_catalog
+from .task_definitions import (read_convert_skysub_character_catalog,
+                               plate_solve_all_images)
 
 
 class TaskOutcome:
@@ -34,6 +35,23 @@ class WorkflowManager:
             self.pipe_config = yaml.safe_load(file)
         self.task_graph = {}
         self.build_dependency_graph()
+
+        _tmp_decoy = lambda _logger: 1
+        # attribution tasks
+        self.task_attribution = {
+            'initialize_database': initialize_database,
+            'read_convert_skysub_character_catalog': read_convert_skysub_character_catalog,
+            'plate_solving': plate_solve_all_images,
+            'calculate_common_and_total_footprint': _tmp_decoy,
+            'query_gaia_for_stars': _tmp_decoy,
+            'stamp_extraction': _tmp_decoy,
+            'psf_modeling': _tmp_decoy,
+            'star_photometry': _tmp_decoy,
+            'calculate_normalization_coefficient': _tmp_decoy,
+            'prepare_calibrated_cutouts': _tmp_decoy,
+        }
+        print(self.pipe_config)
+        assert set(self.task_attribution.keys()) == set([entry['name'] for entry in self.pipe_config['tasks']])
 
         if logger is None:
             logger = logging.getLogger(__name__)
@@ -83,20 +101,13 @@ class WorkflowManager:
         for task_name in sorted_tasks:
             task = next((item for item in self.pipe_config['tasks'] if item['name'] == task_name), None)
             if task:
-                self.execute_task(task)
+                self.execute_task(task, self.logger)
 
-    def execute_task(self, task):
+    def execute_task(self, task, logger):
         # Assume task_func is a callable for simplicity
-        task_func = self.get_task_function(task['name'])
+        task_func = self.task_attribution.get(task['name'])
         print(f"Executing task: {task['name']}")
         task_func()
 
-    def get_task_function(self, task_name):
-        # This method needs to map task_name to actual function calls
-        if task_name == 'read_convert_skysub_character_catalog':
-            return read_convert_skysub_character_catalog
-        elif task_name == "initialize_database":
-            return initialize_database
-        return lambda: 1
-        pass
+
 

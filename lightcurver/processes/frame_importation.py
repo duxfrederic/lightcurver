@@ -7,9 +7,11 @@ from astropy.wcs import WCS
 from .background_estimation import subtract_background
 from .star_extraction import extract_stars
 from .frame_characterization import ephemeris, estimate_seeing
+from ..structure.user_header_parser import load_custom_header_parser
+header_parser_function = load_custom_header_parser()
 
 
-def process_new_frame(fits_file, user_config, header_parser_function):
+def process_new_frame(fits_file, user_config, logger):
     """
         crops, transforms to e- and writes the result to our workdir.
 
@@ -17,12 +19,12 @@ def process_new_frame(fits_file, user_config, header_parser_function):
 
         :param fits_file: path
         :param user_config: dictionary containing user config
-        :param header_parser_function: a function that takes the header of your specific fits file and returns a
-                                       dictionary: {'mjd':value, 'gain':value, 'filter': value, 'exptime':value}
+        :param logger: a logger.
     """
     trim_vertical = user_config.get('trim_vertical', 0)
     trim_horizontal = user_config.get('trim_horizontal', 0)
     copied_image_relpath = Path('images') / fits_file.name
+    logger.info(f'  Importing {fits_file}.')
     with fits.open(str(fits_file), mode='readonly', ignore_missing_end=True, memmap=True) as hdu:
         hdu_index = 1 if len(hdu) > 1 else 0
         data_shape = hdu[hdu_index].data.shape
@@ -89,7 +91,7 @@ def process_new_frame(fits_file, user_config, header_parser_function):
     conn = sqlite3.connect(user_config['database_path'], timeout=15.0)
     add_frame_to_database(original_image_path=fits_file,
                           copied_image_relpath=copied_image_relpath,
-                          sources_file_relpath=sources_file_relpath,
+                          sources_relpath=sources_file_relpath,
                           mjd=mjd_gain_filter_exptime_dict['mjd'],
                           gain=mjd_gain_filter_exptime_dict['gain'],
                           filter=mjd_gain_filter_exptime_dict['filter'],
@@ -103,7 +105,7 @@ def process_new_frame(fits_file, user_config, header_parser_function):
     return header
 
 
-def add_frame_to_database(original_image_path, copied_image_relpath, sources_file_relpath,
+def add_frame_to_database(original_image_path, copied_image_relpath, sources_relpath,
                           mjd, gain, filter, exptime,
                           seeing_pixels,
                           database_connexion,
@@ -140,10 +142,10 @@ def add_frame_to_database(original_image_path, copied_image_relpath, sources_fil
     :param ephemeris_dictionary: dictionary as returned by the ephemerides function of frame_characterization.
     :return: None
     """
-    columns = ['original_image_path', 'image_relpath', 'sources_file_relpath',
+    columns = ['original_image_path', 'image_relpath', 'sources_relpath',
                'seeing_pixels', 'mjd', 'gain', 'filter', 'exptime']
 
-    values = [str(original_image_path), str(copied_image_relpath), str(sources_file_relpath),
+    values = [str(original_image_path), str(copied_image_relpath), str(sources_relpath),
               seeing_pixels, mjd, gain, filter, exptime]
 
     # if telescope information, add it to the columns and values

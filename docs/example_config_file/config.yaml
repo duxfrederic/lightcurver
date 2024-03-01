@@ -1,7 +1,42 @@
+# the working directory
+workdir: /storage/COSMOGRAIL/VST_J0248_for_new_pipeline/
+# where to find new images
 raw_dirs:
   - /storage/COSMOGRAIL/VST_J0248_for_new_pipeline/raw
-workdir: /storage/COSMOGRAIL/VST_J0248_for_new_pipeline/
+# redo flag, used by most processes
 redo: 0
+# now we define our Region of Interest (ROI)
+# the ROI will be extracted, and have flux calibrated cutouts prepared.
+ROI:
+  J0248+1913: 
+    coordinates: [42.2031, 19.22528]  # [ra, dec] in degrees
+    cutout_size: 50  # in pixels
+# the ROI will be used as a position starting point for the plate solving.
+
+# do plots of extracted sources?
 source_extraction_do_plots: 1
+# trimming the images upon importation, in pixels
 trim_vertical: 1200
 trim_horizontal: 200
+
+# are your images already plate solved? if yes, we will skip the plate solving step 
+already_plate_solved: 0
+# plate solving strategy: plate solve all, or plate solve one and align the others 
+# onto the first one.
+# possibilities: 'plate_solve_all', 'plate_solve_then_align'
+# I recomment the first one, it'll be a bit slower ...but also more robust to
+# variations in the pointing.
+plate_solving_strategy: 'plate_solve'
+
+# this is a plate scale interval to speed up the plate solving, 
+# you can make it more precise if you know the plate scale of your instrument. 
+# In arcseconds per pixel.
+plate_scale_interval: [0.1, 0.4]
+
+# now for the plate solving, we are going to use my wrapper around Astrometry.net:
+# widefield_plate_solver
+# It can either use a local installation (solve-field command in path)
+# or the astrometry.net api. We will try to use the local installation
+# if the astrometry api key below is null.
+# else we'll use the API.
+astrometry_net_api_key: null

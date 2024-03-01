@@ -4,7 +4,7 @@ import pandas as pd
 from ..structure.user_config import get_user_config
 
 
-def get_pandas(conditions=None, columns=None):
+def get_pandas(conditions=None, columns=None, table='frames'):
     """
     Retrieve data from the database based on specified conditions and return as a Pandas DataFrame.
 
@@ -12,6 +12,7 @@ def get_pandas(conditions=None, columns=None):
         conditions (list of str): The SQL conditions to filter the data, default None.
         columns (str or list of str, optional): Columns to select from the database. Defaults to None,
             which selects all columns.
+        table: string, which table to fetch data from.
     Returns:
         pandas.DataFrame: A DataFrame containing the results of the SQL query.
     """
@@ -19,7 +20,7 @@ def get_pandas(conditions=None, columns=None):
     conn = sqlite3.connect(db_path)
     if columns is None:
         columns = '*'
-    request = f"SELECT {','.join(columns)} FROM frames"
+    request = f"SELECT {','.join(columns)} FROM {table}"
     if conditions is not None:
         conditions = ','.join(conditions)
         request += f" WHERE {conditions}"
@@ -31,19 +32,25 @@ def get_pandas(conditions=None, columns=None):
         conn.close()
 
 
-def execute_sqlite(command):
+def execute_sqlite_query(query, params=(), is_select=True, timeout=15.0):
+    db_path = get_user_config()['database_path']
+    with sqlite3.connect(db_path, timeout=timeout) as conn:
+        cursor = conn.cursor()
+        if is_select:
+            cursor.execute(query, params)
+            return cursor.fetchall()
+        else:
+            cursor.execute(query, params)
+            conn.commit()
+            return cursor.rowcount
+
+
+def get_count_based_on_conditions(conditions, table='frames'):
     db_path = get_user_config()['database_path']
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
-    return cursor.execute(command).fetchall()
 
-
-def get_count_based_on_conditions(conditions):
-    db_path = get_user_config()['database_path']
-    conn = sqlite3.connect(db_path)
-    cursor = conn.cursor()
-
-    request = f"select count(*) from frames where {conditions}"
+    request = f"select count(*) from {table} where {conditions}"
 
     return cursor.execute(request).fetchone()[0]
 
@@ -65,12 +72,13 @@ def initialize_database():
         "gain REAL",
         "original_image_path TEXT",  # e.g. /some/drive/2023-02-01T01:23:35.fits
         "image_relpath TEXT UNIQUE",  # e.g. images/2023-02-01T01:23:35.fits -- relative to $workdir
-        "sources_file_relpath TEXT",  # convention: images/2023-02-01T01:23:35_sources.fits  -- same dir as above
+        "sources_relpath TEXT",  # convention: images/2023-02-01T01:23:35_sources.fits  -- same dir as above
         "telescope_latitude REAL",
         "telescope_longitude REAL",
         "telescope_altitude REAL",
         "telescope_name TEXT",
         "imager_name TEXT",
+        "plate_solved INTEGER DEFAULT 0",
         "eliminated INTEGER DEFAULT 0",
         "airmass REAL DEFAULT NULL",
         "degrees_to_moon REAL DEFAULT NULL",
