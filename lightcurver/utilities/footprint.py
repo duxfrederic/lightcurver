@@ -1,8 +1,6 @@
 import pandas as pd
 import sqlite3
 import numpy as np
-from astropy.wcs import WCS
-from astropy.io import fits
 from shapely.geometry import Polygon, mapping
 from functools import reduce
 import hashlib
@@ -11,12 +9,11 @@ import json
 from ..structure.database import execute_sqlite_query
 
 
-def calc_footprints(list_of_fits_paths):
+def calc_common_and_total_footprint(list_of_footprints):
     """
-    Calculate the common (intersection) and largest (union) footprints from a list of FITS files.
-
-    This function loads World Coordinate System (WCS) objects from the headers of FITS files,
-    calculates their footprints, and then determines both the intersection and union of these
+    Calculate the common (intersection) and largest (union) footprints from a list of numpy arrays: products
+    of astropy.wcs.WCS.calc_footprint.
+    Then determines both the intersection and union of these
     footprints using Shapely Polygons. The intersection represents the area common to all images,
     while the union covers the total area spanned by any of the images.
 
@@ -28,16 +25,15 @@ def calc_footprints(list_of_fits_paths):
     - common_footprint: A Shapely Polygon representing the intersected footprint common to all WCS footprints.
     - largest_footprint: A Shapely Polygon representing the union of all WCS footprints.
     """
-    wcs_objects = [WCS(fits.getheader(fits_path)) for fits_path in list_of_fits_paths]
-
-    wcs_footprints = [wcs_obj.calc_footprint() for wcs_obj in wcs_objects]
+    wcs_footprints = list_of_footprints
 
     polygons = [Polygon(footprint) for footprint in wcs_footprints]
 
     common_footprint = reduce(lambda x, y: x.intersection(y), polygons)
     largest_footprint = reduce(lambda x, y: x.union(y), polygons)
 
-    return wcs_objects, common_footprint, largest_footprint
+    return (common_footprint.simplify(tolerance=0.001, preserve_topology=True),
+            largest_footprint.simplify(tolerance=0.001, preserve_topology=True))
 
 
 def database_insert_single_footprint(frame_id, footprint_array):
@@ -60,19 +56,34 @@ def database_get_footprint(frame_id):
     return footprint_polygon
 
 
-def save_common_footprint_to_db(image_relpaths_df, footprint):
-    # Generate a hash from the dataframe's image paths
-    hash_str = hashlib.sha256(pd.util.hash_pandas_object(image_relpaths_df).values).hexdigest()
-    polygon_str = json.dumps(mapping(footprint))
+def get_frames_hash(frames_ids):
+    """
+    when calculating footprints, we need a way to identify which footprint was calculated from which frames.
+    I don't want to deal with the relational many-to-many situation that will arise in a relational database,
+    so let's calculate a hash of the integers of the frames that were used to calculate a footprint.
+    then to check for a footprint, which can just query the hash.
+    Args:
+        frames_ids: list of integers, frames.id in the database
 
-    # Connect to the database and create the table if it doesn't exist
-    conn = sqlite3.connect(db_path)
-    cursor = conn.cursor()
+    Returns:
+        a text hash
 
-    cursor.execute('''INSERT INTO footprints (hash, polygon) VALUES (?, ?)''',
-                   (hash_str, polygon_str))
-    conn.commit()
-    conn.close()
+    """
+    assert len(set(frames_ids)) == len(frames_ids), "Non-unique frame ids passed to this function"
+    sorted_frame_ids = sorted(frames_ids)
+    frame_ids_tuple = tuple(sorted_frame_ids)
+    return hash(frame_ids_tuple)
+
+
+def save_combined_footprints_to_db(frames_hash, common_footprint, largest_footprint):
+
+    common_str = json.dumps(mapping(common_footprint))
+    largest_str = json.dumps(mapping(largest_footprint))
+    save_query = "INSERT INTO combined_footprint (hash, largest, common) VALUES (?, ?, ?)"
+    execute_sqlite_query(save_query,
+                         params=(frames_hash, largest_str, common_str),
+                         is_select=False)
+
 
 
 def load_common_footprint_from_db(db_path, hash_str):

@@ -135,7 +135,7 @@ def add_frame_to_database(original_image_path, copied_image_relpath, sources_rel
 
     :param original_image_path: Path to the original image
     :param copied_image_relpath: Path where the image was copied, relative to workdir
-    :param sources_file_relpath: filename of the file of sources (fits table) as extracted by sep, relative to workdir
+    :param sources_relpath: filename of the file of sources (fits table) as extracted by sep, relative to workdir
     :param mjd: float, mjd of frame
     :param gain: float
     :param filter: string, filter of the observations

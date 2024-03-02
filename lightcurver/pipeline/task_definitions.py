@@ -3,16 +3,20 @@
 # before proceeding, and adds structure around multiprocessing when needed.
 from multiprocessing import Pool, Manager
 import os
+import numpy as np
+import pandas as pd
 import logging
 import logging.handlers
-import pandas as pd
 from pathlib import Path
 import functools
+import json
 
 from ..structure.user_config import get_user_config
-from ..structure.database import get_pandas
+from ..structure.database import get_pandas, execute_sqlite_query
 from ..processes.frame_importation import process_new_frame
 from ..processes.plate_solving import solve_one_image_and_update_database
+from ..utilities.footprint import calc_common_and_total_footprint, get_frames_hash, save_combined_footprints_to_db
+from ..plotting.footprint_plotting import plot_footprints
 
 
 def worker_init(log_queue):
@@ -94,7 +98,7 @@ def plate_solve_all_images():
         return
 
     frames_to_process = get_pandas(columns=['id', 'image_relpath', 'sources_relpath'],
-                                   conditions=['plate_solved = 0'])
+                                   conditions=['plate_solved = 0', 'eliminated = 0'])
     logger.info(f"Ready to plate solve {len(frames_to_process)} images.")
 
     with Pool(processes=user_config['multiprocessing_cpu_count'],
@@ -111,3 +115,37 @@ def plate_solve_all_images():
 
     listener.stop()
 
+
+def calc_common_and_total_footprint_and_save():
+    """
+    verifies whether the footprint was already calculated for the set of frames at hand
+    if no, calculates it and stores it.
+
+    Returns: None
+
+    """
+
+    query = """
+    SELECT frames.id, footprints.polygon
+    FROM footprints 
+    JOIN frames ON footprints.frame_id = frames.id 
+    WHERE frames.eliminated != 1;
+    """
+    results = execute_sqlite_query(query)
+    frames_ids = [result[0] for result in results]
+    frames_hash = get_frames_hash(frames_ids)
+    # check if already exists
+    count = execute_sqlite_query("SELECT COUNT(*) FROM combined_footprint WHERE hash = ?",
+                                 params=(frames_hash,))[0][0]
+    if count > 0:
+        return
+    polygon_list = [np.array(json.loads(result[1])) for result in results]
+    common_footprint, largest_footprint = calc_common_and_total_footprint(polygon_list)
+
+    user_config = get_user_config()
+    plots_dir = user_config['plots_dir']
+    footprints_plot_path = plots_dir / 'footprints.jpg'
+    plot_footprints(polygon_list, common_footprint, largest_footprint, save_path=footprints_plot_path)
+
+    # ok, save it
+    save_combined_footprints_to_db(frames_hash, common_footprint, largest_footprint)

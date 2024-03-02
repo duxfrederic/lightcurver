@@ -22,7 +22,7 @@ def get_pandas(conditions=None, columns=None, table='frames'):
         columns = '*'
     request = f"SELECT {','.join(columns)} FROM {table}"
     if conditions is not None:
-        conditions = ','.join(conditions)
+        conditions = ' AND '.join(conditions)
         request += f" WHERE {conditions}"
 
     try:
@@ -179,9 +179,9 @@ def initialize_database():
     # calculated from the sorted list of frames (image_relpath) composing the common footprint.
     cursor.execute("""CREATE TABLE IF NOT EXISTS combined_footprint ( 
                       id INTEGER PRIMARY KEY, 
-                      type TEXT,  -- will be 'common' or 'largest' 
-                      hash TEXT UNIQUE,  -- will be a hash of a concatenation of the image names used for this footprint
-                      polygon TEXT
+                      hash INTEGER UNIQUE,  -- will be a hash of a concatenation of the used frames' ids
+                      largest TEXT,
+                      common TEXT
                       )""")
 
     conn.commit()

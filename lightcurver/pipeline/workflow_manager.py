@@ -6,7 +6,7 @@ import logging
 from ..structure.user_config import get_user_config
 from ..structure.database import initialize_database
 from .task_definitions import (read_convert_skysub_character_catalog,
-                               plate_solve_all_images)
+                               plate_solve_all_images, calc_common_and_total_footprint_and_save)
 
 
 class WorkflowManager:
@@ -23,7 +23,7 @@ class WorkflowManager:
             'initialize_database': initialize_database,
             'read_convert_skysub_character_catalog': read_convert_skysub_character_catalog,
             'plate_solving': plate_solve_all_images,
-            'calculate_common_and_total_footprint': _tmp_decoy,
+            'calculate_common_and_total_footprint': calc_common_and_total_footprint_and_save,
             'query_gaia_for_stars': _tmp_decoy,
             'stamp_extraction': _tmp_decoy,
             'psf_modeling': _tmp_decoy,
