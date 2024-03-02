@@ -79,6 +79,7 @@ def initialize_database():
         "telescope_name TEXT",
         "telescope_imager_name TEXT",
         "plate_solved INTEGER DEFAULT 0",
+        "pixel_scale FLOAT DEFAULT NULL",
         "eliminated INTEGER DEFAULT 0",
         "airmass REAL DEFAULT NULL",
         "degrees_to_moon REAL DEFAULT NULL",
