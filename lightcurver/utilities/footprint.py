@@ -85,14 +85,15 @@ def save_combined_footprints_to_db(frames_hash, common_footprint, largest_footpr
                          is_select=False)
 
 
+def load_combined_footprint_from_db(frames_hash):
 
-def load_common_footprint_from_db(db_path, hash_str):
-    conn = sqlite3.connect(db_path)
-    cursor = conn.cursor()
-    cursor.execute('''SELECT polygon FROM footprints WHERE hash = ?''', (hash_str,))
-    result = cursor.fetchone()
-    conn.close()
+    query = "SELECT largest, common FROM combined_footprint WHERE hash = ?"
+    result = execute_sqlite_query(query,
+                                  params=(frames_hash,),
+                                  is_select=True)[0]
+    largest = json.loads(result[0])
+    common = json.loads(result[1])
     if result:
-        return Polygon(json.loads(result[0]))
+        return largest, common
     else:
         return None

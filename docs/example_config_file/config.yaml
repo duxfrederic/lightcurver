@@ -66,4 +66,20 @@ astrometry_net_api_key: null
 # pram name: 'stars_per_frame'
 # in summary: 'common_footprint_stars', 'common_footprint_with_extra_stars', or 'stars_per_frame'.
 star_selection_strategy: 'common_footprint_stars'
-
+# now the stars, depending on your setup you will need to probe a different range
+# of magnitudes to both provide high S/N constraints to your normalization and PSF models,
+# while avoiding saturation -- set to null for no contraints
+star_min_gmag: 16.5
+star_max_gmag: 19.0
+# we discard stars that were not well fitted by a point source solution in gaia
+# (could be galaxies, or very crowded fields, or doubles ...which we need to avoid)
+# set to null for no constraints
+star_max_astrometric_excess_noise: 2.0
+# finally, we can also request a small photometric error,
+# as the photometric error will go up with variability. this way we can select
+# more stable stars.
+star_max_phot_g_mean_flux_error: 2.0
+# number criterion
+min_number_stars: 4
+# and whether we query again ... please set it to true should you need to change the footprint type
+gaia_query_redo: false

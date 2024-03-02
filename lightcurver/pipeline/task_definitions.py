@@ -10,13 +10,17 @@ import logging.handlers
 from pathlib import Path
 import functools
 import json
+from astropy.coordinates import SkyCoord
+import astropy.units as u
 
 from ..structure.user_config import get_user_config
 from ..structure.database import get_pandas, execute_sqlite_query
 from ..processes.frame_importation import process_new_frame
 from ..processes.plate_solving import solve_one_image_and_update_database
-from ..utilities.footprint import calc_common_and_total_footprint, get_frames_hash, save_combined_footprints_to_db
+from ..utilities.footprint import (calc_common_and_total_footprint, get_frames_hash,
+                                   save_combined_footprints_to_db, load_combined_footprint_from_db)
 from ..plotting.footprint_plotting import plot_footprints
+from ..processes.find_gaia_stars import find_gaia_stars_in_polygon
 
 
 def worker_init(log_queue):
@@ -82,7 +86,7 @@ def solve_one_image_and_update_database_wrapper(*args):
 
 def plate_solve_all_images():
     # boilerplate logging queue and listener
-    # TODO can we reduce it?
+    # TODO can we reduce the boiler plate?
     log_queue = Manager().Queue()
     listener = logging.handlers.QueueListener(log_queue, *logging.getLogger().handlers)
     listener.start()
@@ -149,3 +153,58 @@ def calc_common_and_total_footprint_and_save():
 
     # ok, save it
     save_combined_footprints_to_db(frames_hash, common_footprint, largest_footprint)
+
+
+def query_gaia_stars():
+    user_config = get_user_config()
+    frames_info = get_pandas(columns=['id', 'pixel_scale'], conditions=['frames.eliminated != 1'])
+    frames_hash = get_frames_hash(frames_info['id'].to_list())
+    # before doing anything, check whether we are already done
+
+    count = execute_sqlite_query("SELECT COUNT(*) FROM stars WHERE combined_footprint_hash = ?",
+                                 params=(frames_hash,), is_select=True)[0][0]
+    if count > 0 and not user_config['gaia_query_redo']:
+        # we're done
+        return
+    elif count > 0 and user_config['gaia_query_redo']:
+        # then we need to purge the database from the stars queried with this footprint.
+        # TODO I forgot we have two types of footprints for a given footprint hash dayum
+        # TODO for now proceeding with the user having to set redo if changing footprint type
+        execute_sqlite_query("DELETE FROM stars WHERE combined_footprint_hash = ?",
+                             params=(frames_hash,), is_select=True)
+
+    largest_footprint, common_footprint = load_combined_footprint_from_db(frames_hash)
+    if user_config['star_selection_strategy'] == 'common_footprint_stars':
+        query_footprint = common_footprint
+        # then we want to make sure we use stars that are available in all frames.
+        # this likely achieves the best precision, but is only possible typically in dedicated
+        # monitoring programs with stable pointings.
+    elif user_config['star_selection_strategy'] == 'stars_per_frame':
+        query_footprint = largest_footprint
+        # then, we must fall back to using stars selected in each individual frame.
+        # here, we will query a larger footprint so that we have options in each
+        # individual frame.
+
+    stars_table = find_gaia_stars_in_polygon(
+                        query_footprint['coordinates'][0],
+                        release='dr3',
+                        astrometric_excess_noise_max=user_config["star_max_astrometric_excess_noise"],
+                        gmag_range=(user_config["star_min_gmag"], user_config["star_max_gmag"]),
+                        max_phot_g_mean_flux_error=user_config["star_max_phot_g_mean_flux_error"]
+    )
+
+    message = "Too few stars compared to the config criterion! Only {len(stars_table)} stars available."
+    assert len(stars_table) >= user_config['min_number_stars'], message
+
+    columns = ['combined_footprint_hash', 'ra', 'dec', 'gmag', 'rmag', 'bmag', 'pmra', 'pmdec',
+               'gaia_id', 'distance_to_roi_arcsec']
+    insert_query = f"INSERT INTO stars ({', '.join(columns)}) VALUES ({', '.join(len(columns)*['?'])})"
+    for star in stars_table:
+        star_coord = SkyCoord(ra=star['ra'] * u.degree, dec=star['dec'] * u.degree)
+        distance_to_roi = star_coord.separation(user_config['ROI_SkyCoord']).arcsecond
+
+        star_data = (frames_hash, star['ra'], star['dec'], star['phot_g_mean_mag'],
+                     star['phot_rp_mean_mag'],  star['phot_bp_mean_mag'],
+                     star['pmra'], star['pmdec'], star['source_id'],
+                     distance_to_roi)
+        execute_sqlite_query(insert_query, params=star_data, is_select=False)

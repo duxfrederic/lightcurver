@@ -108,14 +108,19 @@ def initialize_database():
     # table of stars
     # the stars will be filled in once by a python process.
     cursor.execute("""CREATE TABLE IF NOT EXISTS stars (
-                      id INTEGER PRIMARY KEY,
-                      name TEXT, -- typically a letter
-                      ra REAL, -- Right Ascension
-                      dec REAL, -- Declination,
+                      combined_footprint_hash INTEGER, -- which footprint was this star was queried from
+                      name TEXT DEFAULT NULL, -- typically a letter
+                      ra REAL,
+                      dec REAL,
                       gmag REAL,
                       rmag REAL,
-                      bmag REAL,                      
-                      gaia_id TEXT -- Gaia ID
+                      bmag REAL,               
+                      pmra REAL,
+                      pmdec REAL,       
+                      gaia_id TEXT,
+                      distance_to_roi_arcsec REAL,
+                      FOREIGN KEY (combined_footprint_hash) REFERENCES combined_footprint(hash),
+                      PRIMARY KEY (gaia_id, combined_footprint_hash)
                       )""")
 
     # linking stars and frame
