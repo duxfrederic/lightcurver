@@ -79,14 +79,14 @@ def process_new_frame(fits_file, user_config, logger):
         sources_table.write(user_config['workdir'] / sources_file_relpath, format='fits', overwrite=True)
 
         seeing_pixels = estimate_seeing(sources_table)
-        if 'telescope_longitude' in user_config:
+        if 'telescope' in user_config:
             eph_dict = ephemeris(mjd=mjd_gain_filter_exptime_dict['mjd'],
-                                 ra_object=user_config['ra_object'],
-                                 dec_object=user_config['dec_object'],
-                                 telescope_longitude=user_config['telescope_longitude'],
-                                 telescope_latitude=user_config['telescope_latitude'],
-                                 telescope_elevation=user_config['telescope_elevation'])
-            telescope_information = {k: v for k, v in user_config.items() if 'telescope_' in k}
+                                 ra_object=user_config['ROI_ra_deg'],
+                                 dec_object=user_config['ROI_dec_deg'],
+                                 telescope_longitude=user_config['telescope']['longitude'],
+                                 telescope_latitude=user_config['telescope']['latitude'],
+                                 telescope_elevation=user_config['telescope']['elevation'])
+            telescope_information = {k: v for k, v in user_config['telescope'].items()}
         else:
             telescope_information = None
             eph_dict = None
@@ -155,12 +155,12 @@ def add_frame_to_database(original_image_path, copied_image_relpath, sources_rel
     # if telescope information, add it to the columns and values
     if telescope_information is not None:
         for key, value in telescope_information.items():
-            columns.append(key)
+            columns.append(f"telescope_{key}")
             values.append(value)
 
     if ephemeris_dictionary is not None:
         columns.append('airmass')
-        values.append(ephemeris_dictionary['target_info']['airmass'])
+        values.append(float(ephemeris_dictionary['target_info']['airmass']))
         columns.append('degrees_to_moon')
         values.append(ephemeris_dictionary['moon_info']['distance_deg'])
         columns.append('moon_phase')

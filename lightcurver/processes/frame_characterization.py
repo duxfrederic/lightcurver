@@ -105,7 +105,7 @@ def ephemeris(mjd: float,
     target_alt_deg = np.degrees(target.alt)
     target_az_deg = np.degrees(target.az)
 
-    airmass = calculate_airmass(target.alt)
+    airmass = calculate_airmass(target_alt_deg)
     if airmass < 1.0 or airmass > 5.0:
         results['weird_astro_conditions'] = True
         results['comments'] += f"Target altitude: {target_alt_deg:.2f} degrees (airmass {airmass:.2f})."

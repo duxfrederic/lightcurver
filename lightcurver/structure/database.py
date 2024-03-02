@@ -75,9 +75,9 @@ def initialize_database():
         "sources_relpath TEXT",  # convention: images/2023-02-01T01:23:35_sources.fits  -- same dir as above
         "telescope_latitude REAL",
         "telescope_longitude REAL",
-        "telescope_altitude REAL",
+        "telescope_elevation REAL",
         "telescope_name TEXT",
-        "imager_name TEXT",
+        "telescope_imager_name TEXT",
         "plate_solved INTEGER DEFAULT 0",
         "eliminated INTEGER DEFAULT 0",
         "airmass REAL DEFAULT NULL",
@@ -88,6 +88,8 @@ def initialize_database():
         "seeing_arcseconds REAL DEFAULT NULL",
         "azimuth REAL DEFAULT NULL",
         "altitude REAL DEFAULT NULL",
+        "comment TEXT DEFAULT NULL",
+        "roi_in_footprint INTEGER DEFAULT 1",
         # potential new stuff to keep track on in future here
     ]
 
@@ -164,6 +166,22 @@ def initialize_database():
                       zeropoint_uncertainty FLOAT,
                       FOREIGN KEY (norm_coefficient_id) REFERENCES normalization_coefficients(id),
                       PRIMARY KEY (id, norm_coefficient_id)
+                      )""")
+
+    # table of footprints
+    cursor.execute("""CREATE TABLE IF NOT EXISTS footprints (
+                      frame_id INTEGER PRIMARY KEY,
+                      polygon TEXT NOT NULL,
+                      FOREIGN KEY (frame_id) REFERENCES frames (id)
+                      )""")
+
+    # and also a smaller one: "combined" (intersection or union) of footprints given a hash
+    # calculated from the sorted list of frames (image_relpath) composing the common footprint.
+    cursor.execute("""CREATE TABLE IF NOT EXISTS combined_footprint ( 
+                      id INTEGER PRIMARY KEY, 
+                      type TEXT,  -- will be 'common' or 'largest' 
+                      hash TEXT UNIQUE,  -- will be a hash of a concatenation of the image names used for this footprint
+                      polygon TEXT
                       )""")
 
     conn.commit()

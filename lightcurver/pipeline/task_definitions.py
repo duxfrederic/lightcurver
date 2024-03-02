@@ -1,12 +1,13 @@
 # this file wraps around the processes defined in the processes subpackage.
 # the wrapper determine which images / regions / psfs (depending on task) need processing
-# before proceeding.
+# before proceeding, and adds structure around multiprocessing when needed.
 from multiprocessing import Pool, Manager
 import os
 import logging
 import logging.handlers
 import pandas as pd
 from pathlib import Path
+import functools
 
 from ..structure.user_config import get_user_config
 from ..structure.database import get_pandas
@@ -22,7 +23,8 @@ def worker_init(log_queue):
 
 
 def log_process(func):
-    def wrapper(*args, **kwargs):
+    @functools.wraps(func)
+    def wrapper(args):
         frame_id_for_logger = args[-1]
         logger = logging.getLogger(f"Process-{os.getpid()}")
         logger.info(f"{func.__name__} .... Processing image with ID {frame_id_for_logger}")
@@ -47,7 +49,11 @@ def read_convert_skysub_character_catalog():
     available_frames = sum([list(raw_dir.glob('*.fits')) for raw_dir in user_config['raw_dirs']], start=[])
     df_available_frames = pd.DataFrame({'frame_name': [frame.name for frame in available_frames]})
     already_imported = get_pandas(columns=['original_image_path', 'id'])
-    already_imported['name'] = already_imported.apply(lambda row: Path(row['original_image_path']).name, axis=1)
+    if not already_imported.empty:
+        already_imported['name'] = already_imported.apply(lambda row: Path(row['original_image_path']).name, axis=1)
+    else:
+        # just a decoy
+        already_imported['name'] = pd.Series(dtype='str')
     new_frames_df = df_available_frames[~df_available_frames['frame_name'].isin(already_imported['name'])]
     new_frames = [frame for frame in available_frames if frame.name in new_frames_df['frame_name'].tolist()]
     logger.info(f"Importing {len(new_frames)} new frames.")
@@ -71,7 +77,8 @@ def solve_one_image_and_update_database_wrapper(*args):
 
 
 def plate_solve_all_images():
-    # Set up logging queue and listener
+    # boilerplate logging queue and listener
+    # TODO can we reduce it?
     log_queue = Manager().Queue()
     listener = logging.handlers.QueueListener(log_queue, *logging.getLogger().handlers)
     listener.start()

@@ -9,25 +9,6 @@ from .task_definitions import (read_convert_skysub_character_catalog,
                                plate_solve_all_images)
 
 
-class TaskOutcome:
-    def __init__(self):
-        self.outcomes = {}
-
-    def set_outcome(self, task_name, outcome_name, value):
-        if task_name not in self.outcomes:
-            self.outcomes[task_name] = {}
-        self.outcomes[task_name][outcome_name] = value
-
-    def check_outcome(self, task_name, outcome_name):
-        return self.outcomes.get(task_name, {}).get(outcome_name, False)
-
-    def check_dependencies(self, task):
-        dependencies_met = True
-        for dependency in task.dependencies:
-            pass
-        return dependencies_met
-
-
 class WorkflowManager:
     def __init__(self, logger=None):
         self.user_config = get_user_config()
@@ -36,7 +17,7 @@ class WorkflowManager:
         self.task_graph = {}
         self.build_dependency_graph()
 
-        _tmp_decoy = lambda _logger: 1
+        _tmp_decoy = lambda: 1
         # attribution tasks
         self.task_attribution = {
             'initialize_database': initialize_database,
@@ -50,7 +31,6 @@ class WorkflowManager:
             'calculate_normalization_coefficient': _tmp_decoy,
             'prepare_calibrated_cutouts': _tmp_decoy,
         }
-        print(self.pipe_config)
         assert set(self.task_attribution.keys()) == set([entry['name'] for entry in self.pipe_config['tasks']])
 
         if logger is None:

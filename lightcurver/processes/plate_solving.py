@@ -5,6 +5,7 @@ from astropy.wcs import WCS
 from widefield_plate_solver import plate_solve
 
 from ..structure.database import execute_sqlite_query
+from ..utilities.footprint import database_insert_single_footprint
 
 
 def solve_one_image(image_path, sources_path, user_config, logger):
@@ -16,8 +17,7 @@ def solve_one_image(image_path, sources_path, user_config, logger):
         use_api = True
         os.environ['astrometry_net_api_key'] = user_config['astrometry_net_api_key']
 
-    roi_keys = list(user_config['ROI'].keys())
-    ra, dec = user_config['ROI'][roi_keys[0]]['coordinates']
+    ra, dec = user_config['ROI_ra_deg'], user_config['ROI_dec_deg']
     plate_scale_min, plate_scale_max = user_config['plate_scale_interval']
 
     wcs = plate_solve(fits_file_path=image_path, sources=sources,
@@ -29,11 +29,25 @@ def solve_one_image(image_path, sources_path, user_config, logger):
                       logger=logger,
                       do_debug_plot=False)
 
-    return WCS(wcs).is_celestial
+    return WCS(wcs)
 
 
 def solve_one_image_and_update_database(image_path, sources_path, user_config, frame_id, logger):
-    success = solve_one_image(image_path, sources_path, user_config, logger)
+    wcs = solve_one_image(image_path, sources_path, user_config, logger)
+    success = wcs.is_celestial
+    if success:
+        # but our object might be out of the footprint of the image!
+        final_header = fits.getheader(image_path)
+        # replace the wcs above with the WCS we saved in the header of the image (contains naxis)
+        wcs = WCS(final_header)
+        in_footprint = user_config['ROI_SkyCoord'].contained_by(wcs)
+        if not in_footprint:
+            execute_sqlite_query(query="UPDATE frames SET roi_in_footprint = ? WHERE id = ?",
+                                 params=(0, frame_id), is_select=False)
+        # also, let us save the actual footprint
+        footprint_array = wcs.calc_footprint()
+        database_insert_single_footprint(frame_id, footprint_array)
+    # at the end, set the image to plate solved in db
     execute_sqlite_query(query="UPDATE frames SET plate_solved = ? WHERE id = ?",
                          params=(1 if success else 0, frame_id), is_select=False)
 

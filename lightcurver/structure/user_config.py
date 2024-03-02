@@ -1,6 +1,8 @@
 import yaml
 import os
 from pathlib import Path
+from astropy.coordinates import SkyCoord
+from astropy import units as u
 
 from .exceptions import NoConfigFilePathInEnvironment
 
@@ -11,6 +13,14 @@ def get_user_config():
     config_path = os.environ['LIGHTCURVER_CONFIG']
     with open(config_path, 'r') as file:
         config = yaml.safe_load(file)
+
+    roi_keys = list(config['ROI'].keys())
+    config['roi_name'] = roi_keys[0]
+    ra, dec = config['ROI'][config['roi_name']]['coordinates']
+    config['ROI_ra_deg'] = ra
+    config['ROI_dec_deg'] = dec
+    config['ROI_SkyCoord'] = SkyCoord(ra*u.deg, dec*u.deg)
+
 
     assert 'raw_dirs' in config
     raw_dirs = config['raw_dirs']
