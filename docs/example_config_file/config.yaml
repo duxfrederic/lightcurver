@@ -5,6 +5,8 @@ raw_dirs:
   - /storage/COSMOGRAIL/VST_J0248_for_new_pipeline/raw
 # redo flag, used by most processes
 redo: 0
+# for logging
+log_directory: /tmp/logs
 # some processes can be parallelized
 multiprocessing_cpu_count: 4
 

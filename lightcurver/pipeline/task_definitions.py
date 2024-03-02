@@ -12,6 +12,7 @@ import functools
 import json
 from astropy.coordinates import SkyCoord
 import astropy.units as u
+from datetime import datetime
 
 from ..structure.user_config import get_user_config
 from ..structure.database import get_pandas, execute_sqlite_query
@@ -30,17 +31,51 @@ def worker_init(log_queue):
     logger.addHandler(q_handler)
 
 
-def log_process(func):
-    @functools.wraps(func)
-    def wrapper(args):
-        frame_id_for_logger = args[-1]
-        logger = logging.getLogger(f"Process-{os.getpid()}")
-        logger.info(f"{func.__name__} .... Processing image with ID {frame_id_for_logger}")
-        return func(*args[:-1])  # execute original function without the last arg (used for logging)
-    return wrapper
+def log_function(use_multiprocessing=True):
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            user_config = get_user_config()
+            log_directory = user_config.get('log_directory')
+
+            process_info = f"Process-{os.getpid()}" if use_multiprocessing else "Function"
+            logger = logging.getLogger(process_info)
+
+            if not logger.handlers:  # ensure we don't add handlers more than once
+                if log_directory is not None:
+                    log_directory.mkdir(exist_ok=True)
+                    log_file_path = log_directory / f'logs_{datetime.now().strftime("%Y%m%d_%H%M%S")}.log'
+                    # for writing logs to a file
+                    file_handler = logging.FileHandler(log_file_path)
+                    file_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+                    file_handler.setFormatter(file_formatter)
+
+                # for printing logs to the terminal
+                stream_handler = logging.StreamHandler()
+                stream_formatter = logging.Formatter('%(name)s - %(levelname)s - %(message)s')
+                stream_handler.setFormatter(stream_formatter)
+
+                logger.addHandler(file_handler)
+                logger.addHandler(stream_handler)
+                logger.setLevel(logging.INFO)
+
+            # logging logic (with or without frame ID)
+            if args and isinstance(args[-1], str) and args[-1].startswith("FrameID-"):
+                frame_id_for_logger = args[-1]
+                logger.info(f"{func.__name__} .... Processing with ID {frame_id_for_logger}")
+                result = func(*args[:-1], **kwargs)  # Execute the function without the last arg
+            else:
+                logger.info(f"{func.__name__} .... Processing")
+                result = func(*args, **kwargs)
+
+            return result
+
+        return wrapper
+
+    return decorator
 
 
-@log_process
+@log_function
 def process_new_frame_wrapper(*args):
     process_new_frame(*args)
 
@@ -79,7 +114,7 @@ def read_convert_skysub_character_catalog():
     listener.stop()
 
 
-@log_process
+@log_function
 def solve_one_image_and_update_database_wrapper(*args):
     solve_one_image_and_update_database(*args)
 
@@ -120,6 +155,7 @@ def plate_solve_all_images():
     listener.stop()
 
 
+@log_function(use_multiprocessing=False)
 def calc_common_and_total_footprint_and_save():
     """
     verifies whether the footprint was already calculated for the set of frames at hand
@@ -128,7 +164,7 @@ def calc_common_and_total_footprint_and_save():
     Returns: None
 
     """
-
+    logger = logging.getLogger("calc_footprints")
     query = """
     SELECT frames.id, footprints.polygon
     FROM footprints 
@@ -142,6 +178,7 @@ def calc_common_and_total_footprint_and_save():
     count = execute_sqlite_query("SELECT COUNT(*) FROM combined_footprint WHERE hash = ?",
                                  params=(frames_hash,))[0][0]
     if count > 0:
+        logger.info(f'This combined footprint (hash {frames_hash}) was already calculated.')
         return
     polygon_list = [np.array(json.loads(result[1])) for result in results]
     common_footprint, largest_footprint = calc_common_and_total_footprint(polygon_list)
@@ -153,9 +190,12 @@ def calc_common_and_total_footprint_and_save():
 
     # ok, save it
     save_combined_footprints_to_db(frames_hash, common_footprint, largest_footprint)
+    logger.info(f'Footprint with (hash {frames_hash} saved to db')
 
 
+@log_function(use_multiprocessing=False)
 def query_gaia_stars():
+    logger = logging.getLogger("gaia_stars")
     user_config = get_user_config()
     frames_info = get_pandas(columns=['id', 'pixel_scale'], conditions=['frames.eliminated != 1'])
     if user_config['star_selection_strategy'] != 'ROI_disk':
@@ -169,14 +209,17 @@ def query_gaia_stars():
     count = execute_sqlite_query("SELECT COUNT(*) FROM stars WHERE combined_footprint_hash = ?",
                                  params=(frames_hash,), is_select=True)[0][0]
     if count > 0 and not user_config['gaia_query_redo']:
+        logger.info(f'Gaia stars already fetched for this footprint: {frames_hash}')
         # we're done
         return
     elif count > 0 and user_config['gaia_query_redo']:
+        logger.info(f'Gaia stars already fetched for this footprint: {frames_hash} but redo is True.')
         # then we need to purge the database from the stars queried with this footprint.
         # TODO I forgot we have two types of footprints for a given footprint hash dayum
         # TODO for now proceeding with the user having to set redo if changing footprint type
         execute_sqlite_query("DELETE FROM stars WHERE combined_footprint_hash = ?",
                              params=(frames_hash,), is_select=True)
+        logger.info(f'  deleted previously queried stars.')
 
     if user_config['star_selection_strategy'] == 'common_footprint_stars':
         _, common_footprint = load_combined_footprint_from_db(frames_hash)
