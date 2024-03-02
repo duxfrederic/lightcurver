@@ -57,15 +57,15 @@ astrometry_net_api_key: null
 # epochs in both the PSF model and normalization coefficient.
 # only works with stable pointings obviously.
 # param name: 'common_footprint_stars'
-# The other possibility is looking for stars close to the ROI in each frame.
-# We aim for stability as much as possible (selecting from the common footprint first,
-# then adding more stars). Unavoidable when the pointings are not regular.
-# param name: 'common_footprint_with_extra_stars'
+# The other possibility is looking for stars close to the ROI: ROI_disk
 # third possibility, we do not care about the footprints and simply select the best 
-# stars in each image, with a preference close to the ROI. 
-# pram name: 'stars_per_frame'
-# in summary: 'common_footprint_stars', 'common_footprint_with_extra_stars', or 'stars_per_frame'.
-star_selection_strategy: 'common_footprint_stars'
+# stars in each image, with a preference for being close to the ROI at later stages.
+# param name: 'stars_per_frame'
+# the latter is prefered when you're desperate for stars, querying a much larger footprint.
+# in summary: 'common_footprint_stars', or 'ROI_disk', or 'stars_per_frame'.
+star_selection_strategy: 'ROI_disk'
+# if the above is 'ROI_disk', provide here the radius in arcseconds:
+ROI_disk_radius_arcseconds: 160
 # now the stars, depending on your setup you will need to probe a different range
 # of magnitudes to both provide high S/N constraints to your normalization and PSF models,
 # while avoiding saturation -- set to null for no contraints

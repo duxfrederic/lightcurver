@@ -21,7 +21,6 @@ def get_user_config():
     config['ROI_dec_deg'] = dec
     config['ROI_SkyCoord'] = SkyCoord(ra*u.deg, dec*u.deg)
 
-
     assert 'raw_dirs' in config
     raw_dirs = config['raw_dirs']
     if type(raw_dirs) is list:

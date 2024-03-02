@@ -20,7 +20,7 @@ from ..processes.plate_solving import solve_one_image_and_update_database
 from ..utilities.footprint import (calc_common_and_total_footprint, get_frames_hash,
                                    save_combined_footprints_to_db, load_combined_footprint_from_db)
 from ..plotting.footprint_plotting import plot_footprints
-from ..processes.find_gaia_stars import find_gaia_stars_in_polygon
+from ..utilities.gaia import find_gaia_stars_in_circle, find_gaia_stars_in_polygon
 
 
 def worker_init(log_queue):
@@ -158,9 +158,14 @@ def calc_common_and_total_footprint_and_save():
 def query_gaia_stars():
     user_config = get_user_config()
     frames_info = get_pandas(columns=['id', 'pixel_scale'], conditions=['frames.eliminated != 1'])
-    frames_hash = get_frames_hash(frames_info['id'].to_list())
-    # before doing anything, check whether we are already done
+    if user_config['star_selection_strategy'] != 'ROI_disk':
+        # then it depends on the frames we're considering.
+        frames_hash = get_frames_hash(frames_info['id'].to_list())
+    else:
+        # if ROI_disk, it does not depend on the frames: unique region defined by its radius.
+        frames_hash = hash(user_config['ROI_disk_radius_arcseconds'])
 
+    # before doing anything, check whether we are already done
     count = execute_sqlite_query("SELECT COUNT(*) FROM stars WHERE combined_footprint_hash = ?",
                                  params=(frames_hash,), is_select=True)[0][0]
     if count > 0 and not user_config['gaia_query_redo']:
@@ -173,27 +178,35 @@ def query_gaia_stars():
         execute_sqlite_query("DELETE FROM stars WHERE combined_footprint_hash = ?",
                              params=(frames_hash,), is_select=True)
 
-    largest_footprint, common_footprint = load_combined_footprint_from_db(frames_hash)
     if user_config['star_selection_strategy'] == 'common_footprint_stars':
-        query_footprint = common_footprint
+        _, common_footprint = load_combined_footprint_from_db(frames_hash)
+        query_footprint = common_footprint['coordinates'][0]
+        query_function = find_gaia_stars_in_polygon
         # then we want to make sure we use stars that are available in all frames.
         # this likely achieves the best precision, but is only possible typically in dedicated
         # monitoring programs with stable pointings.
     elif user_config['star_selection_strategy'] == 'stars_per_frame':
-        query_footprint = largest_footprint
+        largest_footprint, _ = load_combined_footprint_from_db(frames_hash)
+        query_footprint = largest_footprint['coordinates'][0]
+        query_function = find_gaia_stars_in_polygon
         # then, we must fall back to using stars selected in each individual frame.
         # here, we will query a larger footprint so that we have options in each
         # individual frame.
+    elif user_config['star_selection_strategy'] == 'ROI_disk':
+        center = user_config['ROI_ra_deg'], user_config['ROI_dec_deg']
+        radius = user_config['ROI_disk_radius_arcseconds'] / 3600.
+        query_footprint = {'center': center, 'radius': radius}
+        query_function = find_gaia_stars_in_circle
 
-    stars_table = find_gaia_stars_in_polygon(
-                        query_footprint['coordinates'][0],
+    stars_table = query_function(
+                        query_footprint,
                         release='dr3',
                         astrometric_excess_noise_max=user_config["star_max_astrometric_excess_noise"],
                         gmag_range=(user_config["star_min_gmag"], user_config["star_max_gmag"]),
                         max_phot_g_mean_flux_error=user_config["star_max_phot_g_mean_flux_error"]
     )
 
-    message = "Too few stars compared to the config criterion! Only {len(stars_table)} stars available."
+    message = f"Too few stars compared to the config criterion! Only {len(stars_table)} stars available."
     assert len(stars_table) >= user_config['min_number_stars'], message
 
     columns = ['combined_footprint_hash', 'ra', 'dec', 'gmag', 'rmag', 'bmag', 'pmra', 'pmdec',
