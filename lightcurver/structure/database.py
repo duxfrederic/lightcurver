@@ -128,10 +128,11 @@ def initialize_database():
     # and fill in this table once for each image.
     cursor.execute("""CREATE TABLE IF NOT EXISTS stars_in_frames (
                       frame_id INTEGER,
-                      star_id INTEGER,
+                      gaia_id INTEGER,
+                      combined_footprint_hash INTEGER,
                       FOREIGN KEY (frame_id) REFERENCES frames(id),
-                      FOREIGN KEY (star_id) REFERENCES stars(id),
-                      PRIMARY KEY (frame_id, star_id)
+                      FOREIGN KEY (gaia_id, combined_footprint_hash) REFERENCES stars(gaia_id, combined_footprint_hash),
+                      PRIMARY KEY (frame_id, gaia_id, combined_footprint_hash)
                       )""")
 
     # PSF is defined in yaml files (which stars compose it), here we keep track of which images have

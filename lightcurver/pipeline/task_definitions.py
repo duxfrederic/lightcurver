@@ -18,6 +18,7 @@ from ..structure.user_config import get_user_config
 from ..structure.database import get_pandas, execute_sqlite_query
 from ..processes.frame_importation import process_new_frame
 from ..processes.plate_solving import solve_one_image_and_update_database
+from ..processes.frame_star_assignment import populate_stars_in_frames
 from ..utilities.footprint import (calc_common_and_total_footprint, get_frames_hash,
                                    save_combined_footprints_to_db, load_combined_footprint_from_db)
 from ..plotting.footprint_plotting import plot_footprints
@@ -31,51 +32,17 @@ def worker_init(log_queue):
     logger.addHandler(q_handler)
 
 
-def log_function(use_multiprocessing=True):
-    def decorator(func):
-        @functools.wraps(func)
-        def wrapper(*args, **kwargs):
-            user_config = get_user_config()
-            log_directory = user_config.get('log_directory')
-
-            process_info = f"Process-{os.getpid()}" if use_multiprocessing else "Function"
-            logger = logging.getLogger(process_info)
-
-            if not logger.handlers:  # ensure we don't add handlers more than once
-                if log_directory is not None:
-                    log_directory.mkdir(exist_ok=True)
-                    log_file_path = log_directory / f'logs_{datetime.now().strftime("%Y%m%d_%H%M%S")}.log'
-                    # for writing logs to a file
-                    file_handler = logging.FileHandler(log_file_path)
-                    file_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-                    file_handler.setFormatter(file_formatter)
-
-                # for printing logs to the terminal
-                stream_handler = logging.StreamHandler()
-                stream_formatter = logging.Formatter('%(name)s - %(levelname)s - %(message)s')
-                stream_handler.setFormatter(stream_formatter)
-
-                logger.addHandler(file_handler)
-                logger.addHandler(stream_handler)
-                logger.setLevel(logging.INFO)
-
-            # logging logic (with or without frame ID)
-            if args and isinstance(args[-1], str) and args[-1].startswith("FrameID-"):
-                frame_id_for_logger = args[-1]
-                logger.info(f"{func.__name__} .... Processing with ID {frame_id_for_logger}")
-                result = func(*args[:-1], **kwargs)  # Execute the function without the last arg
-            else:
-                logger.info(f"{func.__name__} .... Processing")
-                result = func(*args, **kwargs)
-
-            return result
-
-        return wrapper
-
-    return decorator
+def log_process(func):
+    @functools.wraps(func)
+    def wrapper(args):
+        frame_id_for_logger = args[-1]
+        logger = logging.getLogger(f"Process-{os.getpid()}")
+        logger.info(f"{func.__name__} .... Processing image with ID {frame_id_for_logger}")
+        return func(*args[:-1])  # execute original function without the last arg (used for logging)
+    return wrapper
 
 
-@log_function
+@log_process
 def process_new_frame_wrapper(*args):
     process_new_frame(*args)
 
@@ -114,7 +81,7 @@ def read_convert_skysub_character_catalog():
     listener.stop()
 
 
-@log_function
+@log_process
 def solve_one_image_and_update_database_wrapper(*args):
     solve_one_image_and_update_database(*args)
 
@@ -155,7 +122,6 @@ def plate_solve_all_images():
     listener.stop()
 
 
-@log_function(use_multiprocessing=False)
 def calc_common_and_total_footprint_and_save():
     """
     verifies whether the footprint was already calculated for the set of frames at hand
@@ -193,8 +159,9 @@ def calc_common_and_total_footprint_and_save():
     logger.info(f'Footprint with (hash {frames_hash} saved to db')
 
 
-@log_function(use_multiprocessing=False)
 def query_gaia_stars():
+    populate_stars_in_frames()
+    return
     logger = logging.getLogger("gaia_stars")
     user_config = get_user_config()
     frames_info = get_pandas(columns=['id', 'pixel_scale'], conditions=['frames.eliminated != 1'])
@@ -240,6 +207,8 @@ def query_gaia_stars():
         radius = user_config['ROI_disk_radius_arcseconds'] / 3600.
         query_footprint = {'center': center, 'radius': radius}
         query_function = find_gaia_stars_in_circle
+    else:
+        raise RuntimeError("Not an agreed upon strategy for star selection:", user_config['star_selection_strategy'])
 
     stars_table = query_function(
                         query_footprint,
@@ -264,3 +233,4 @@ def query_gaia_stars():
                      star['pmra'], star['pmdec'], star['source_id'],
                      distance_to_roi)
         execute_sqlite_query(insert_query, params=star_data, is_select=False)
+    populate_stars_in_frames()
