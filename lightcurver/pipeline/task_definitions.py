@@ -12,7 +12,6 @@ import functools
 import json
 from astropy.coordinates import SkyCoord
 import astropy.units as u
-from datetime import datetime
 
 from ..structure.user_config import get_user_config
 from ..structure.database import get_pandas, execute_sqlite_query
@@ -160,8 +159,6 @@ def calc_common_and_total_footprint_and_save():
 
 
 def query_gaia_stars():
-    populate_stars_in_frames()
-    return
     logger = logging.getLogger("gaia_stars")
     user_config = get_user_config()
     frames_info = get_pandas(columns=['id', 'pixel_scale'], conditions=['frames.eliminated != 1'])
@@ -221,7 +218,7 @@ def query_gaia_stars():
     message = f"Too few stars compared to the config criterion! Only {len(stars_table)} stars available."
     assert len(stars_table) >= user_config['min_number_stars'], message
 
-    columns = ['combined_footprint_hash', 'ra', 'dec', 'gmag', 'rmag', 'bmag', 'pmra', 'pmdec',
+    columns = ['combined_footprint_hash', 'ra', 'dec', 'gmag', 'rmag', 'bmag', 'pmra', 'pmdec', 'ref_epoch',
                'gaia_id', 'distance_to_roi_arcsec']
     insert_query = f"INSERT INTO stars ({', '.join(columns)}) VALUES ({', '.join(len(columns)*['?'])})"
     for star in stars_table:
@@ -230,7 +227,7 @@ def query_gaia_stars():
 
         star_data = (frames_hash, star['ra'], star['dec'], star['phot_g_mean_mag'],
                      star['phot_rp_mean_mag'],  star['phot_bp_mean_mag'],
-                     star['pmra'], star['pmdec'], star['source_id'],
+                     star['pmra'], star['pmdec'], star['ref_epoch'], star['source_id'],
                      distance_to_roi)
         execute_sqlite_query(insert_query, params=star_data, is_select=False)
     populate_stars_in_frames()
