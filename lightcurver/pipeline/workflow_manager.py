@@ -6,8 +6,9 @@ import logging
 from ..structure.user_config import get_user_config
 from ..structure.database import initialize_database
 from .task_definitions import (read_convert_skysub_character_catalog,
-                               plate_solve_all_images, calc_common_and_total_footprint_and_save,
-                               query_gaia_stars)
+                               plate_solve_all_images, calc_common_and_total_footprint_and_save)
+from ..processes.cutout_making import extract_all_stamps
+from ..processes.star_querying import query_gaia_stars
 
 
 class WorkflowManager:
@@ -26,7 +27,7 @@ class WorkflowManager:
             'plate_solving': plate_solve_all_images,
             'calculate_common_and_total_footprint': calc_common_and_total_footprint_and_save,
             'query_gaia_for_stars': query_gaia_stars,
-            'stamp_extraction': _tmp_decoy,
+            'stamp_extraction': extract_all_stamps,
             'psf_modeling': _tmp_decoy,
             'star_photometry': _tmp_decoy,
             'calculate_normalization_coefficient': _tmp_decoy,

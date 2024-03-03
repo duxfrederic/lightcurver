@@ -32,11 +32,13 @@ def get_pandas(conditions=None, columns=None, table='frames'):
         conn.close()
 
 
-def execute_sqlite_query(query, params=(), is_select=True, timeout=15.0):
+def execute_sqlite_query(query, params=(), is_select=True, timeout=15.0, use_pandas=False):
     db_path = get_user_config()['database_path']
     with sqlite3.connect(db_path, timeout=timeout) as conn:
         cursor = conn.cursor()
         if is_select:
+            if use_pandas:
+                return pd.read_sql_query(sql=query, con=conn, params=params)
             cursor.execute(query, params)
             return cursor.fetchall()
         else:
@@ -53,6 +55,40 @@ def get_count_based_on_conditions(conditions, table='frames'):
     request = f"select count(*) from {table} where {conditions}"
 
     return cursor.execute(request).fetchone()[0]
+
+
+def query_stars_for_frame_and_footprint(frame_id, combined_footprint_hash=None):
+    """
+    Queries and returns all stars linked to a specific frame, optionally filtered by a specific footprint hash.
+
+    Parameters:
+    - db_path: The path to the SQLite database file.
+    - frame_id: The ID of the frame for which to find linked stars.
+    - combined_footprint_hash: Optional. The combined footprint hash to filter the stars by.
+
+    Returns:
+    a pandas dataframe with the stars associated to the frame and footprint
+    """
+
+    sql_query = """
+    SELECT stars.*
+    FROM stars
+    INNER JOIN stars_in_frames ON stars.gaia_id = stars_in_frames.gaia_id 
+                                  AND stars.combined_footprint_hash = stars_in_frames.combined_footprint_hash
+    WHERE stars_in_frames.frame_id = ?
+    """
+
+    # params for the query
+    params = [frame_id]
+
+    # if combined_footprint_hash, add it to the query and params
+    if combined_footprint_hash is not None:
+        sql_query += "AND stars.combined_footprint_hash = ?"
+        params.append(combined_footprint_hash)
+
+    stars = execute_sqlite_query(sql_query, params=params, is_select=True, use_pandas=True)
+
+    return stars
 
 
 def initialize_database():
