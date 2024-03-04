@@ -9,7 +9,7 @@ from .task_definitions import (read_convert_skysub_character_catalog,
                                plate_solve_all_frames, calc_common_and_total_footprint_and_save)
 from ..processes.cutout_making import extract_all_stamps
 from ..processes.star_querying import query_gaia_stars
-
+from ..processes.psf_modelling import model_all_psfs
 
 class WorkflowManager:
     def __init__(self, logger=None):
@@ -28,7 +28,7 @@ class WorkflowManager:
             'calculate_common_and_total_footprint': calc_common_and_total_footprint_and_save,
             'query_gaia_for_stars': query_gaia_stars,
             'stamp_extraction': extract_all_stamps,
-            'psf_modeling': _tmp_decoy,
+            'psf_modeling': model_all_psfs,
             'star_photometry': _tmp_decoy,
             'calculate_normalization_coefficient': _tmp_decoy,
             'prepare_calibrated_cutouts': _tmp_decoy,

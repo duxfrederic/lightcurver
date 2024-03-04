@@ -16,7 +16,7 @@ class EphemeridesTestCase(unittest.TestCase):
 
         # Verify the structure and some key aspects of the results
         self.assertIsInstance(results, dict)
-        self.assertIn('astro_conditions', results)
+        self.assertIn('weird_astro_conditions', results)
         self.assertIn('comments', results)
         self.assertIn('target_info', results)
         self.assertIn('moon_info', results)

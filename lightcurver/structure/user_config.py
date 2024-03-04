@@ -41,4 +41,10 @@ def get_user_config():
     for directory in [config['plots_dir'], config['logs_dir'], config['frames_dir']]:
         directory.mkdir(parents=True, exist_ok=True)
     assert 'redo' in config
+
+    # star names: make it a list if user defined a string.
+    # e.g. stars_to_use = 'abcd' --> ['a', 'b', 'c', 'd']
+    if type(config['stars_to_use']) is str:
+        config['stars_to_use'] = [c for c in config['stars_to_use']]
+
     return config

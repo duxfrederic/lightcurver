@@ -57,6 +57,59 @@ def get_count_based_on_conditions(conditions, table='frames'):
     return cursor.execute(request).fetchone()[0]
 
 
+def select_stars_for_a_frame(frame_id, stars_to_use=None):
+    """
+    Selects all the stars available in a given frame, either
+     -- top 10 closest stars to ROI if stars_to_use is None
+     -- top 'stars_to_use' closest stars to ROI if stars_to_use is int
+     -- stars whose name is in 'stars_to_use' if stars_to_use is a list.
+
+    Useful for selecting the stars we want to use when modelling the PSF
+    or calculating a normalization coefficient.
+    
+    #TODO very similar to query_stars_for_frame_and_footprint,
+    #TODO consider merging in the future.
+    Args:
+        frame_id:  database frame ID
+        stars_to_use:   None or int or list, see docstring
+
+    Returns:
+        a pandas dataframe containing our stars (name, id coordinates ...)
+    """
+    base_query = """
+        SELECT 
+            sif.frame_id, 
+            s.gaia_id, 
+            s.name, 
+            s.ra, 
+            s.dec, 
+            s.distance_to_roi_arcsec
+        FROM stars_in_frames sif
+        JOIN stars s ON sif.gaia_id = s.gaia_id AND sif.combined_footprint_hash = s.combined_footprint_hash
+        WHERE sif.frame_id = ?"""
+    if stars_to_use is None:
+        stars_to_use = 10  # make it an int for top 10 selection
+
+    if type(stars_to_use) is int:
+        # Query for top closest stars
+        query = base_query + """
+        ORDER BY s.distance_to_roi_arcsec ASC
+        LIMIT 10
+        """
+        params = (frame_id,)
+    elif type(stars_to_use) is list:
+        # Query for stars in the user-defined list
+        placeholders = ','.join(['?'] * len(stars_to_use))
+        query = base_query + f"""
+        AND s.name IN ({placeholders})
+        """
+        params = (frame_id, *stars_to_use)
+    else:
+        raise RuntimeError(f'stars_to_use argument: expected types None, int or list, got: {type(stars_to_use)}')
+
+    return execute_sqlite_query(query, params, use_pandas=True)
+
+
 def query_stars_for_frame_and_footprint(frame_id, combined_footprint_hash=None):
     """
     Queries and returns all stars linked to a specific frame, optionally filtered by a specific footprint hash.
@@ -115,7 +168,7 @@ def initialize_database():
         "telescope_name TEXT",
         "telescope_imager_name TEXT",
         "plate_solved INTEGER DEFAULT 0",
-        "pixel_scale FLOAT DEFAULT NULL",
+        "pixel_scale REAL DEFAULT NULL",
         "eliminated INTEGER DEFAULT 0",
         "airmass REAL DEFAULT NULL",
         "degrees_to_moon REAL DEFAULT NULL",
@@ -180,9 +233,8 @@ def initialize_database():
     cursor.execute("""CREATE TABLE IF NOT EXISTS PSFs (
                       id INTEGER, 
                       frame_id INTEGER,
-                      float chi2, -- chi2 of the fit of the PSF
-                      psf_name TEXT, -- reference to the config file given in name
-                      hdf5_route TEXT, -- where in the hdf5 file is the PSF,
+                      chi2 REAL, -- chi2 of the fit of the PSF
+                      psf_ref TEXT, -- sorted concatenation of all star names used in the model.
                       FOREIGN KEY (frame_id) REFERENCES frames(id),
                       PRIMARY KEY (id, frame_id)
                       )""")
@@ -194,8 +246,8 @@ def initialize_database():
                       frame_id INTEGER,
                       psf_id INTEGER,
                       coefficient_name TEXT, -- reference to the config file given in name
-                      coefficient FLOAT,
-                      coefficient_uncertainty FLOAT,
+                      coefficient REAL,
+                      coefficient_uncertainty REAL,
                       FOREIGN KEY (frame_id) REFERENCES frames(id),
                       FOREIGN KEY (psf_id) REFERENCES PSFs(id),
                       PRIMARY KEY (id, psf_id, frame_id)
@@ -206,8 +258,8 @@ def initialize_database():
     cursor.execute("""CREATE TABLE IF NOT EXISTS approximate_zeropoints (
                       id INTEGER, 
                       norm_coefficient_id INTEGER,
-                      zeropoint FLOAT,
-                      zeropoint_uncertainty FLOAT,
+                      zeropoint REAL,
+                      zeropoint_uncertainty REAL,
                       FOREIGN KEY (norm_coefficient_id) REFERENCES normalization_coefficients(id),
                       PRIMARY KEY (id, norm_coefficient_id)
                       )""")
