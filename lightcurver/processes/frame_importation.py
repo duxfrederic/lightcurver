@@ -27,7 +27,7 @@ def process_new_frame(fits_file, user_config, logger):
     """
     trim_vertical = user_config.get('trim_vertical', 0)
     trim_horizontal = user_config.get('trim_horizontal', 0)
-    copied_image_relpath = Path('images') / fits_file.name
+    copied_image_relpath = Path('frames') / fits_file.name
     logger.info(f'  Importing {fits_file}.')
     with fits.open(str(fits_file), mode='readonly', ignore_missing_end=True, memmap=True) as hdu:
         hdu_index = 1 if len(hdu) > 1 else 0

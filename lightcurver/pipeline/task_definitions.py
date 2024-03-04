@@ -1,5 +1,5 @@
 # this file wraps around the processes defined in the processes subpackage.
-# the wrapper determine which images / regions / psfs (depending on task) need processing
+# the wrapper determine which frames / regions / psfs (depending on task) need processing
 # before proceeding, and adds structure around multiprocessing when needed.
 from multiprocessing import Pool, Manager
 import os
@@ -50,7 +50,7 @@ def read_convert_skysub_character_catalog():
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
     logger = logging.getLogger("PlateSolveLogger")
 
-    # find the new images, we compare on file name!
+    # find the new frames, we compare on file name!
     user_config = get_user_config()
     available_frames = sum([list(raw_dir.glob('*.fits')) for raw_dir in user_config['raw_dirs']], start=[])
     df_available_frames = pd.DataFrame({'frame_name': [frame.name for frame in available_frames]})
@@ -82,7 +82,7 @@ def solve_one_image_and_update_database_wrapper(*args):
     solve_one_image_and_update_database(*args)
 
 
-def plate_solve_all_images():
+def plate_solve_all_frames():
     # boilerplate logging queue and listener
     # TODO can we reduce the boiler plate?
     log_queue = Manager().Queue()
@@ -95,13 +95,13 @@ def plate_solve_all_images():
     user_config = get_user_config()
     workdir = Path(user_config['workdir'])
     if user_config['already_plate_solved']:
-        logger.info('The images are already plate solved according to user config. Stopping.')
+        logger.info('The frames are already plate solved according to user config. Stopping.')
         listener.stop()
         return
 
     frames_to_process = get_pandas(columns=['id', 'image_relpath', 'sources_relpath'],
                                    conditions=['plate_solved = 0', 'eliminated = 0'])
-    logger.info(f"Ready to plate solve {len(frames_to_process)} images.")
+    logger.info(f"Ready to plate solve {len(frames_to_process)} frames.")
 
     with Pool(processes=user_config['multiprocessing_cpu_count'],
               initializer=worker_init, initargs=(log_queue,)) as pool:

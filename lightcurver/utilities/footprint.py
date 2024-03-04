@@ -14,8 +14,8 @@ def calc_common_and_total_footprint(list_of_footprints):
     Calculate the common (intersection) and largest (union) footprints from a list of numpy arrays: products
     of astropy.wcs.WCS.calc_footprint.
     Then determines both the intersection and union of these
-    footprints using Shapely Polygons. The intersection represents the area common to all images,
-    while the union covers the total area spanned by any of the images.
+    footprints using Shapely Polygons. The intersection represents the area common to all frames,
+    while the union covers the total area spanned by any of the frames.
 
     Parameters:
     - list_of_fits_paths: A list of paths to FITS files.

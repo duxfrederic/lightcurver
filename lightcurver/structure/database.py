@@ -93,7 +93,7 @@ def query_stars_for_frame_and_footprint(frame_id, combined_footprint_hash=None):
 
 def initialize_database():
     """
-    initializes the database we'll be working with to keep track of our images.
+    initializes the database we'll be working with to keep track of our frames.
     """
     db_path = get_user_config()['database_path']
     conn = sqlite3.connect(db_path)
@@ -107,8 +107,8 @@ def initialize_database():
         "exptime REAL",
         "gain REAL",
         "original_image_path TEXT",  # e.g. /some/drive/2023-02-01T01:23:35.fits
-        "image_relpath TEXT UNIQUE",  # e.g. images/2023-02-01T01:23:35.fits -- relative to $workdir
-        "sources_relpath TEXT",  # convention: images/2023-02-01T01:23:35_sources.fits  -- same dir as above
+        "image_relpath TEXT UNIQUE",  # e.g. frames/2023-02-01T01:23:35.fits -- relative to $workdir
+        "sources_relpath TEXT",  # convention: frames/2023-02-01T01:23:35_sources.fits  -- same dir as above
         "telescope_latitude REAL",
         "telescope_longitude REAL",
         "telescope_elevation REAL",
@@ -172,7 +172,7 @@ def initialize_database():
                       PRIMARY KEY (frame_id, gaia_id, combined_footprint_hash)
                       )""")
 
-    # PSF is defined in yaml files (which stars compose it), here we keep track of which images have
+    # PSF is defined in yaml files (which stars compose it), here we keep track of which frames have
     # a given PSF.
     # we trace back to the above link of stars and frame to know which stars entered
     # the PSF exactly.
