@@ -27,8 +27,6 @@ def model_all_psfs():
                         conditions=['plate_solved = 1', 'eliminated = 0', 'roi_in_footprint = 1'])
     # for each frame, check if the PSF was already built -- else, go for it.
     for i, frame in frames.iterrows():
-        if frame['id'] != 33:
-            continue
         stars = select_stars_for_a_frame(frame['id'], stars_to_use)
         if len(stars) == 0:
             # will deal with this later.
