@@ -60,8 +60,10 @@ def solve_one_image_and_update_database(image_path, sources_path, user_config, f
         pixel_scale = 0.5 * (psx + psy) * 3600  # to arcsecond / pixel
         execute_sqlite_query(query="UPDATE frames SET pixel_scale = ? WHERE id = ?",
                              params=(pixel_scale, frame_id), is_select=False)
-
+        execute_sqlite_query(query= "UPDATE frames SET seeing_arcseconds = pixel_scale * seeing_pixels WHERE id = ?",
+                             params=(frame_id,), is_select=False)
     # at the end, set the image to plate solved in db
     execute_sqlite_query(query="UPDATE frames SET plate_solved = ? WHERE id = ?",
                          params=(1 if success else 0, frame_id), is_select=False)
+
 

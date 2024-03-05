@@ -215,6 +215,7 @@ def initialize_database():
         "sun_altitude REAL DEFAULT NULL",
         "seeing_pixels REAL DEFAULT NULL",
         "seeing_arcseconds REAL DEFAULT NULL",
+        "ellipticity REAL DEFAULT NULL",
         "azimuth REAL DEFAULT NULL",
         "altitude REAL DEFAULT NULL",
         "comment TEXT DEFAULT NULL",

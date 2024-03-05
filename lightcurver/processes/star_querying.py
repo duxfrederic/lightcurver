@@ -26,7 +26,9 @@ def query_gaia_stars():
                                  params=(frames_hash,), is_select=True)[0][0]
     if count > 0 and not user_config['gaia_query_redo']:
         logger.info(f'Gaia stars already fetched for this footprint: {frames_hash}')
-        # we're done
+        logger.info('Still re-calculating which star is in which frame again.')
+        # we still need to populate the new frames though
+        populate_stars_in_frames()
         return
     elif count > 0 and user_config['gaia_query_redo']:
         logger.info(f'Gaia stars already fetched for this footprint: {frames_hash} but redo is True.')

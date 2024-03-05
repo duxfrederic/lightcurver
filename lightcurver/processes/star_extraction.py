@@ -47,6 +47,8 @@ def extract_stars(image_background_subtracted, background_rms, detection_thresho
 
     # define some FWHM quantity
     sources['FWHM'] = 2 * (np.log(2) * (sources['a']**2 + sources['b']**2))**0.5
+    # and ellipticity
+    sources['ellipticity'] = 1 - sources['b'] / sources['a']
 
     # remove those occupying a weirdly small amount of space (likely hot pixels or cosmics)
     med_pix = np.median(sources['npix'])

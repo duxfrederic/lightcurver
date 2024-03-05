@@ -79,6 +79,7 @@ def process_new_frame(fits_file, user_config, logger):
         sources_table.write(user_config['workdir'] / sources_file_relpath, format='fits', overwrite=True)
 
         seeing_pixels = estimate_seeing(sources_table)
+        ellipticity = np.nanmedian(sources_table['ellipticity'])
         if 'telescope' in user_config:
             eph_dict = ephemeris(mjd=mjd_gain_filter_exptime_dict['mjd'],
                                  ra_object=user_config['ROI_ra_deg'],
@@ -101,6 +102,7 @@ def process_new_frame(fits_file, user_config, logger):
                           filter=mjd_gain_filter_exptime_dict['filter'],
                           exptime=mjd_gain_filter_exptime_dict['exptime'],
                           seeing_pixels=seeing_pixels,
+                          ellipticity=ellipticity,
                           ephemeris_dictionary=eph_dict,
                           database_connexion=conn,
                           telescope_information=telescope_information)
@@ -111,7 +113,7 @@ def process_new_frame(fits_file, user_config, logger):
 
 def add_frame_to_database(original_image_path, copied_image_relpath, sources_relpath,
                           mjd, gain, filter, exptime,
-                          seeing_pixels,
+                          seeing_pixels, ellipticity,
                           database_connexion,
                           telescope_information=None,
                           ephemeris_dictionary=None):
@@ -141,16 +143,17 @@ def add_frame_to_database(original_image_path, copied_image_relpath, sources_rel
     :param filter: string, filter of the observations
     :param exptime: float, exposure time
     :param seeing_pixels: Seeing value measured for this frame, float.
+    :param ellipticity: ellipticity of the psf, calculated as 1 - b/a
     :param database_connexion: SQLite3 connection object to the database
     :param telescope_information: Optional dictionary with telescope information
     :param ephemeris_dictionary: dictionary as returned by the ephemerides function of frame_characterization.
     :return: None
     """
     columns = ['original_image_path', 'image_relpath', 'sources_relpath',
-               'seeing_pixels', 'mjd', 'gain', 'filter', 'exptime']
+               'seeing_pixels', 'mjd', 'gain', 'filter', 'exptime', 'ellipticity']
 
     values = [str(original_image_path), str(copied_image_relpath), str(sources_relpath),
-              seeing_pixels, mjd, gain, filter, exptime]
+              seeing_pixels, mjd, gain, filter, exptime, ellipticity]
 
     # if telescope information, add it to the columns and values
     if telescope_information is not None:

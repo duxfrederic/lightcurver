@@ -208,8 +208,8 @@ def do_star_photometry():
         for j, frame in frames.iterrows():
             gaia_id = star['gaia_id']
             frame_id = frame['id']
-            flux = result['fluxes'][j]
-            flux_uncertainty = result['fluxes_uncertainties'][j]
+            flux = float(result['fluxes'][j])
+            flux_uncertainty = float(result['fluxes_uncertainties'][j])
             flux_data.append((frame_id, gaia_id, flux, flux_uncertainty))
 
         # big insert while updating if value already in DB...

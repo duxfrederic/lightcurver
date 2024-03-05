@@ -2,9 +2,7 @@ from shapely.geometry import Point, Polygon
 import json
 import sqlite3
 
-
 from ..structure.user_config import get_user_config
-from ..structure.database import execute_sqlite_query
 
 
 def populate_stars_in_frames():
