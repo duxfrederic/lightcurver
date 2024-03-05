@@ -38,12 +38,12 @@ def extract_stamp(data, header, exptime, sky_coord, cutout_size):
     data_cutout_electrons = exptime * data_cutout.data
 
     # noise map given that the data is now in electrons ...
-    stddev = 0.25 * (
-                       np.nanstd(data_cutout_electrons[:, 0])
-                       + np.nanstd(data_cutout_electrons[0, :])
-                       + np.nanstd(data_cutout_electrons[:, -1])
-                       + np.nanstd(data_cutout_electrons[-1, :])
-                     )
+    stddev = np.nanmean([
+           np.nanstd(data_cutout_electrons[:, 0]),
+           np.nanstd(data_cutout_electrons[0, :]),
+           np.nanstd(data_cutout_electrons[:, -1]),
+           np.nanstd(data_cutout_electrons[-1, :]),
+    ])
     noisemap = stddev + np.sqrt(np.abs(data_cutout_electrons))
     # remove zeros if there are any ...
     noisemap[noisemap < 1e-7] = 1e-7

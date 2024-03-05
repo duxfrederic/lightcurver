@@ -3,6 +3,7 @@ workdir: /scratch/VST_J0248_for_new_pipeline/
 # where to find new images
 raw_dirs:
   - /scratch/VST_J0248_for_new_pipeline/raw
+  - /scratch/VST_J0248_for_new_pipeline/raw_2
 # redo flag, used by most processes
 redo: 0
 # for logging
@@ -65,7 +66,7 @@ astrometry_net_api_key: null
 # param name: 'stars_per_frame'
 # the latter is prefered when you're desperate for stars, querying a much larger footprint.
 # in summary: 'common_footprint_stars', or 'ROI_disk', or 'stars_per_frame'.
-star_selection_strategy: 'common_footprint_stars'
+star_selection_strategy: 'ROI_disk'
 # if the above is 'ROI_disk', provide here the radius in arcseconds:
 ROI_disk_radius_arcseconds: 160
 # now the stars, depending on your setup you will need to probe a different range
@@ -91,7 +92,7 @@ gaia_query_redo: false
 # these stars will be used for the PSF model and normalization.
 # if null: uses the top 10 closest star to the ROI.
 stars_to_use_psf: null
-stars_to_use_norm: 'ab'
+stars_to_use_norm: 'abcd'
 
 # Stamp extraction
 stamp_size_stars: 32
@@ -100,6 +101,7 @@ redo_stamp_extraction: false
 
 
 # PSF modelling
+redo_psf: true
 subsampling_factor: 2
 n_iter_analytic: 60
 n_iter_pixels: 3000

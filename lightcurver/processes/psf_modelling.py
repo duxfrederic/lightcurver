@@ -27,14 +27,16 @@ def model_all_psfs():
                         conditions=['plate_solved = 1', 'eliminated = 0', 'roi_in_footprint = 1'])
     # for each frame, check if the PSF was already built -- else, go for it.
     for i, frame in frames.iterrows():
+        if frame['id'] != 33:
+            continue
         stars = select_stars_for_a_frame(frame['id'], stars_to_use)
         if len(stars) == 0:
             # will deal with this later.
-            raise
+            raise RuntimeError("No star in this frame!")
         psf_ref = 'psf_' + ''.join(sorted(stars['name']))
 
         # check so we don't redo for nothing
-        if check_psf_exists(frame['id'], psf_ref):
+        if check_psf_exists(frame['id'], psf_ref) and not user_config['redo_psf']:
             continue
 
         # get the cutouts
@@ -47,12 +49,18 @@ def model_all_psfs():
             cosmics_masks = np.array([mask_group[name][...] for name in sorted(stars['name'])]).astype(bool)
             # invert because the cosmics are marked as True, but we want the healthy pixels to be marked as True:
             cosmics_masks = ~cosmics_masks
-
+        isnan = np.where(np.isnan(datas)*np.isnan(noisemaps))
+        datas[isnan] = 0.
+        noisemaps[isnan] = 1.0
+        cosmics_masks[isnan] = False
+        # we set the initial guess for the position of the star to the center (guess_method thing)
+        # because we are confident that is where the star will be (plate solving + gaia proper motions)
         result = build_psf(datas, noisemaps, subsampling_factor=user_config['subsampling_factor'],
                            n_iter_analytic=user_config['n_iter_analytic'],
                            n_iter_adabelief=user_config['n_iter_pixels'],
-                           masks=cosmics_masks)
-        psf_plots_dir = user_config['plots_dir'] / psf_ref
+                           masks=cosmics_masks,
+                           guess_method_star_position='center')
+        psf_plots_dir = user_config['plots_dir'] / 'PSFs'
         psf_plots_dir.mkdir(exist_ok=True)
         frame_name = Path(frame['image_relpath']).stem
         seeing = frame['seeing_pixels'] * frame['pixel_scale']
@@ -74,7 +82,11 @@ def model_all_psfs():
             psf_group['full_psf'] = np.array(result['full_psf'])
 
         # and update the database.
-        query = "INSERT INTO PSFs (frame_id, chi2, psf_ref) VALUES (?, ?, ?)"
-        params = (frame['id'], float(result['chi2']), psf_ref)
-        execute_sqlite_query(query, params, is_select=False)
+        delete_query = "DELETE FROM PSFs WHERE frame_id = ? AND psf_ref = ?"
+        delete_params = (frame['id'], psf_ref)
+        execute_sqlite_query(delete_query, delete_params, is_select=False)
+        insert_query = "INSERT INTO PSFs (frame_id, chi2, psf_ref) VALUES (?, ?, ?)"
+        insert_params = (frame['id'], float(result['chi2']), psf_ref)
+        execute_sqlite_query(insert_query, insert_params, is_select=False)
+
 
