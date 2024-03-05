@@ -71,7 +71,7 @@ def do_one_deconvolution(data, noisemap, psf, subsampling_factor):
     optim = Optimizer(loss, parameters, method='adabelief')
 
     optimiser_optax_option = {
-                'max_iterations': 3000, 'min_iterations': None,
+                'max_iterations': 500, 'min_iterations': None,
                 'init_learning_rate': 2e-3, 'schedule_learning_rate': True,
                 'restart_from_init': True, 'stop_at_loss_increase': False,
                 'progress_bar': True, 'return_param_history': True
@@ -128,22 +128,29 @@ def get_frames_for_star_without_flux(gaia_id):
     SELECT f.*
     FROM frames f
     JOIN stars_in_frames sif ON f.id = sif.frame_id
-    LEFT JOIN star_flux_in_frame sff ON f.id = sff.frame_id AND sif.gaia_id = sff.star_id
-    WHERE sif.gaia_id = ? AND sff.id IS NULL
-    """
+    LEFT JOIN star_flux_in_frame sff ON f.id = sff.frame_id AND sif.gaia_id = sff.star_gaia_id
+    WHERE sif.gaia_id = ? AND sff.frame_id IS NULL"""
     params = (gaia_id,)
     return execute_sqlite_query(query, params, is_select=True, use_pandas=True)
 
 
-def insert_star_fluxes(flux_data):
+def update_star_fluxes(flux_data):
     db_path = get_user_config()['database_path']
     with sqlite3.connect(db_path, timeout=15.0) as conn:
         cursor = conn.cursor()
-        query = """
-        INSERT INTO star_flux_in_frame (frame_id, star_id, flux, flux_uncertainty)
+
+        # insert query with ON CONFLICT clause for bulk update
+        # upon ON CONFLICT (integrity error due to trying to insert a flux for a given star and frame again),
+        # as we would if we "redo", then we do indeed erase the previous values and add the new ones.
+        insert_query = """
+        INSERT INTO star_flux_in_frame (frame_id, star_gaia_id, flux, flux_uncertainty)
         VALUES (?, ?, ?, ?)
+        ON CONFLICT(frame_id, star_gaia_id) DO UPDATE SET
+        flux=excluded.flux, flux_uncertainty=excluded.flux_uncertainty
         """
-        cursor.executemany(query, flux_data)
+
+        cursor.executemany(insert_query, flux_data)
+
         conn.commit()
 
 
@@ -163,6 +170,9 @@ def do_star_photometry():
     frame_selector = get_frames_for_star if user_config['redo_star_photometry'] else get_frames_for_star_without_flux
     for i, star in stars.iterrows():
         frames = frame_selector(star['gaia_id'])
+        if len(frames) == 0:
+            # we up to date, nothing to do
+            continue
         # build the data for deconvolution
         with h5py.File(user_config['regions_path'], 'r') as h5f:
             data = []
@@ -178,7 +188,7 @@ def do_star_photometry():
                 stars_psf = select_stars_for_a_frame(frame['id'], user_config['stars_to_use_psf'])
                 psf_ref = 'psf_' + ''.join(sorted(stars_psf['name']))
                 mask.append(h5f[f"{frame['image_relpath']}/cosmicsmask/{star['name']}"][...])
-                psf.append(h5f[f"{frame['image_relpath']}/{psf_ref}/{star['name']}"][...])
+                psf.append(h5f[f"{frame['image_relpath']}/{psf_ref}/narrow_psf"][...])
             data, noisemap, mask, psf = np.array(data), np.array(noisemap), np.array(mask), np.array(psf)
             # cosmics: masks are 'true' where cosmic, and we typically want it to "true" for good pixels
             mask = ~(np.array(mask).astype(bool))  # so we invert it.
@@ -192,17 +202,16 @@ def do_star_photometry():
                                       subsampling_factor=user_config['subsampling_factor'])
 
         # now we can insert our results in our dedicated database table.
-        # flux_data should be a list of tuples, each containing (frame_id, star_id, flux, flux_uncertainty)
+        # flux_data should be a list of tuples, each containing (frame_id, star_gaia_id, flux, flux_uncertainty)
         flux_data = []
         # the order of the frames is the same as before, and the same as that of our arrays and fluxes.
         for j, frame in frames.iterrows():
-            # Assuming star_id is the same as gaia_id, which might need adjustment based on your schema
-            star_id = star['id']  # Adjust according to your actual schema if needed
+            gaia_id = star['gaia_id']
             frame_id = frame['id']
             flux = result['fluxes'][j]
             flux_uncertainty = result['fluxes_uncertainties'][j]
-            flux_data.append((frame_id, star_id, flux, flux_uncertainty))
+            flux_data.append((frame_id, gaia_id, flux, flux_uncertainty))
 
-        # big insert
-        insert_star_fluxes(flux_data)
+        # big insert while updating if value already in DB...
+        update_star_fluxes(flux_data)
         # done!

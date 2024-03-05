@@ -281,12 +281,12 @@ def initialize_database():
     # we'll also need to keep track of the flux of each star in each frame
     cursor.execute("""CREATE TABLE IF NOT EXISTS star_flux_in_frame (
                       frame_id INTEGER,
-                      star_id INTEGER, 
+                      star_gaia_id INTEGER, 
                       flux REAL, -- in e- / second
                       flux_uncertainty REAL,
                       FOREIGN KEY (frame_id) REFERENCES frames(id),
-                      FOREIGN KEY (star_id) REFERENCES stars(id),
-                      PRIMARY KEY (frame_id, star_id)
+                      FOREIGN KEY (star_gaia_id) REFERENCES stars(gaia_id),
+                      PRIMARY KEY (frame_id, star_gaia_id)
                       )""")
 
     # very similarly to PSFs, we keep track of normalization coefficients.
