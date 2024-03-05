@@ -44,7 +44,8 @@ def get_user_config():
 
     # star names: make it a list if user defined a string.
     # e.g. stars_to_use = 'abcd' --> ['a', 'b', 'c', 'd']
-    if type(config['stars_to_use']) is str:
-        config['stars_to_use'] = [c for c in config['stars_to_use']]
-
+    if type(config['stars_to_use_psf']) is str:
+        config['stars_to_use_psf'] = [c for c in config['stars_to_use_psf']]
+    if type(config['stars_to_use_norm']) is str:
+        config['stars_to_use_norm'] = [c for c in config['stars_to_use_norm']]
     return config

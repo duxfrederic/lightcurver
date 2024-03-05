@@ -10,6 +10,8 @@ from .task_definitions import (read_convert_skysub_character_catalog,
 from ..processes.cutout_making import extract_all_stamps
 from ..processes.star_querying import query_gaia_stars
 from ..processes.psf_modelling import model_all_psfs
+from ..processes.star_photometry import do_star_photometry
+
 
 class WorkflowManager:
     def __init__(self, logger=None):
@@ -29,7 +31,7 @@ class WorkflowManager:
             'query_gaia_for_stars': query_gaia_stars,
             'stamp_extraction': extract_all_stamps,
             'psf_modeling': model_all_psfs,
-            'star_photometry': _tmp_decoy,
+            'star_photometry': do_star_photometry,
             'calculate_normalization_coefficient': _tmp_decoy,
             'prepare_calibrated_cutouts': _tmp_decoy,
         }

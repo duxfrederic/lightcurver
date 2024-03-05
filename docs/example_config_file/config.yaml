@@ -1,8 +1,8 @@
 # the working directory
-workdir: /storage/COSMOGRAIL/VST_J0248_for_new_pipeline/
+workdir: /scratch/VST_J0248_for_new_pipeline/
 # where to find new images
 raw_dirs:
-  - /storage/COSMOGRAIL/VST_J0248_for_new_pipeline/raw
+  - /scratch/VST_J0248_for_new_pipeline/raw
 # redo flag, used by most processes
 redo: 0
 # for logging
@@ -65,7 +65,7 @@ astrometry_net_api_key: null
 # param name: 'stars_per_frame'
 # the latter is prefered when you're desperate for stars, querying a much larger footprint.
 # in summary: 'common_footprint_stars', or 'ROI_disk', or 'stars_per_frame'.
-star_selection_strategy: 'ROI_disk'
+star_selection_strategy: 'common_footprint_stars'
 # if the above is 'ROI_disk', provide here the radius in arcseconds:
 ROI_disk_radius_arcseconds: 160
 # now the stars, depending on your setup you will need to probe a different range
@@ -85,3 +85,24 @@ star_max_phot_g_mean_flux_error: 2.0
 min_number_stars: 4
 # and whether we query again ... please set it to true should you need to change the footprint type
 gaia_query_redo: false
+
+# each good star is then named with a single letter, by ascending distance from the ROI.
+# if more than 26, names will include 'aa', 'ab', etc. --> then switch to a list instead of a string.
+# these stars will be used for the PSF model and normalization.
+# if null: uses the top 10 closest star to the ROI.
+stars_to_use_psf: null
+stars_to_use_norm: 'ab'
+
+# Stamp extraction
+stamp_size_stars: 32
+stamp_size_ROI: 64
+redo_stamp_extraction: false
+
+
+# PSF modelling
+subsampling_factor: 2
+n_iter_analytic: 60
+n_iter_pixels: 3000
+
+# star photometry
+redo_star_photometry: false

@@ -57,6 +57,45 @@ def get_count_based_on_conditions(conditions, table='frames'):
     return cursor.execute(request).fetchone()[0]
 
 
+def select_stars(stars_to_use=None):
+    """
+    Selects all the stars, either
+     -- top 10 closest stars to ROI if stars_to_use is None
+     -- top 'stars_to_use' closest stars to ROI if stars_to_use is int
+     -- stars whose name is in 'stars_to_use' if stars_to_use is a list.
+
+    Useful for selecting the stars we want to use when calculating a normalization coefficient.
+
+    Args:
+        stars_to_use:   None or int or list, see docstring
+
+    Returns:
+        a pandas dataframe containing our stars (name, id coordinates ...)
+    """
+    base_query = "SELECT * FROM stars s"
+    if stars_to_use is None:
+        stars_to_use = 10  # make it an int for top 10 selection
+
+    if type(stars_to_use) is int:
+        # Query for top closest stars
+        query = base_query + """
+        ORDER BY s.distance_to_roi_arcsec ASC
+        LIMIT 10
+        """
+        params = ()
+    elif type(stars_to_use) is list:
+        # Query for stars in the user-defined list
+        placeholders = ','.join(['?'] * len(stars_to_use))
+        query = base_query + f"""
+        WHERE s.name IN ({placeholders})
+        """
+        params = (*stars_to_use,)
+    else:
+        raise RuntimeError(f'stars_to_use argument: expected types None, int or list, got: {type(stars_to_use)}')
+
+    return execute_sqlite_query(query, params, use_pandas=True)
+
+
 def select_stars_for_a_frame(frame_id, stars_to_use=None):
     """
     Selects all the stars available in a given frame, either
@@ -234,18 +273,29 @@ def initialize_database():
                       id INTEGER, 
                       frame_id INTEGER,
                       chi2 REAL, -- chi2 of the fit of the PSF
-                      psf_ref TEXT, -- sorted concatenation of all star names used in the model.
+                      psf_ref TEXT, -- convention: sorted concatenation of all star names used in the model.
                       FOREIGN KEY (frame_id) REFERENCES frames(id),
                       PRIMARY KEY (id, frame_id)
                       )""")
 
-    # very similarly, we keep track of normalization coefficients.
-    # these are computed once per image in python.
+    # we'll also need to keep track of the flux of each star in each frame
+    cursor.execute("""CREATE TABLE IF NOT EXISTS star_flux_in_frame (
+                      frame_id INTEGER,
+                      star_id INTEGER, 
+                      flux REAL, -- in e- / second
+                      flux_uncertainty REAL,
+                      FOREIGN KEY (frame_id) REFERENCES frames(id),
+                      FOREIGN KEY (star_id) REFERENCES stars(id),
+                      PRIMARY KEY (frame_id, star_id)
+                      )""")
+
+    # very similarly to PSFs, we keep track of normalization coefficients.
+    # these are computed once per image within python, from the star fluxes above.
     cursor.execute("""CREATE TABLE IF NOT EXISTS normalization_coefficients (
                       id INTEGER, 
                       frame_id INTEGER,
                       psf_id INTEGER,
-                      coefficient_name TEXT, -- reference to the config file given in name
+                      coefficient_ref TEXT, -- convention: sorted concatenation of all star names used for this value.
                       coefficient REAL,
                       coefficient_uncertainty REAL,
                       FOREIGN KEY (frame_id) REFERENCES frames(id),

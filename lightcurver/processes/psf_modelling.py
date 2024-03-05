@@ -17,7 +17,7 @@ def check_psf_exists(frame_id, psf_ref):
 
 def model_all_psfs():
     user_config = get_user_config()
-    stars_to_use = user_config['stars_to_use']
+    stars_to_use = user_config['stars_to_use_psf']
 
     # where we'll save our stamps
     regions_file = user_config['regions_path']
@@ -72,60 +72,9 @@ def model_all_psfs():
             psf_group = frame_group.create_group(psf_ref)
             psf_group['narrow_psf'] = np.array(result['narrow_psf'])
             psf_group['full_psf'] = np.array(result['full_psf'])
-            
+
+        # and update the database.
         query = "INSERT INTO PSFs (frame_id, chi2, psf_ref) VALUES (?, ?, ?)"
         params = (frame['id'], float(result['chi2']), psf_ref)
         execute_sqlite_query(query, params, is_select=False)
 
-
-"""
-
-        imgname = image['imgname']
-        t0 = time()
-
-        # load stamps and noise maps for this image
-        data, noisemap = getData(imgname)
-        # open the file in which we'll store the result
-        with h5py.File(psfsfile, 'r+') as f:
-            # check if we need to build again
-            if not redo and (imgname + '_residuals') in f.keys():
-                print(imgname, 'already done and redo is False.')
-                continue
-
-            # call the routine defined above
-            kwargs_final, narrowpsf, numpsf, moffat, fullmodel, residuals, extra_fields = buildPSF(data,
-                                                                                                   noisemap)
-            # time for storage. If key already exists, gotta delete it since
-            # h5py does not like overwriting
-            for to_store, name in zip([data, noisemap, narrowpsf, numpsf, moffat, fullmodel, residuals],
-                                      ['data', 'noisemap', 'narrow', 'num', 'moffat', 'model', 'residuals']):
-                key = f"{imgname}_{name}"
-                if key in f.keys():
-                    del f[key]
-                f[key] = to_store
-
-        # write plots
-        if dopsfplots:
-            try:
-                # try because the analytical methods don't have a 'loss_history'
-                # field.
-                fig = plt.figure(figsize=(2.56, 2.56))
-                plt.plot(extra_fields['loss_history'])
-                plt.title('loss history')
-                plt.tight_layout()
-                with io.BytesIO() as buff:
-                    # write the plot to a buffer, read it with numpy
-                    fig.savefig(buff, format='raw')
-                    buff.seek(0)
-                    plotimg = np.frombuffer(buff.getvalue(), dtype=np.uint8)
-                    w, h = fig.canvas.get_width_height()
-                    # white <-> black:
-                    lossim = 255 - plotimg.reshape((int(h), int(w), -1))[:, :, 0].T[:, ::-1]
-                plt.close()
-            except:
-                print('no loss history in extra_fields')
-                lossim = np.zeros((256, 256))
-            plot_psf(image, noisemap, lossim)
-        # time of iteration
-        times.append(time() - t0)
-"""
