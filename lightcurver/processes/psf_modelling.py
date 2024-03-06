@@ -54,8 +54,8 @@ def model_all_psfs():
         # we set the initial guess for the position of the star to the center (guess_method thing)
         # because we are confident that is where the star will be (plate solving + gaia proper motions)
         result = build_psf(datas, noisemaps, subsampling_factor=user_config['subsampling_factor'],
-                           n_iter_analytic=user_config['n_iter_analytic'],
-                           n_iter_adabelief=user_config['n_iter_pixels'],
+                           n_iter_analytic=user_config['psf_n_iter_analytic'],
+                           n_iter_adabelief=user_config['psf_n_iter_pixels'],
                            masks=cosmics_masks,
                            guess_method_star_position='center')
         psf_plots_dir = user_config['plots_dir'] / 'PSFs'

@@ -101,10 +101,25 @@ redo_stamp_extraction: false
 
 
 # PSF modelling
-redo_psf: true
+redo_psf: false
 subsampling_factor: 2
-n_iter_analytic: 60
-n_iter_pixels: 3000
+psf_n_iter_analytic: 60
+psf_n_iter_pixels: 3000
+
+# general preparation beyond PSF.
+# we'll have a nice chi2 value for each PSF fit.
+# we can filter the bad fit by comparing the chi2 values.
+# so, psf_fit_exclude_strategy: 'null', or 'sigma_clip' 
+# so, first one would look like:
+#psf_fit_exclude_strategy: null  # not excluding anything
+# second one:
+psf_fit_exclude_strategy: 
+    sigma_clip: 4 # from how many sigma from the median do we exclude?
+# and a final one:
+#psf_fit_exclude_strategy:
+#    threshold: [0, 1.5] # range of values of chi2 that we keep.
+# uncomment one of them.
 
 # star photometry
-redo_star_photometry: false
+redo_star_photometry: true
+star_deconv_n_iter: 1000

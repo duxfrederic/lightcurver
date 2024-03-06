@@ -8,9 +8,11 @@ from starred.optim.optimization import Optimizer, FisherCovariance
 
 from ..structure.database import execute_sqlite_query, select_stars, select_stars_for_a_frame
 from ..structure.user_config import get_user_config
+from ..utilities.chi2_selector import get_psf_chi2_bounds
+from ..plotting.star_photometry_plotting import plot_joint_deconv_diagnostic
 
 
-def do_one_deconvolution(data, noisemap, psf, subsampling_factor):
+def do_one_deconvolution(data, noisemap, psf, subsampling_factor, n_iter=2000):
     """
     Joint 'deconvolution' of N stamps of a star (in data), with noisemap, and associated PSF at each slice.
     the subsampling factor is that used for building the psf model.
@@ -20,6 +22,7 @@ def do_one_deconvolution(data, noisemap, psf, subsampling_factor):
         noisemap:  numpy array (N, nx, ny) noisemap of the above
         psf: numpy array (N, nxx, nyy) PSF model, one per slice
         subsampling_factor: int, subsampling_factor of the psf model.
+        n_iter: int, number of adabelief iterations to do. default 2000
 
     Returns: dictionary, containing the fluxes (ready to be used) as a 1D array, the final kwargs of the optimization,
              the chi2, and by how much we rescaled the data before optimizing. (the fluxes are already scaled back
@@ -35,12 +38,12 @@ def do_one_deconvolution(data, noisemap, psf, subsampling_factor):
     xs = np.array([0.])
     ys = np.array([0.])
     # initial guess for fluxes, some kind of rough "aperture"  photometry with background subtraction
-    background_values = 0.25 * (
-            np.nanmedian(data[:, :1, :], axis=(1, 2)) +
-            np.nanmedian(data[:, :, :1], axis=(1, 2)) +
-            np.nanmedian(data[:, -1:, :], axis=(1, 2)) +
+    background_values = np.nanmean([
+            np.nanmedian(data[:, :1, :], axis=(1, 2)),
+            np.nanmedian(data[:, :, :1], axis=(1, 2)),
+            np.nanmedian(data[:, -1:, :], axis=(1, 2)),
             np.nanmedian(data[:, :, -1:], axis=(1, 2))
-    )
+    ])
     a_est = np.nansum(data, axis=(1, 2)) - data[0].size * background_values
     a_est = list(a_est)
 
@@ -71,7 +74,7 @@ def do_one_deconvolution(data, noisemap, psf, subsampling_factor):
     optim = Optimizer(loss, parameters, method='adabelief')
 
     optimiser_optax_option = {
-                'max_iterations': 500, 'min_iterations': None,
+                'max_iterations': n_iter, 'min_iterations': None,
                 'init_learning_rate': 2e-3, 'schedule_learning_rate': True,
                 'restart_from_init': True, 'stop_at_loss_increase': False,
                 'progress_bar': True, 'return_param_history': True
@@ -79,8 +82,12 @@ def do_one_deconvolution(data, noisemap, psf, subsampling_factor):
 
     optim.minimize(**optimiser_optax_option)
     kwargs_final = parameters.best_fit_values(as_kwargs=True)
+    modelled_pixels = model.model(kwargs_final)
+    residuals = data - modelled_pixels
+    # let's calculate a chi2 in each frame!
+    chi2_per_frame = np.nansum((residuals**2 / sigma_2), axis=(1, 2)) / model.image_size**2
+    chi2 = np.nanmean(chi2_per_frame)
     fluxes = scale * np.array(kwargs_final['kwargs_analytic']['a'])
-    chi2 = -2 * loss._log_likelihood_chi2(kwargs_final) / (model.image_size**2)
 
     # let us calculate the uncertainties ~ equivalent to photon noise / read noise
     fish = FisherCovariance(parameters, optim, diagonal_only=True)
@@ -95,42 +102,54 @@ def do_one_deconvolution(data, noisemap, psf, subsampling_factor):
         'fluxes': fluxes,
         'fluxes_uncertainties': fluxes_uncertainties,
         'chi2': chi2,
-        'loss_curve': optim.loss_history
+        'chi2_per_frame': np.array(chi2_per_frame),
+        'loss_curve': optim.loss_history,
+        'residuals': scale * residuals
     }
     return result
 
 
-def get_frames_for_star(gaia_id):
+def get_frames_for_star(gaia_id, psf_fit_chi2_min, psf_fit_chi2_max, only_fluxless_frames=False):
     """
-    Retrieves frames that include the given star
+    Retrieves frames that include the given star, provided that those frames have a PSF with a chi2 between
+    psf_fit_chi2_min and psf_fit_chi2_max. Optionally, can filter to include only frames without a flux measurement.
 
     :param gaia_id: The Gaia ID of the star.
-    :return: A list of frames that need flux measurements for the given star.
+    :param psf_fit_chi2_min: The minimum acceptable chi2 value for the PSF fit.
+    :param psf_fit_chi2_max: The maximum acceptable chi2 value for the PSF fit.
+    :param only_fluxless_frames: If True, only returns frames without a flux measurement for the star. Default is False.
+    :return: A list of frames that meet the criteria.
     """
+    # start building the base query
     query = """
-    SELECT f.*
+    SELECT f.*, ps.chi2, ps.psf_ref
     FROM frames f
     JOIN stars_in_frames sif ON f.id = sif.frame_id
-    WHERE sif.gaia_id = ?
     """
-    params = (gaia_id,)
-    return execute_sqlite_query(query, params, is_select=True, use_pandas=True)
+    # add the LEFT JOIN for star_flux_in_frame, if we only are selecting the frames without a flux measurement.
+    if only_fluxless_frames:
+        query += "LEFT JOIN star_flux_in_frame sff ON f.id = sff.frame_id AND sif.gaia_id = sff.star_gaia_id\n"
 
-
-def get_frames_for_star_without_flux(gaia_id):
+    # keep building the query
+    query += """
+    JOIN PSFs ps ON f.id = ps.frame_id
+    WHERE sif.gaia_id = ? 
     """
-    Retrieves frames that include the given star but do not yet have a flux measurement.
+    # the condition for frames without flux measurements
+    if only_fluxless_frames:
+        query += "AND sff.frame_id IS NULL\n"
 
-    :param gaia_id: The Gaia ID of the star.
-    :return: A list of frames that need flux measurements for the given star.
-    """
-    query = """
-    SELECT f.*
-    FROM frames f
-    JOIN stars_in_frames sif ON f.id = sif.frame_id
-    LEFT JOIN star_flux_in_frame sff ON f.id = sff.frame_id AND sif.gaia_id = sff.star_gaia_id
-    WHERE sif.gaia_id = ? AND sff.frame_id IS NULL"""
-    params = (gaia_id,)
+    # finish the query with PSF chi2 conditions and existence check for appropriate PSF, selecting
+    # only 1 to avoid selecting the same frame multiple times if multiple psf models are available for a given frame.
+    query += """
+    AND EXISTS (
+        SELECT 1
+        FROM PSFs ps
+        WHERE f.id = ps.frame_id
+        AND ps.chi2 BETWEEN ? AND ?
+    )"""
+    params = (gaia_id, psf_fit_chi2_min, psf_fit_chi2_max)
+
     return execute_sqlite_query(query, params, is_select=True, use_pandas=True)
 
 
@@ -143,8 +162,8 @@ def update_star_fluxes(flux_data):
         # upon ON CONFLICT (integrity error due to trying to insert a flux for a given star and frame again),
         # as we would if we "redo", then we do indeed erase the previous values and add the new ones.
         insert_query = """
-        INSERT INTO star_flux_in_frame (frame_id, star_gaia_id, flux, flux_uncertainty)
-        VALUES (?, ?, ?, ?)
+        INSERT INTO star_flux_in_frame (frame_id, star_gaia_id, flux, flux_uncertainty, chi2)
+        VALUES (?, ?, ?, ?, ?)
         ON CONFLICT(frame_id, star_gaia_id) DO UPDATE SET
         flux=excluded.flux, flux_uncertainty=excluded.flux_uncertainty
         """
@@ -165,11 +184,14 @@ def do_star_photometry():
     # start by finding the stars we need to do photometry of:
     user_config = get_user_config()
     stars = select_stars(user_config['stars_to_use_norm'])
-    # if re-do, select all the frames
-    # if not re-do ...select only the new frames.
-    frame_selector = get_frames_for_star if user_config['redo_star_photometry'] else get_frames_for_star_without_flux
+    # if not re-do ...select only the new frames that do not have a flux measurement yet.
+    only_fluxless_frames = not user_config['redo_star_photometry']
     for i, star in stars.iterrows():
-        frames = frame_selector(star['gaia_id'])
+        psf_fit_chi2_min, psf_fit_chi2_max = get_psf_chi2_bounds()
+        frames = get_frames_for_star(star['gaia_id'],
+                                     psf_fit_chi2_min=psf_fit_chi2_min,
+                                     psf_fit_chi2_max=psf_fit_chi2_max,
+                                     only_fluxless_frames=only_fluxless_frames)
         if len(frames) == 0:
             # we up to date, nothing to do
             continue
@@ -190,6 +212,10 @@ def do_star_photometry():
                 mask.append(h5f[f"{frame['image_relpath']}/cosmicsmask/{star['name']}"][...])
                 psf.append(h5f[f"{frame['image_relpath']}/{psf_ref}/narrow_psf"][...])
             data, noisemap, mask, psf = np.array(data), np.array(noisemap), np.array(mask), np.array(psf)
+            # just like for the PSF, we need to remove the NaNs ...
+            isnan = np.where(np.isnan(data) * np.isnan(noisemap))
+            data[isnan] = 0.
+            noisemap[isnan] = 1e7
             # cosmics: masks are 'true' where cosmic, and we typically want it to "true" for good pixels
             mask = ~(np.array(mask).astype(bool))  # so we invert it.
             # oh, we invert it again to boost the noisemap where mask is False,
@@ -199,7 +225,16 @@ def do_star_photometry():
 
         # ready to "deconvolve" using starred!
         result = do_one_deconvolution(data=data, noisemap=noisemap, psf=psf,
-                                      subsampling_factor=user_config['subsampling_factor'])
+                                      subsampling_factor=user_config['subsampling_factor'],
+                                      n_iter=user_config['star_deconv_n_iter'])
+        # ok, plot the diagnostic
+        plot_deconv_dir = user_config['plots_dir'] / 'deconvolutions'
+        plot_deconv_dir.mkdir(exist_ok=True)
+        plot_file = plot_deconv_dir / f"joint_deconv_star_{star['name']}.jpg"
+        plot_joint_deconv_diagnostic(datas=data, noisemaps=noisemap,
+                                     residuals=result['residuals'],
+                                     chi2_per_frame=result['chi2_per_frame'], loss_curve=result['loss_curve'],
+                                     save_path=plot_file)
 
         # now we can insert our results in our dedicated database table.
         # flux_data should be a list of tuples, each containing (frame_id, star_gaia_id, flux, flux_uncertainty)
@@ -210,7 +245,8 @@ def do_star_photometry():
             frame_id = frame['id']
             flux = float(result['fluxes'][j])
             flux_uncertainty = float(result['fluxes_uncertainties'][j])
-            flux_data.append((frame_id, gaia_id, flux, flux_uncertainty))
+            chi2 = float(result['chi2_per_frame'][j])
+            flux_data.append((frame_id, gaia_id, flux, flux_uncertainty, chi2))
 
         # big insert while updating if value already in DB...
         update_star_fluxes(flux_data)

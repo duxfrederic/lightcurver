@@ -285,6 +285,7 @@ def initialize_database():
                       star_gaia_id INTEGER, 
                       flux REAL, -- in e- / second
                       flux_uncertainty REAL,
+                      chi2 REAL, -- chi2 of fit in this specific frame.
                       FOREIGN KEY (frame_id) REFERENCES frames(id),
                       FOREIGN KEY (star_gaia_id) REFERENCES stars(gaia_id),
                       PRIMARY KEY (frame_id, star_gaia_id)
@@ -314,7 +315,7 @@ def initialize_database():
                       FOREIGN KEY (norm_coefficient_id) REFERENCES normalization_coefficients(id),
                       PRIMARY KEY (id, norm_coefficient_id)
                       )""")
-
+    # TODO we have multiple tables here where the id is not auto incrementing -- useless.
     # table of footprints
     cursor.execute("""CREATE TABLE IF NOT EXISTS footprints (
                       frame_id INTEGER PRIMARY KEY,
