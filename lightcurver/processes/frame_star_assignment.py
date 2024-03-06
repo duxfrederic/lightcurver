@@ -30,7 +30,7 @@ def populate_stars_in_frames():
             star_point = Point(ra, dec)
             if star_point.within(footprint_polygon):
                 try:
-                    cursor.execute("""INSERT INTO stars_in_frames (frame_id, gaia_id, combined_footprint_hash) 
+                    cursor.execute("""INSERT INTO stars_in_frames (frame_id, star_gaia_id, combined_footprint_hash) 
                                       VALUES (?, ?, ?)""", (frame_id, star_id, combined_footprint_hash))
                 except sqlite3.IntegrityError:
                     # Handle cases where the same star-frame relationship might already be in the table

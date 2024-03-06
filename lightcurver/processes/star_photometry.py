@@ -6,9 +6,10 @@ from starred.deconvolution.loss import Loss
 from starred.deconvolution.parameters import ParametersDeconv
 from starred.optim.optimization import Optimizer, FisherCovariance
 
-from ..structure.database import execute_sqlite_query, select_stars, select_stars_for_a_frame
+from ..structure.database import execute_sqlite_query, select_stars, select_stars_for_a_frame, get_pandas
 from ..structure.user_config import get_user_config
 from ..utilities.chi2_selector import get_psf_chi2_bounds
+from ..utilities.footprint import get_combined_footprint_hash
 from ..plotting.star_photometry_plotting import plot_joint_deconv_diagnostic
 
 
@@ -55,10 +56,7 @@ def do_one_deconvolution(data, noisemap, psf, subsampling_factor, n_iter=2000):
 
     # fix the background. (except the mean component)
     kwargs_fixed['kwargs_background']['h'] = kwargs_init['kwargs_background']['h']
-    # single point source, c_x, c_y will be degenerate with dx, dy.
-    # rotation pointless as well.
-    kwargs_fixed['kwargs_analytic']['c_x'] = kwargs_init['kwargs_analytic']['c_x']
-    kwargs_fixed['kwargs_analytic']['c_y'] = kwargs_init['kwargs_analytic']['c_y']
+    # rotation pointless for single source.
     kwargs_fixed['kwargs_analytic']['alpha'] = kwargs_init['kwargs_analytic']['alpha']
 
     parameters = ParametersDeconv(kwargs_init=kwargs_init,
@@ -109,11 +107,13 @@ def do_one_deconvolution(data, noisemap, psf, subsampling_factor, n_iter=2000):
     return result
 
 
-def get_frames_for_star(gaia_id, psf_fit_chi2_min, psf_fit_chi2_max, only_fluxless_frames=False):
+def get_frames_for_star(combined_footprint_hash, gaia_id,
+                        psf_fit_chi2_min, psf_fit_chi2_max, only_fluxless_frames=False):
     """
     Retrieves frames that include the given star, provided that those frames have a PSF with a chi2 between
     psf_fit_chi2_min and psf_fit_chi2_max. Optionally, can filter to include only frames without a flux measurement.
 
+    :param combined_footprint_hash: int, the hash of the combined footprint we are processing.
     :param gaia_id: The Gaia ID of the star.
     :param psf_fit_chi2_min: The minimum acceptable chi2 value for the PSF fit.
     :param psf_fit_chi2_max: The maximum acceptable chi2 value for the PSF fit.
@@ -124,16 +124,16 @@ def get_frames_for_star(gaia_id, psf_fit_chi2_min, psf_fit_chi2_max, only_fluxle
     query = """
     SELECT f.*, ps.chi2, ps.psf_ref
     FROM frames f
-    JOIN stars_in_frames sif ON f.id = sif.frame_id
+    JOIN stars_in_frames sif ON f.id = sif.frame_id AND sif.combined_footprint_hash = ?
     """
     # add the LEFT JOIN for star_flux_in_frame, if we only are selecting the frames without a flux measurement.
     if only_fluxless_frames:
-        query += "LEFT JOIN star_flux_in_frame sff ON f.id = sff.frame_id AND sif.gaia_id = sff.star_gaia_id\n"
+        query += "LEFT JOIN star_flux_in_frame sff ON f.id = sff.frame_id AND sif.star_gaia_id = sff.star_gaia_id\n"
 
     # keep building the query
     query += """
     JOIN PSFs ps ON f.id = ps.frame_id
-    WHERE sif.gaia_id = ? 
+    WHERE sif.star_gaia_id = ? 
     """
     # the condition for frames without flux measurements
     if only_fluxless_frames:
@@ -148,7 +148,7 @@ def get_frames_for_star(gaia_id, psf_fit_chi2_min, psf_fit_chi2_max, only_fluxle
         WHERE f.id = ps.frame_id
         AND ps.chi2 BETWEEN ? AND ?
     )"""
-    params = (gaia_id, psf_fit_chi2_min, psf_fit_chi2_max)
+    params = (combined_footprint_hash, gaia_id, psf_fit_chi2_min, psf_fit_chi2_max)
 
     return execute_sqlite_query(query, params, is_select=True, use_pandas=True)
 
@@ -162,9 +162,9 @@ def update_star_fluxes(flux_data):
         # upon ON CONFLICT (integrity error due to trying to insert a flux for a given star and frame again),
         # as we would if we "redo", then we do indeed erase the previous values and add the new ones.
         insert_query = """
-        INSERT INTO star_flux_in_frame (frame_id, star_gaia_id, flux, flux_uncertainty, chi2)
-        VALUES (?, ?, ?, ?, ?)
-        ON CONFLICT(frame_id, star_gaia_id) DO UPDATE SET
+        INSERT INTO star_flux_in_frame (combined_footprint_hash, frame_id, star_gaia_id, flux, flux_uncertainty, chi2)
+        VALUES (?, ?, ?, ?, ?, ?)
+        ON CONFLICT(combined_footprint_hash, frame_id, star_gaia_id) DO UPDATE SET
         flux=excluded.flux, flux_uncertainty=excluded.flux_uncertainty
         """
 
@@ -181,17 +181,25 @@ def do_star_photometry():
     Returns:
 
     """
-    # start by finding the stars we need to do photometry of:
     user_config = get_user_config()
-    stars = select_stars(user_config['stars_to_use_norm'])
+    # so, we need the footprint we are working with.
+    # below we will query only the frames we need for each frame, but first we need to
+    # query all the frames that we actually started with when defining the footprints:
+    # so, let's query those frames, then calculate the footprint.
+    frames_ini = get_pandas(columns=['id', 'image_relpath', 'exptime', 'mjd', 'seeing_pixels', 'pixel_scale'],
+                            conditions=['plate_solved = 1', 'eliminated = 0', 'roi_in_footprint = 1'])
+    combined_footprint_hash = get_combined_footprint_hash(user_config, frames_ini['id'].to_list())
+    # now we can select the stars we need to do photometry of, within this footprint.
+    stars = select_stars(stars_to_use=user_config['stars_to_use_norm'], combined_footprint_hash=combined_footprint_hash)
     # if not re-do ...select only the new frames that do not have a flux measurement yet.
     only_fluxless_frames = not user_config['redo_star_photometry']
     for i, star in stars.iterrows():
         psf_fit_chi2_min, psf_fit_chi2_max = get_psf_chi2_bounds()
-        frames = get_frames_for_star(star['gaia_id'],
+        frames = get_frames_for_star(gaia_id=star['gaia_id'],
                                      psf_fit_chi2_min=psf_fit_chi2_min,
                                      psf_fit_chi2_max=psf_fit_chi2_max,
-                                     only_fluxless_frames=only_fluxless_frames)
+                                     only_fluxless_frames=only_fluxless_frames,
+                                     combined_footprint_hash=combined_footprint_hash)
         if len(frames) == 0:
             # we up to date, nothing to do
             continue
@@ -207,7 +215,9 @@ def do_star_photometry():
                 # more difficult for the psf.
                 # we need to reconstruct which stars were used in the psf given our
                 # accepted stars in 'stars_to_use_psf'.
-                stars_psf = select_stars_for_a_frame(frame['id'], user_config['stars_to_use_psf'])
+                stars_psf = select_stars_for_a_frame(frame_id=frame['id'],
+                                                     stars_to_use=user_config['stars_to_use_psf'],
+                                                     combined_footprint_hash=combined_footprint_hash)
                 psf_ref = 'psf_' + ''.join(sorted(stars_psf['name']))
                 mask.append(h5f[f"{frame['image_relpath']}/cosmicsmask/{star['name']}"][...])
                 psf.append(h5f[f"{frame['image_relpath']}/{psf_ref}/narrow_psf"][...])
@@ -246,7 +256,7 @@ def do_star_photometry():
             flux = float(result['fluxes'][j])
             flux_uncertainty = float(result['fluxes_uncertainties'][j])
             chi2 = float(result['chi2_per_frame'][j])
-            flux_data.append((frame_id, gaia_id, flux, flux_uncertainty, chi2))
+            flux_data.append((combined_footprint_hash, frame_id, gaia_id, flux, flux_uncertainty, chi2))
 
         # big insert while updating if value already in DB...
         update_star_fluxes(flux_data)

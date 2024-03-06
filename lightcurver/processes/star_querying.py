@@ -1,6 +1,5 @@
 import logging
 from astropy.coordinates import SkyCoord
-import astropy.units as u
 
 from ..utilities.footprint import load_combined_footprint_from_db, get_frames_hash
 from ..structure.user_config import get_user_config

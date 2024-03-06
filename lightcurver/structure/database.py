@@ -57,22 +57,24 @@ def get_count_based_on_conditions(conditions, table='frames'):
     return cursor.execute(request).fetchone()[0]
 
 
-def select_stars(stars_to_use=None):
+def select_stars(combined_footprint_hash, stars_to_use=None):
     """
     Selects all the stars, either
      -- top 10 closest stars to ROI if stars_to_use is None
-     -- top 'stars_to_use' closest stars to ROI if stars_to_use is int
+     -- top 'stars_to_use' closest stars to ROI if star s_to_use is int
      -- stars whose name is in 'stars_to_use' if stars_to_use is a list.
 
     Useful for selecting the stars we want to use when calculating a normalization coefficient.
 
     Args:
+        combined_footprint_hash: since the stars were queried in a footprint, specify which. (or might get duplicates or stars
+                        that are not in the current footprint)
         stars_to_use:   None or int or list, see docstring
 
     Returns:
         a pandas dataframe containing our stars (name, id coordinates ...)
     """
-    base_query = "SELECT * FROM stars s"
+    base_query = "SELECT * FROM stars s WHERE combined_footprint_hash = ?"
     if stars_to_use is None:
         stars_to_use = 10  # make it an int for top 10 selection
 
@@ -82,21 +84,21 @@ def select_stars(stars_to_use=None):
         ORDER BY s.distance_to_roi_arcsec ASC
         LIMIT 10
         """
-        params = ()
+        params = (combined_footprint_hash, )
     elif type(stars_to_use) is list:
         # Query for stars in the user-defined list
         placeholders = ','.join(['?'] * len(stars_to_use))
         query = base_query + f"""
-        WHERE s.name IN ({placeholders})
+        AND s.name IN ({placeholders})
         """
-        params = (*stars_to_use,)
+        params = (combined_footprint_hash, *stars_to_use)
     else:
         raise RuntimeError(f'stars_to_use argument: expected types None, int or list, got: {type(stars_to_use)}')
 
     return execute_sqlite_query(query, params, use_pandas=True)
 
 
-def select_stars_for_a_frame(frame_id, stars_to_use=None):
+def select_stars_for_a_frame(frame_id, combined_footprint_hash, stars_to_use=None):
     """
     Selects all the stars available in a given frame, either
      -- top 10 closest stars to ROI if stars_to_use is None
@@ -110,6 +112,7 @@ def select_stars_for_a_frame(frame_id, stars_to_use=None):
     #TODO consider merging in the future.
     Args:
         frame_id:  database frame ID
+        combined_footprint_hash: hash of the footprint in which the stars were originally queried.
         stars_to_use:   None or int or list, see docstring
 
     Returns:
@@ -124,8 +127,8 @@ def select_stars_for_a_frame(frame_id, stars_to_use=None):
             s.dec, 
             s.distance_to_roi_arcsec
         FROM stars_in_frames sif
-        JOIN stars s ON sif.gaia_id = s.gaia_id AND sif.combined_footprint_hash = s.combined_footprint_hash
-        WHERE sif.frame_id = ?"""
+        JOIN stars s ON sif.star_gaia_id = s.gaia_id AND sif.combined_footprint_hash = s.combined_footprint_hash
+        WHERE sif.frame_id = ? AND s.combined_footprint_hash = ?"""
     if stars_to_use is None:
         stars_to_use = 10  # make it an int for top 10 selection
 
@@ -135,14 +138,14 @@ def select_stars_for_a_frame(frame_id, stars_to_use=None):
         ORDER BY s.distance_to_roi_arcsec ASC
         LIMIT 10
         """
-        params = (frame_id,)
+        params = (frame_id, combined_footprint_hash)
     elif type(stars_to_use) is list:
         # Query for stars in the user-defined list
         placeholders = ','.join(['?'] * len(stars_to_use))
         query = base_query + f"""
         AND s.name IN ({placeholders})
         """
-        params = (frame_id, *stars_to_use)
+        params = (frame_id, combined_footprint_hash, *stars_to_use)
     else:
         raise RuntimeError(f'stars_to_use argument: expected types None, int or list, got: {type(stars_to_use)}')
 
@@ -165,7 +168,7 @@ def query_stars_for_frame_and_footprint(frame_id, combined_footprint_hash=None):
     sql_query = """
     SELECT stars.*
     FROM stars
-    INNER JOIN stars_in_frames ON stars.gaia_id = stars_in_frames.gaia_id 
+    INNER JOIN stars_in_frames ON stars.gaia_id = stars_in_frames.star_gaia_id 
                                   AND stars.combined_footprint_hash = stars_in_frames.combined_footprint_hash
     WHERE stars_in_frames.frame_id = ?
     """
@@ -234,7 +237,30 @@ def initialize_database():
             # operational error if column exists, ignore
             pass
 
-    # table of stars
+    # now we'll need stars to calibrate the PSF and normalization of each frame.
+    # these stars will be queried in a "footprint",  which can be changed to change the selection
+    # of reference stars. So we'll refer to the footprint at hand in all steps.
+    # a "footprint" is a polygon, composed of vertices (ra,dec).
+    # we assume that the gnonomic projection is fine for checking what lands in a footprint
+    # first, we define a foot print for each frame
+    cursor.execute("""CREATE TABLE IF NOT EXISTS footprints (
+                      frame_id INTEGER PRIMARY KEY,
+                      polygon TEXT NOT NULL,
+                      FOREIGN KEY (frame_id) REFERENCES frames (id)
+                      )""")
+
+    # then, a "combined" (intersection or union) footprint, to which we give a hash value that identifies it.
+    # (this way, we don't recompute everything if we define a new footprint that actually is identical to one
+    # we already processed).
+    # this combined footprint is what we will refer to in every downstream step.
+    cursor.execute("""CREATE TABLE IF NOT EXISTS combined_footprint ( 
+                      id INTEGER PRIMARY KEY, 
+                      hash INTEGER UNIQUE,  -- will be a hash of a concatenation of the used frames' ids
+                      largest TEXT,
+                      common TEXT
+                      )""")
+
+    # now the stars:
     # the stars will be filled in once by a python process.
     cursor.execute("""CREATE TABLE IF NOT EXISTS stars (
                       combined_footprint_hash INTEGER, -- which footprint was this star was queried from
@@ -250,86 +276,74 @@ def initialize_database():
                       gaia_id TEXT,
                       distance_to_roi_arcsec REAL,
                       FOREIGN KEY (combined_footprint_hash) REFERENCES combined_footprint(hash),
-                      PRIMARY KEY (gaia_id, combined_footprint_hash)
+                      PRIMARY KEY (combined_footprint_hash, gaia_id)
                       )""")
 
     # linking stars and frame
     # again, a python process will check the footprint of each image
-    # and fill in this table once for each image.
+    # and fill in this table once for each image, the idea being able to query which stars are available in which image.
     cursor.execute("""CREATE TABLE IF NOT EXISTS stars_in_frames (
                       frame_id INTEGER,
-                      gaia_id INTEGER,
+                      star_gaia_id INTEGER,
                       combined_footprint_hash INTEGER,
                       FOREIGN KEY (frame_id) REFERENCES frames(id),
-                      FOREIGN KEY (gaia_id, combined_footprint_hash) REFERENCES stars(gaia_id, combined_footprint_hash),
-                      PRIMARY KEY (frame_id, gaia_id, combined_footprint_hash)
+                      FOREIGN KEY (star_gaia_id) REFERENCES stars(gaia_id),
+                      FOREIGN KEY (combined_footprint_hash) REFERENCES combined_footprint(hash),
+                      PRIMARY KEY (combined_footprint_hash, frame_id, star_gaia_id)
                       )""")
 
-    # PSF is defined in yaml files (which stars compose it), here we keep track of which frames have
-    # a given PSF.
-    # we trace back to the above link of stars and frame to know which stars entered
-    # the PSF exactly.
+    # here we keep track of which frames have a given PSF.
+    # we trace back to which footprint the stars were queried in.
     # the subsampling factor is also defined in yaml file.
     cursor.execute("""CREATE TABLE IF NOT EXISTS PSFs (
-                      id INTEGER, 
+                      combined_footprint_hash INTEGER,
                       frame_id INTEGER,
                       chi2 REAL, -- chi2 of the fit of the PSF
                       psf_ref TEXT, -- convention: sorted concatenation of all star names used in the model.
+                      subsampling_factor INTEGER,  -- we do starred (pixelated) PSFs.
                       FOREIGN KEY (frame_id) REFERENCES frames(id),
-                      PRIMARY KEY (id, frame_id)
+                      FOREIGN KEY (combined_footprint_hash) REFERENCES combined_footprint(hash),
+                      PRIMARY KEY (combined_footprint_hash, frame_id, psf_ref)
                       )""")
 
-    # we'll also need to keep track of the flux of each star in each frame
+    # once we'll have PSF models, we'll do PSF photometry of the stars in the field.
+    # the table below will keep track of the fitted fluxes.
     cursor.execute("""CREATE TABLE IF NOT EXISTS star_flux_in_frame (
                       frame_id INTEGER,
                       star_gaia_id INTEGER, 
+                      combined_footprint_hash INTEGER,
                       flux REAL, -- in e- / second
                       flux_uncertainty REAL,
                       chi2 REAL, -- chi2 of fit in this specific frame.
                       FOREIGN KEY (frame_id) REFERENCES frames(id),
                       FOREIGN KEY (star_gaia_id) REFERENCES stars(gaia_id),
-                      PRIMARY KEY (frame_id, star_gaia_id)
+                      FOREIGN KEY (combined_footprint_hash) REFERENCES combined_footprint(hash),
+                      PRIMARY KEY (combined_footprint_hash, frame_id, star_gaia_id)
                       )""")
 
     # very similarly to PSFs, we keep track of normalization coefficients.
     # these are computed once per image within python, from the star fluxes above.
     cursor.execute("""CREATE TABLE IF NOT EXISTS normalization_coefficients (
-                      id INTEGER, 
                       frame_id INTEGER,
-                      psf_id INTEGER,
+                      combined_footprint_hash INTEGER,
                       coefficient_ref TEXT, -- convention: sorted concatenation of all star names used for this value.
                       coefficient REAL,
                       coefficient_uncertainty REAL,
                       FOREIGN KEY (frame_id) REFERENCES frames(id),
-                      FOREIGN KEY (psf_id) REFERENCES PSFs(id),
-                      PRIMARY KEY (id, psf_id, frame_id)
+                      FOREIGN KEY (combined_footprint_hash) REFERENCES combined_footprint(hash),
+                      PRIMARY KEY (combined_footprint_hash, frame_id)
                       )""")
 
     # zero points are derived from normalization coefficients and are for APPROXIMATE magnitude calibration
     # as we are going to derive them from gaia colors and band conversions.
     cursor.execute("""CREATE TABLE IF NOT EXISTS approximate_zeropoints (
-                      id INTEGER, 
-                      norm_coefficient_id INTEGER,
+                      frame_id INTEGER,
+                      combined_footprint_hash INTEGER,
                       zeropoint REAL,
                       zeropoint_uncertainty REAL,
-                      FOREIGN KEY (norm_coefficient_id) REFERENCES normalization_coefficients(id),
-                      PRIMARY KEY (id, norm_coefficient_id)
-                      )""")
-    # TODO we have multiple tables here where the id is not auto incrementing -- useless.
-    # table of footprints
-    cursor.execute("""CREATE TABLE IF NOT EXISTS footprints (
-                      frame_id INTEGER PRIMARY KEY,
-                      polygon TEXT NOT NULL,
-                      FOREIGN KEY (frame_id) REFERENCES frames (id)
-                      )""")
-
-    # and also a smaller one: "combined" (intersection or union) of footprints given a hash
-    # calculated from the sorted list of frames (image_relpath) composing the common footprint.
-    cursor.execute("""CREATE TABLE IF NOT EXISTS combined_footprint ( 
-                      id INTEGER PRIMARY KEY, 
-                      hash INTEGER UNIQUE,  -- will be a hash of a concatenation of the used frames' ids
-                      largest TEXT,
-                      common TEXT
+                      FOREIGN KEY (frame_id) REFERENCES frames(id),
+                      FOREIGN KEY (combined_footprint_hash) REFERENCES combined_footprint(hash),
+                      PRIMARY KEY (combined_footprint_hash, frame_id)
                       )""")
 
     conn.commit()

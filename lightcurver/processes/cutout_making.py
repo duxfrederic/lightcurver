@@ -15,7 +15,7 @@ import erfa
 
 from ..structure.user_config import get_user_config
 from ..structure.database import get_pandas, query_stars_for_frame_and_footprint
-from ..utilities.footprint import get_frames_hash
+from ..utilities.footprint import get_combined_footprint_hash
 
 
 def extract_stamp(data, header, exptime, sky_coord, cutout_size):
@@ -68,20 +68,14 @@ def extract_all_stamps():
                                    conditions=['plate_solved = 1', 'eliminated = 0', 'roi_in_footprint = 1'])
 
     # we'll need to know what combined_footprint we're working with.
-    # so, calculate the hash! TODO factor out some day? how?
-    if user_config['star_selection_strategy'] != 'ROI_disk':
-        # then it depends on the frames we're considering.
-        frames_hash = get_frames_hash(frames_to_process['id'].to_list())
-    else:
-        # if ROI_disk, it does not depend on the frames: unique region defined by its radius.
-        frames_hash = hash(user_config['ROI_disk_radius_arcseconds'])
+    combined_footprint_hash = get_combined_footprint_hash(user_config, frames_to_process['id'].to_list())
 
     # suppress the no parallax warning in proper motion corrections:
     warnings.filterwarnings('ignore', category=erfa.ErfaWarning)
 
-    with h5py.File(regions_file, 'a') as regf:
+    with h5py.File(regions_file, 'a') as reg_f:
         for i, frame in frames_to_process.iterrows():
-            if frame['image_relpath'] in regf.keys():
+            if frame['image_relpath'] in reg_f.keys():
                 continue
             image_file = user_config['workdir'] / frame['image_relpath']
 
@@ -92,26 +86,26 @@ def extract_all_stamps():
                 continue
 
             # organize hdf5 file
-            frame_set = regf.create_group(frame['image_relpath'])
+            frame_set = reg_f.create_group(frame['image_relpath'])
             data_set = frame_set.create_group('data')
             noise_set = frame_set.create_group('noisemap')
             wcs_set = frame_set.create_group('wcs')
             cosmic_mask = frame_set.create_group('cosmicsmask')
 
             # extract the ROI -- assuming no proper motion.
-            cutout, noisemap, wcsstr = extract_stamp(data=data, header=header,
-                                                     exptime=frame['exptime'],
-                                                     sky_coord=user_config['ROI_SkyCoord'],
-                                                     cutout_size=user_config['stamp_size_ROI'])
+            cutout, noisemap, wcs_str = extract_stamp(data=data, header=header,
+                                                      exptime=frame['exptime'],
+                                                      sky_coord=user_config['ROI_SkyCoord'],
+                                                      cutout_size=user_config['stamp_size_ROI'])
             # clean the cosmics
             mask, cleaned = detect_cosmics(cutout, invar=noisemap**2)
             data_set['ROI'] = cleaned
             noise_set['ROI'] = noisemap
-            wcs_set['ROI'] = wcsstr
+            wcs_set['ROI'] = wcs_str
             cosmic_mask['ROI'] = mask
 
             stars = query_stars_for_frame_and_footprint(frame_id=frame['id'],
-                                                        combined_footprint_hash=frames_hash)
+                                                        combined_footprint_hash=combined_footprint_hash)
 
             # extract the stars
             for j, star in stars.iterrows():
@@ -125,7 +119,7 @@ def extract_all_stamps():
                 # then correct the proper motion
                 obs_epoch = Time(frame['mjd'], format='mjd')
                 corrected_coord = star_coord.apply_space_motion(new_obstime=obs_epoch)
-                cutout, noisemap, wcsstr = extract_stamp(data=data, header=header,
+                cutout, noisemap, wcs_str = extract_stamp(data=data, header=header,
                                                          exptime=frame['exptime'],
                                                          sky_coord=corrected_coord,
                                                          cutout_size=user_config['stamp_size_stars'])
@@ -135,6 +129,6 @@ def extract_all_stamps():
                 mask, cleaned = detect_cosmics(cutout, invar=noisemap**2)
                 data_set[source_id] = cleaned
                 noise_set[source_id] = noisemap
-                wcs_set[source_id] = wcsstr
+                wcs_set[source_id] = wcs_str
                 cosmic_mask[source_id] = mask
 

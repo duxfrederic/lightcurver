@@ -22,7 +22,6 @@ class WorkflowManager:
         self.build_dependency_graph()
 
         _tmp_decoy = lambda: 1
-        # attribution tasks
         self.task_attribution = {
             'initialize_database': initialize_database,
             'read_convert_skysub_character_catalog': read_convert_skysub_character_catalog,

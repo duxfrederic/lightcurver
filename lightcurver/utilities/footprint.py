@@ -1,12 +1,28 @@
-import pandas as pd
-import sqlite3
 import numpy as np
 from shapely.geometry import Polygon, mapping
 from functools import reduce
-import hashlib
 import json
 
 from ..structure.database import execute_sqlite_query
+
+
+def get_combined_footprint_hash(user_config, frames_id_list):
+    """
+    Calculates the hash of the combined footprint of the frames whose id is in frames_id_list.
+    Args:
+        user_config: dictionary obtained from structure.config.get_user_config
+        frames_id_list: list of integers, which frames are we using.
+
+    Returns:
+        frames_hash, integer
+
+    """
+    if user_config['star_selection_strategy'] != 'ROI_disk':
+        # then it depends on the frames we're considering.
+        frames_hash = get_frames_hash(frames_id_list)
+    else:
+        # if ROI_disk, it does not depend on the frames: unique region defined by its radius.
+        return hash(user_config['ROI_disk_radius_arcseconds'])
 
 
 def calc_common_and_total_footprint(list_of_footprints):

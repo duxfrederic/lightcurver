@@ -6,11 +6,12 @@ from starred.procedures.psf_routines import build_psf
 from ..structure.database import select_stars_for_a_frame, execute_sqlite_query, get_pandas
 from ..structure.user_config import get_user_config
 from ..plotting.psf_plotting import plot_psf_diagnostic
+from ..utilities.footprint import get_combined_footprint_hash
 
 
-def check_psf_exists(frame_id, psf_ref):
-    query = "SELECT 1 FROM PSFs WHERE frame_id = ? AND psf_ref = ?"
-    params = (frame_id, psf_ref)
+def check_psf_exists(frame_id, psf_ref, combined_footprint_hash):
+    query = "SELECT 1 FROM PSFs WHERE frame_id = ? AND psf_ref = ? and combined_footprint_hash = ?"
+    params = (frame_id, psf_ref, combined_footprint_hash)
     result = execute_sqlite_query(query, params)
     return len(result) > 0
 
@@ -25,16 +26,19 @@ def model_all_psfs():
     # query frames
     frames = get_pandas(columns=['id', 'image_relpath', 'exptime', 'mjd', 'seeing_pixels', 'pixel_scale'],
                         conditions=['plate_solved = 1', 'eliminated = 0', 'roi_in_footprint = 1'])
+    combined_footprint_hash = get_combined_footprint_hash(user_config, frames['id'].to_list())
     # for each frame, check if the PSF was already built -- else, go for it.
     for i, frame in frames.iterrows():
-        stars = select_stars_for_a_frame(frame['id'], stars_to_use)
+        stars = select_stars_for_a_frame(frame_id=frame['id'],
+                                         combined_footprint_hash=combined_footprint_hash,
+                                         stars_to_use=stars_to_use)
         if len(stars) == 0:
             # will deal with this later.
             raise RuntimeError("No star in this frame!")
         psf_ref = 'psf_' + ''.join(sorted(stars['name']))
 
         # check so we don't redo for nothing
-        if check_psf_exists(frame['id'], psf_ref) and not user_config['redo_psf']:
+        if check_psf_exists(frame['id'], psf_ref, combined_footprint_hash) and not user_config['redo_psf']:
             continue
 
         # get the cutouts
@@ -80,11 +84,14 @@ def model_all_psfs():
             psf_group['full_psf'] = np.array(result['full_psf'])
 
         # and update the database.
-        delete_query = "DELETE FROM PSFs WHERE frame_id = ? AND psf_ref = ?"
-        delete_params = (frame['id'], psf_ref)
+        delete_query = "DELETE FROM PSFs WHERE frame_id = ? AND psf_ref = ? AND combined_footprint_hash = ?"
+        delete_params = (frame['id'], psf_ref, combined_footprint_hash)
         execute_sqlite_query(delete_query, delete_params, is_select=False)
-        insert_query = "INSERT INTO PSFs (frame_id, chi2, psf_ref) VALUES (?, ?, ?)"
-        insert_params = (frame['id'], float(result['chi2']), psf_ref)
+        insert_params = (frame['id'], float(result['chi2']), psf_ref,
+                         combined_footprint_hash, user_config['subsampling_factor'])
+        insert_query = "INSERT INTO PSFs (frame_id, chi2, psf_ref, combined_footprint_hash, subsampling_factor) "
+        insert_query += f"VALUES ({','.join(len(insert_params)*['?'])})"
+
         execute_sqlite_query(insert_query, insert_params, is_select=False)
 
 
