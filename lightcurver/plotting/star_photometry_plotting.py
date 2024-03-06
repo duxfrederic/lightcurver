@@ -14,7 +14,7 @@ def plot_joint_deconv_diagnostic(datas, noisemaps, residuals, loss_curve, chi2_p
         noisemaps: same as above but for the noisemaps
         residuals: same as above but for the residuals
         loss_curve: 1D array containing the evolution of the loss during optimization
-        chi2: the chi2 value of the fit.
+        chi2_per_frame: 1D array, the chi2 value of the fit, one per slice.
         save_path: optional, string or path, where to save the plot.
 
     Returns: None
