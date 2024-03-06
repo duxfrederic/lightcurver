@@ -62,8 +62,8 @@ def model_all_psfs():
                            n_iter_adabelief=user_config['psf_n_iter_pixels'],
                            masks=cosmics_masks,
                            guess_method_star_position='center')
-        psf_plots_dir = user_config['plots_dir'] / 'PSFs'
-        psf_plots_dir.mkdir(exist_ok=True)
+        psf_plots_dir = user_config['plots_dir'] / 'PSFs' / str(combined_footprint_hash)
+        psf_plots_dir.mkdir(exist_ok=True, parents=True)
         frame_name = Path(frame['image_relpath']).stem
         seeing = frame['seeing_pixels'] * frame['pixel_scale']
         plot_psf_diagnostic(datas=datas, noisemaps=noisemaps, residuals=result['residuals'],

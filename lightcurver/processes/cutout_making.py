@@ -75,8 +75,14 @@ def extract_all_stamps():
 
     with h5py.File(regions_file, 'a') as reg_f:
         for i, frame in frames_to_process.iterrows():
+            # check what stars need be extracted
+            stars = query_stars_for_frame_and_footprint(frame_id=frame['id'],
+                                                        combined_footprint_hash=combined_footprint_hash)
             if frame['image_relpath'] in reg_f.keys():
-                continue
+                if len(reg_f[frame['image_relpath']]['data'].keys()) == len(stars) + 1:
+                    # let's say that if we have the right number of cutouts ...we good
+                    # TODO implement a better check
+                    continue
             image_file = user_config['workdir'] / frame['image_relpath']
 
             try:
@@ -86,49 +92,63 @@ def extract_all_stamps():
                 continue
 
             # organize hdf5 file
-            frame_set = reg_f.create_group(frame['image_relpath'])
-            data_set = frame_set.create_group('data')
-            noise_set = frame_set.create_group('noisemap')
-            wcs_set = frame_set.create_group('wcs')
-            cosmic_mask = frame_set.create_group('cosmicsmask')
+            if frame['image_relpath'] not in reg_f.keys():
+                frame_set = reg_f.create_group(frame['image_relpath'])
+            else:
+                frame_set = reg_f[frame['image_relpath']]
+            if 'data' not in frame_set.keys():
+                data_set = frame_set.create_group('data')
+            else:
+                data_set = frame_set['data']
+            if 'noisemap' not in frame_set.keys():
+                noise_set = frame_set.create_group('noisemap')
+            else:
+                noise_set = frame_set['noisemap']
+            if 'wcs' not in frame_set.keys():
+                wcs_set = frame_set.create_group('wcs')
+            else:
+                wcs_set = frame_set['wcs']
+            if 'cosmicsmask' not in frame_set.keys():
+                cosmic_mask = frame_set.create_group('cosmicsmask')
+            else:
+                cosmic_mask = frame_set['cosmicsmask']
 
-            # extract the ROI -- assuming no proper motion.
-            cutout, noisemap, wcs_str = extract_stamp(data=data, header=header,
-                                                      exptime=frame['exptime'],
-                                                      sky_coord=user_config['ROI_SkyCoord'],
-                                                      cutout_size=user_config['stamp_size_ROI'])
-            # clean the cosmics
-            mask, cleaned = detect_cosmics(cutout, invar=noisemap**2)
-            data_set['ROI'] = cleaned
-            noise_set['ROI'] = noisemap
-            wcs_set['ROI'] = wcs_str
-            cosmic_mask['ROI'] = mask
-
-            stars = query_stars_for_frame_and_footprint(frame_id=frame['id'],
-                                                        combined_footprint_hash=combined_footprint_hash)
+            if 'ROI' not in cosmic_mask.keys():
+                # extract the ROI -- assuming no proper motion.
+                cutout, noisemap, wcs_str = extract_stamp(data=data, header=header,
+                                                          exptime=frame['exptime'],
+                                                          sky_coord=user_config['ROI_SkyCoord'],
+                                                          cutout_size=user_config['stamp_size_ROI'])
+                # clean the cosmics
+                mask, cleaned = detect_cosmics(cutout, invar=noisemap**2)
+                data_set['ROI'] = cleaned
+                noise_set['ROI'] = noisemap
+                wcs_set['ROI'] = wcs_str
+                cosmic_mask['ROI'] = mask
 
             # extract the stars
             for j, star in stars.iterrows():
-                # make a sky coord with our star and its proper motion
-                star_coord = SkyCoord(ra=star['ra'] * u.deg,
-                                      dec=star['dec'] * u.deg,
-                                      pm_ra_cosdec=star['pmra'] * u.mas / u.yr,
-                                      pm_dec=star['pmdec'] * u.mas / u.yr,
-                                      frame='icrs',
-                                      obstime=Time(star['ref_epoch'], format='decimalyear'))
-                # then correct the proper motion
-                obs_epoch = Time(frame['mjd'], format='mjd')
-                corrected_coord = star_coord.apply_space_motion(new_obstime=obs_epoch)
-                cutout, noisemap, wcs_str = extract_stamp(data=data, header=header,
-                                                         exptime=frame['exptime'],
-                                                         sky_coord=corrected_coord,
-                                                         cutout_size=user_config['stamp_size_stars'])
+                star_name = str(star['name'])
+                if star_name not in cosmic_mask.keys():
+                    # make a sky coord with our star and its proper motion
+                    star_coord = SkyCoord(ra=star['ra'] * u.deg,
+                                          dec=star['dec'] * u.deg,
+                                          pm_ra_cosdec=star['pmra'] * u.mas / u.yr,
+                                          pm_dec=star['pmdec'] * u.mas / u.yr,
+                                          frame='icrs',
+                                          obstime=Time(star['ref_epoch'], format='decimalyear'))
+                    # then correct the proper motion
+                    obs_epoch = Time(frame['mjd'], format='mjd')
+                    corrected_coord = star_coord.apply_space_motion(new_obstime=obs_epoch)
+                    cutout, noisemap, wcs_str = extract_stamp(data=data, header=header,
+                                                             exptime=frame['exptime'],
+                                                             sky_coord=corrected_coord,
+                                                             cutout_size=user_config['stamp_size_stars'])
 
-                source_id = str(star['name'])
-                # again, clean the cosmics.
-                mask, cleaned = detect_cosmics(cutout, invar=noisemap**2)
-                data_set[source_id] = cleaned
-                noise_set[source_id] = noisemap
-                wcs_set[source_id] = wcs_str
-                cosmic_mask[source_id] = mask
+                    # again, clean the cosmics.
+                    mask, cleaned = detect_cosmics(cutout, invar=noisemap**2)
+                    data_set[star_name] = cleaned
+                    noise_set[star_name] = noisemap
+                    wcs_set[star_name] = wcs_str
+                    cosmic_mask[star_name] = mask
 

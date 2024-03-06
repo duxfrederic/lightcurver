@@ -1,6 +1,7 @@
 import h5py
 import numpy as np
 import sqlite3
+from datetime import datetime
 from starred.deconvolution.deconvolution import setup_model
 from starred.deconvolution.loss import Loss
 from starred.deconvolution.parameters import ParametersDeconv
@@ -193,6 +194,8 @@ def do_star_photometry():
     stars = select_stars(stars_to_use=user_config['stars_to_use_norm'], combined_footprint_hash=combined_footprint_hash)
     # if not re-do ...select only the new frames that do not have a flux measurement yet.
     only_fluxless_frames = not user_config['redo_star_photometry']
+
+    time_now = datetime.now().strftime("%Y-%m-%dT%H-%M-%S")  # for plots
     for i, star in stars.iterrows():
         psf_fit_chi2_min, psf_fit_chi2_max = get_psf_chi2_bounds()
         frames = get_frames_for_star(gaia_id=star['gaia_id'],
@@ -238,9 +241,10 @@ def do_star_photometry():
                                       subsampling_factor=user_config['subsampling_factor'],
                                       n_iter=user_config['star_deconv_n_iter'])
         # ok, plot the diagnostic
-        plot_deconv_dir = user_config['plots_dir'] / 'deconvolutions'
-        plot_deconv_dir.mkdir(exist_ok=True)
-        plot_file = plot_deconv_dir / f"joint_deconv_star_{star['name']}.jpg"
+        plot_deconv_dir = user_config['plots_dir'] / 'deconvolutions' / str(combined_footprint_hash)
+        plot_deconv_dir.mkdir(exist_ok=True, parents=True)
+
+        plot_file = plot_deconv_dir / f"{time_now}_joint_deconv_star_{star['name']}.jpg"
         plot_joint_deconv_diagnostic(datas=data, noisemaps=noisemap,
                                      residuals=result['residuals'],
                                      chi2_per_frame=result['chi2_per_frame'], loss_curve=result['loss_curve'],

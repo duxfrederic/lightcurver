@@ -11,6 +11,7 @@ from ..processes.cutout_making import extract_all_stamps
 from ..processes.star_querying import query_gaia_stars
 from ..processes.psf_modelling import model_all_psfs
 from ..processes.star_photometry import do_star_photometry
+from ..processes.normalization_calculation import calculate_coefficient
 
 
 class WorkflowManager:
@@ -31,7 +32,7 @@ class WorkflowManager:
             'stamp_extraction': extract_all_stamps,
             'psf_modeling': model_all_psfs,
             'star_photometry': do_star_photometry,
-            'calculate_normalization_coefficient': _tmp_decoy,
+            'calculate_normalization_coefficient': calculate_coefficient,
             'prepare_calibrated_cutouts': _tmp_decoy,
         }
         assert set(self.task_attribution.keys()) == set([entry['name'] for entry in self.pipe_config['tasks']])
