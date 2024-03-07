@@ -127,9 +127,10 @@ def get_frames_for_star(combined_footprint_hash, gaia_id,
     FROM frames f
     JOIN stars_in_frames sif ON f.id = sif.frame_id AND sif.combined_footprint_hash = ?
     """
-    # add the LEFT JOIN for star_flux_in_frame, if we only are selecting the frames without a flux measurement.
+    # if we only are selecting the frames without a flux measurement:
     if only_fluxless_frames:
-        query += "LEFT JOIN star_flux_in_frame sff ON f.id = sff.frame_id AND sif.star_gaia_id = sff.star_gaia_id\n"
+        query += "LEFT JOIN star_flux_in_frame sff ON f.id = sff.frame_id AND sif.star_gaia_id = sff.star_gaia_id "
+        query += "AND sif.combined_footprint_hash = sff.combined_footprint_hash\n"
 
     # keep building the query
     query += """
