@@ -9,7 +9,7 @@ from starred.optim.optimization import Optimizer, FisherCovariance
 
 from ..structure.database import execute_sqlite_query, select_stars, select_stars_for_a_frame, get_pandas
 from ..structure.user_config import get_user_config
-from ..utilities.chi2_selector import get_psf_chi2_bounds
+from ..utilities.chi2_selector import get_chi2_bounds
 from ..utilities.footprint import get_combined_footprint_hash
 from ..plotting.star_photometry_plotting import plot_joint_deconv_diagnostic
 
@@ -198,7 +198,7 @@ def do_star_photometry():
 
     time_now = datetime.now().strftime("%Y-%m-%dT%H-%M-%S")  # for plots
     for i, star in stars.iterrows():
-        psf_fit_chi2_min, psf_fit_chi2_max = get_psf_chi2_bounds()
+        psf_fit_chi2_min, psf_fit_chi2_max = get_chi2_bounds(psf_or_fluxes='psf')
         frames = get_frames_for_star(gaia_id=star['gaia_id'],
                                      psf_fit_chi2_min=psf_fit_chi2_min,
                                      psf_fit_chi2_max=psf_fit_chi2_max,

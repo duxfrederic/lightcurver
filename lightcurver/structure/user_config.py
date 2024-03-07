@@ -40,7 +40,6 @@ def get_user_config():
     config['log_directory'] = Path(config['log_directory'])
     for directory in [config['plots_dir'], config['logs_dir'], config['frames_dir']]:
         directory.mkdir(parents=True, exist_ok=True)
-    assert 'redo' in config
 
     # star names: make it a list if user defined a string.
     # e.g. stars_to_use = 'abcd' --> ['a', 'b', 'c', 'd']

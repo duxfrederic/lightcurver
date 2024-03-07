@@ -4,6 +4,8 @@ import sqlite3
 from ..structure.database import execute_sqlite_query, get_pandas
 from ..structure.user_config import get_user_config
 from ..utilities.footprint import get_combined_footprint_hash
+from ..utilities.chi2_selector import get_chi2_bounds
+from ..plotting.normalization_plotting import plot_normalized_star_curves
 
 
 def get_fluxes(combined_footprint_hash, photometry_chi2_min, photometry_chi2_max):
@@ -74,12 +76,10 @@ def calculate_coefficient():
                             conditions=['plate_solved = 1', 'eliminated = 0', 'roi_in_footprint = 1'])
     combined_footprint_hash = get_combined_footprint_hash(user_config, frames_ini['id'].to_list())
 
-    # TODO fill in user defined chi2 values
+    fluxes_fit_chi2_min, fluxes_fit_chi2_max = get_chi2_bounds(psf_or_fluxes='fluxes')
     df = get_fluxes(combined_footprint_hash=combined_footprint_hash,
-                    photometry_chi2_min=0.1,
-                    photometry_chi2_max=1.5)
-
-    df.to_csv('wow.csv')
+                    photometry_chi2_min=fluxes_fit_chi2_min,
+                    photometry_chi2_max=fluxes_fit_chi2_max)
 
     # get a reference flux by star as the mean of all fluxes for this star
     reference_flux = df.groupby('star_gaia_id')['flux'].mean().reset_index()
@@ -131,4 +131,11 @@ def calculate_coefficient():
         norm_data.append((frame_id, combined_footprint_hash, norm, norm_err))
 
     update_normalization_coefficients(norm_data)
+
+    # ok, query it again in the plot function.
+    plot_norm_dir = user_config['plots_dir'] / 'normalization' / str(combined_footprint_hash)
+    plot_norm_dir.mkdir(exist_ok=True, parents=True)
+
+    plot_file = plot_norm_dir / "normalization_fluxes_plot.pdf"
+    plot_normalized_star_curves(combined_footprint_hash=combined_footprint_hash, save_path=plot_file)
 

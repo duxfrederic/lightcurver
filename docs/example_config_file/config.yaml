@@ -3,9 +3,7 @@ workdir: /scratch/VST_J0248_for_new_pipeline/
 # where to find new images
 raw_dirs:
   - /scratch/VST_J0248_for_new_pipeline/raw
-#  - /scratch/VST_J0248_for_new_pipeline/raw_2
-# redo flag, used by most processes
-redo: 0
+  - /scratch/VST_J0248_for_new_pipeline/raw_2
 # for logging
 log_directory: /tmp/logs
 # some processes can be parallelized
@@ -67,7 +65,7 @@ astrometry_net_api_key: null
 # I recomment the latter, seems to work well.
 star_selection_strategy: 'ROI_disk'
 # so, if the above is 'ROI_disk', provide here the radius in arcseconds:
-ROI_disk_radius_arcseconds: 160
+ROI_disk_radius_arcseconds: 300
 # now the stars, depending on your setup you will need to probe a different range
 # of magnitudes to both provide high S/N constraints to your normalization and PSF models,
 # while avoiding saturation -- set to null for no contraints
@@ -80,9 +78,9 @@ star_max_astrometric_excess_noise: 2.0
 # finally, we can also request a small photometric error,
 # as the photometric error will go up with variability. this way we can select
 # more stable stars.
-star_max_phot_g_mean_flux_error: 2.0
+star_max_phot_g_mean_flux_error: 3.0
 # number criterion
-min_number_stars: 4
+min_number_stars: 6
 # and whether we query again ...can be useful, but in principle querying once should work.
 gaia_query_redo: false
 
@@ -91,7 +89,7 @@ gaia_query_redo: false
 # these stars will be used for the PSF model and normalization.
 # if null: uses the top 10 closest star to the ROI.
 stars_to_use_psf: null
-stars_to_use_norm: 'abcd'
+stars_to_use_norm: null
 
 # Stamp extraction -- squares of size defined below.
 stamp_size_stars: 32
@@ -120,4 +118,9 @@ psf_fit_exclude_strategy:
 
 # star photometry
 redo_star_photometry: false
-star_deconv_n_iter: 1000
+star_deconv_n_iter: 2000
+
+# normalization coefficient
+# excluding the measured star fluxes we do not trust. same as for the PSF above.
+fluxes_fit_exclude_strategy:
+  sigma_clip: 2.5
