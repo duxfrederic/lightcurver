@@ -47,9 +47,12 @@ def process_new_frame(fits_file, user_config, logger):
         header['BUNIT'] = "e-/s"
         mjd_gain_filter_exptime_dict = header_parser_function(header)
         cutout_data *= mjd_gain_filter_exptime_dict['gain'] / mjd_gain_filter_exptime_dict['exptime']
+        # unit: electron per second
 
         # ok, now subtract sky!
         cutout_data_sub, bkg = subtract_background(cutout_data)
+        sky_level_electron_per_second = float(bkg.globalback)
+        background_rms_electron_per_second = float(bkg.globalrms)
 
         # before we write, let's keep as much as we can from our previous header
         new_header = wcs.to_header()
@@ -99,6 +102,8 @@ def process_new_frame(fits_file, user_config, logger):
                           sources_relpath=sources_file_relpath,
                           mjd=mjd_gain_filter_exptime_dict['mjd'],
                           gain=mjd_gain_filter_exptime_dict['gain'],
+                          sky_level_electron_per_second=sky_level_electron_per_second,
+                          background_rms_electron_per_second=background_rms_electron_per_second,
                           filter=mjd_gain_filter_exptime_dict['filter'],
                           exptime=mjd_gain_filter_exptime_dict['exptime'],
                           seeing_pixels=seeing_pixels,
@@ -112,7 +117,9 @@ def process_new_frame(fits_file, user_config, logger):
 
 
 def add_frame_to_database(original_image_path, copied_image_relpath, sources_relpath,
-                          mjd, gain, filter, exptime,
+                          mjd, gain,
+                          sky_level_electron_per_second, background_rms_electron_per_second,
+                          filter, exptime,
                           seeing_pixels, ellipticity,
                           database_connexion,
                           telescope_information=None,
@@ -140,6 +147,8 @@ def add_frame_to_database(original_image_path, copied_image_relpath, sources_rel
     :param sources_relpath: filename of the file of sources (fits table) as extracted by sep, relative to workdir
     :param mjd: float, mjd of frame
     :param gain: float
+    :param sky_level_electron_per_second: float
+    :param background_rms_electron_per_second: float
     :param filter: string, filter of the observations
     :param exptime: float, exposure time
     :param seeing_pixels: Seeing value measured for this frame, float.
@@ -150,10 +159,13 @@ def add_frame_to_database(original_image_path, copied_image_relpath, sources_rel
     :return: None
     """
     columns = ['original_image_path', 'image_relpath', 'sources_relpath',
-               'seeing_pixels', 'mjd', 'gain', 'filter', 'exptime', 'ellipticity']
+               'seeing_pixels', 'mjd', 'gain', 'sky_level_electron_per_second', 'background_rms_electron_per_second',
+               'filter', 'exptime', 'ellipticity']
 
     values = [str(original_image_path), str(copied_image_relpath), str(sources_relpath),
-              seeing_pixels, mjd, gain, filter, exptime, ellipticity]
+              seeing_pixels, mjd, gain,
+              sky_level_electron_per_second, background_rms_electron_per_second,
+              filter, exptime, ellipticity]
 
     # if telescope information, add it to the columns and values
     if telescope_information is not None:
