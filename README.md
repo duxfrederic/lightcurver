@@ -16,6 +16,10 @@ the `lightcurver` / `STARRED` model, and the Hubble Space Telescope image of the
 
 ## Getting Started
 
+0. **Requirements**: on top of the python libraries listed in `requirements.txt`, we need either
+    - a working installation of `astrometry.net`, which provides the `solve-field` function.
+    - alternatively, an `astrometry.net` API key.
+
 1. **Installation**: Clone the repository and install via `pip`:
 
     ```
@@ -25,10 +29,10 @@ the `lightcurver` / `STARRED` model, and the Hubble Space Telescope image of the
     ```
 
 2. **Usage**:
-There are several steps before you can start analyzing your wide field images.
+There are several preparation steps to complete before you can start analyzing your wide field images.
 - Define a working directory, we will call it `workdir`. 
 - Create a subdirectory, `header_parser`, in `workdir`, and create a python file: `$workdir/header_parser/parse_header.py`.  This file should contain a function, `parse_header`, which should extract the exposure time, the gain, and the MJD or some other time information. See the [example header parser](docs/example_header_parser_functions/) directory for an example.
-- Copy the [example config file](docs/example_config_file/config.yaml), and modify it with your information.
+- Copy the [example config file](docs/example_config_file/config.yaml), and update it with your information.
 Now you can run `lightcurver`:
     ```python
     # important before importing: tell the code where your config file is
