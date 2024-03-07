@@ -326,7 +326,6 @@ def initialize_database():
     cursor.execute("""CREATE TABLE IF NOT EXISTS normalization_coefficients (
                       frame_id INTEGER,
                       combined_footprint_hash INTEGER,
-                      coefficient_ref TEXT, -- convention: sorted concatenation of all star names used for this value.
                       coefficient REAL,
                       coefficient_uncertainty REAL,
                       FOREIGN KEY (frame_id) REFERENCES frames(id),
