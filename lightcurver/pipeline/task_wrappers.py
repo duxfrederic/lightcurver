@@ -95,10 +95,6 @@ def plate_solve_all_frames():
     logger = logging.getLogger("PlateSolveLogger")
     user_config = get_user_config()
     workdir = Path(user_config['workdir'])
-    if user_config['already_plate_solved']:
-        logger.info('The frames are already plate solved according to user config. Stopping.')
-        listener.stop()
-        return
 
     frames_to_process = get_pandas(columns=['id', 'image_relpath', 'sources_relpath'],
                                    conditions=['plate_solved = 0', 'eliminated = 0'])

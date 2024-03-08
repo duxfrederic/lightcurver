@@ -34,8 +34,24 @@ def solve_one_image(image_path, sources_path, user_config, logger):
 
 
 def solve_one_image_and_update_database(image_path, sources_path, user_config, frame_id, logger):
-    wcs = solve_one_image(image_path, sources_path, user_config, logger)
-    success = wcs.is_celestial
+    """
+    solves image using the sources in sources_path, then adds useful things to the database.
+    If already solved according to user_config, just does the database part.
+    Args:
+        image_path: path to fits file containing the image
+        sources_path: path to fits file containing the sources extracted from the image
+        user_config: dictionary read by the pipeline
+        frame_id: the database frame id
+        logger: an instance of a logger for logging.
+    Returns:
+        nothing
+    """
+    if not user_config['already_plate_solved']:
+        wcs = solve_one_image(image_path, sources_path, user_config, logger)
+        success = wcs.is_celestial
+    else:
+        success = True
+
     if success:
         # but our object might be out of the footprint of the image!
         final_header = fits.getheader(image_path)
@@ -65,5 +81,3 @@ def solve_one_image_and_update_database(image_path, sources_path, user_config, f
     # at the end, set the image to plate solved in db
     execute_sqlite_query(query="UPDATE frames SET plate_solved = ? WHERE id = ?",
                          params=(1 if success else 0, frame_id), is_select=False)
-
-
