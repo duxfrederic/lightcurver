@@ -100,7 +100,7 @@ def do_one_deconvolution(data, noisemap, psf, subsampling_factor, n_iter=2000):
         'kwargs_uncertainties': k_errs,
         'fluxes': fluxes,
         'fluxes_uncertainties': fluxes_uncertainties,
-        'chi2': chi2,
+        'chi2': float(chi2),
         'chi2_per_frame': np.array(chi2_per_frame),
         'loss_curve': optim.loss_history,
         'residuals': scale * residuals
@@ -266,3 +266,4 @@ def do_star_photometry():
         # big insert while updating if value already in DB...
         update_star_fluxes(flux_data)
         # done!
+

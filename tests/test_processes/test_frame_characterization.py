@@ -1,4 +1,4 @@
-# tests/processes/test_frame_characterization.py
+# tests/test_processes/test_frame_characterization.py
 import unittest
 from lightcurver.processes.frame_characterization import ephemeris
 
