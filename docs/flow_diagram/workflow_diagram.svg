@@ -15,7 +15,7 @@
 <text text-anchor="middle" x="355.62" y="-869.7" font-family="Times,serif" font-size="14.00">Read/Convert/SkySub/Character Catalog</text>
 <text text-anchor="middle" x="355.62" y="-852.45" font-family="Times,serif" font-size="14.00">reads the images from a directory, converts them to electrons,</text>
 <text text-anchor="middle" x="355.62" y="-835.2" font-family="Times,serif" font-size="14.00">subtracts the sky, finds sources, measures noise, seeing,</text>
-<text text-anchor="middle" x="355.62" y="-817.95" font-family="Times,serif" font-size="14.00">calculates ephemerides, records all to database</text>
+<text text-anchor="middle" x="355.62" y="-817.95" font-family="Times,serif" font-size="14.00">calculates ephemeris, records all to database</text>
 </g>
 <!-- C -->
 <g id="node2" class="node">

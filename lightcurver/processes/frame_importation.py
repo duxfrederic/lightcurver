@@ -155,7 +155,7 @@ def add_frame_to_database(original_image_path, copied_image_relpath, sources_rel
     :param ellipticity: ellipticity of the psf, calculated as 1 - b/a
     :param database_connexion: SQLite3 connection object to the database
     :param telescope_information: Optional dictionary with telescope information
-    :param ephemeris_dictionary: dictionary as returned by the ephemerides function of frame_characterization.
+    :param ephemeris_dictionary: dictionary as returned by the ephemeris function of frame_characterization.
     :return: None
     """
     columns = ['original_image_path', 'image_relpath', 'sources_relpath',

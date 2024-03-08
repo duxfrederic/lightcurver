@@ -186,11 +186,16 @@ def query_stars_for_frame_and_footprint(frame_id, combined_footprint_hash=None):
     return stars
 
 
-def initialize_database():
+def initialize_database(db_path=None):
     """
     initializes the database we'll be working with to keep track of our frames.
+
+    Parameters:
+        :param db_path: string or path, default None. Not used during execution of the pipeline,
+                        but can be provided for tests.
     """
-    db_path = get_user_config()['database_path']
+    if db_path is None:
+        db_path = get_user_config()['database_path']
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
 
@@ -244,7 +249,7 @@ def initialize_database():
     # of reference stars. So we'll refer to the footprint at hand in all steps.
     # a "footprint" is a polygon, composed of vertices (ra,dec).
     # we assume that the gnonomic projection is fine for checking what lands in a footprint
-    # first, we define a foot print for each frame
+    # first, we define a footprint for each frame
     cursor.execute("""CREATE TABLE IF NOT EXISTS footprints (
                       frame_id INTEGER PRIMARY KEY,
                       polygon TEXT NOT NULL,

@@ -1,6 +1,7 @@
-# this file wraps around the processes defined in the processes subpackage.
-# the wrapper determine which frames / regions / psfs (depending on task) need processing
+# This file wraps around the processes defined in the processes subpackage.
+# The wrappers typically determine which frames / regions / psfs (depending on task) need processing
 # before proceeding, and adds structure around multiprocessing when needed.
+# This is not needed for all processes.
 from multiprocessing import Pool, Manager
 import os
 import numpy as np
@@ -70,7 +71,7 @@ def read_convert_skysub_character_catalog():
             (new_frame,
              user_config,
              logger,
-             new_frame)  # duplicating so have an identifier for logger.
+             new_frame)  # duplicating so to have an identifier for logger.
             for new_frame in new_frames
         ])
 
@@ -111,7 +112,7 @@ def plate_solve_all_frames():
              user_config,
              row['id'],
              logger,
-             row['id']) # duplicate row['id'] for logger identification.
+             row['id'])  # duplicating row['id'] for logger naming
             for index, row in frames_to_process.iterrows()
         ])
 

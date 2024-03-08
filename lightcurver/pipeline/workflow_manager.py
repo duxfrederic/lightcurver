@@ -5,8 +5,8 @@ import logging
 
 from ..structure.user_config import get_user_config
 from ..structure.database import initialize_database
-from .task_definitions import (read_convert_skysub_character_catalog,
-                               plate_solve_all_frames, calc_common_and_total_footprint_and_save)
+from .task_wrappers import (read_convert_skysub_character_catalog,
+                            plate_solve_all_frames, calc_common_and_total_footprint_and_save)
 from ..processes.cutout_making import extract_all_stamps
 from ..processes.star_querying import query_gaia_stars
 from ..processes.psf_modelling import model_all_psfs

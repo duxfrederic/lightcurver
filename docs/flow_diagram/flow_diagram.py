@@ -5,7 +5,7 @@ from graphviz import Digraph
 dot = Digraph()
 
 #dot.node('A', 'Initialize Database\nJust making sure the database exists, with the right schema.', shape='box')
-dot.node('B', 'Read/Convert/SkySub/Character Catalog\nreads the images from a directory, converts them to electrons,\nsubtracts the sky, finds sources, measures noise, seeing,\ncalculates ephemerides, records all to database', shape='box')
+dot.node('B', 'Read/Convert/SkySub/Character Catalog\nreads the images from a directory, converts them to electrons,\nsubtracts the sky, finds sources, measures noise, seeing,\ncalculates ephemeris, records all to database', shape='box')
 dot.node('C', 'Plate Solving\nUses astrometry.net\'s solve-field and initial guess of plate scale\nprovided in user config to add a reliable WCS to each image fast.\nIf user config states that images are already plate solved, skip.', shape='box')
 dot.node('D', 'Calculate Common and Total Footprint\nChecks the footprint of the images, see how big the common footprint is.\n', shape='box')
 dot.node('E', 'Query Gaia for Stars\nGiven the footprints above, finds stars in gaia for PSF modelling and normalization.\n', shape='box')

@@ -52,6 +52,14 @@ def extract_stamp(data, header, exptime, sky_coord, cutout_size):
 
 
 def extract_all_stamps():
+    """
+    This is the routine that the workflow manager will call.
+    It interfaces with the user config and the database to locate the
+    files and objects to extract, then extracts to a hdf5 file.
+
+    Returns:
+        Nothing
+    """
     user_config = get_user_config()
 
     # where we'll save our stamps
@@ -83,13 +91,9 @@ def extract_all_stamps():
                     # let's say that if we have the right number of cutouts ...we good
                     # TODO implement a better check
                     continue
-            image_file = user_config['workdir'] / frame['image_relpath']
 
-            try:
-                data, header = fits.getdata(image_file), fits.getheader(image_file)
-            except Exception as E:
-                print(f"Problem with {user_config['image_relpath']}: {E}")
-                continue
+            image_file = user_config['workdir'] / frame['image_relpath']
+            data, header = fits.getdata(image_file), fits.getheader(image_file)
 
             # organize hdf5 file
             if frame['image_relpath'] not in reg_f.keys():

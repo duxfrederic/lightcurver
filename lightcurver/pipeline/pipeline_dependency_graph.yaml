@@ -11,7 +11,7 @@ tasks:
     nature: independent
     dependencies: []
   - name: read_convert_skysub_character_catalog
-    description: "reads the images from a directory, converts them to electrons, subtracts the sky, finds sources, measures noise, seeing, calculates ephemerides, records all to database"
+    description: "reads the images from a directory, converts them to electrons, subtracts the sky, finds sources, measures noise, seeing, calculates ephemeris, records all to database"
     dependencies: [initialize_database]
     nature: independent_each_frame
   - name: plate_solving

@@ -46,7 +46,7 @@ def ephemeris(mjd: float,
               ra_object: float, dec_object: float,
               telescope_longitude: float, telescope_latitude: float, telescope_elevation: float) -> dict:
     """
-    This function calculates and returns the ephemerides for a given object at a specific time and location.
+    This function calculates and returns the ephemeris for a given object at a specific time and location.
 
     Parameters:
     mjd (float): Modified Julian Date for the observation.
@@ -135,7 +135,7 @@ def ephemeris(mjd: float,
 def estimate_seeing(sources_table):
     """
     logic written by Malte Tewes, https://github.com/mtewes in 2010, for the COSMOULINE pipe of COSMOGRAIL.
-    it seems to have worked well for 14 years now, so I'm just keeping it.
+    it seems to have worked well for 14 years now, so I'm just keeping the main flow of it.
 
     this function estimates a seeing value (in pixels) based on a table of sources as extracted by sep.
     we need the FWHM column to be present in the table, hence the table of sources has to come from

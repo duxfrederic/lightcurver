@@ -58,14 +58,19 @@ def update_normalization_coefficients(norm_data):
         coefficient=excluded.coefficient, coefficient_uncertainty=excluded.coefficient_uncertainty
         """
 
-        # Execute the query for all normalization data in bulk
         cursor.executemany(insert_query, norm_data)
-
-        # Commit the changes to the database
         conn.commit()
 
 
 def calculate_coefficient():
+    """
+    this is a routine called by the workflow manager. It interfaces with the user config and the database
+    to calculate a representative norm of each frame, which will be used as a normalization coefficient later.
+
+    Returns:
+        nothing
+
+    """
     user_config = get_user_config()
 
     # query initial frames, so we can calculate the footprint at hand

@@ -3,8 +3,8 @@ import unittest
 from lightcurver.processes.frame_characterization import ephemeris
 
 
-class EphemeridesTestCase(unittest.TestCase):
-    def test_ephemerides(self):
+class EphemerisTestCase(unittest.TestCase):
+    def test_ephemeris(self):
         # somehow realistic data
         mjd = 60365.13
         ra, dec = 141.23246, 2.32358
