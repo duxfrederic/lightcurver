@@ -30,7 +30,8 @@ class TestExtractStamp(unittest.TestCase):
     def test_extract_stamp(self):
         # check the function can be called
         cutout, noisemap, wcs_header_string = extract_stamp(
-            self.data, self.header, self.exptime, self.sky_coord, self.cutout_size)
+            self.data, self.header, self.exptime, self.sky_coord, self.cutout_size,
+            background_rms_electron_per_second=0.5)
 
         # check ... output shapes?
         self.assertEqual(cutout.shape, (self.cutout_size, self.cutout_size))
