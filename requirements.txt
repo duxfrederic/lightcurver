@@ -12,5 +12,4 @@ astroquery~=0.4.6
 h5py~=3.8.0
 astroscrappy~=1.1.0
 starred-astro
-lightcurver~=0.1.0
 pytest~=7.4.2
