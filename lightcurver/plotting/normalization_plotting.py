@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors
+import matplotlib as mpl
 import pandas as pd
 
 from ..structure.database import execute_sqlite_query
@@ -17,6 +18,9 @@ def plot_normalized_star_curves(combined_footprint_hash, save_path=None):
     Returns:
         None
     """
+    # doing this because we set the stylesheet to dark for other plots, and we don't want it here (hard to read)
+    mpl.rcParams.update(mpl.rcParamsDefault)
+
     # query the coefficients and fluxes
     fluxes_fit_chi2_min, fluxes_fit_chi2_max = get_chi2_bounds(psf_or_fluxes='fluxes')
 
@@ -27,7 +31,7 @@ def plot_normalized_star_curves(combined_footprint_hash, save_path=None):
        normalization_coefficients nc
     JOIN
        frames f ON nc.frame_id = f.id
-    WHERE 
+    WHERE   
        coefficient > coefficient_uncertainty
     AND
        combined_footprint_hash = ?

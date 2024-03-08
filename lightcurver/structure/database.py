@@ -308,6 +308,7 @@ def initialize_database(db_path=None):
                       chi2 REAL, -- chi2 of the fit of the PSF
                       psf_ref TEXT, -- convention: sorted concatenation of all star names used in the model.
                       subsampling_factor INTEGER,  -- we do starred (pixelated) PSFs.
+                      relative_loss_differential REAL, -- absolute change in last 10% of the iterations vs beginning
                       FOREIGN KEY (frame_id) REFERENCES frames(id),
                       FOREIGN KEY (combined_footprint_hash) REFERENCES combined_footprint(hash),
                       PRIMARY KEY (combined_footprint_hash, frame_id, psf_ref)
@@ -322,6 +323,7 @@ def initialize_database(db_path=None):
                       flux REAL, -- in e- / second
                       flux_uncertainty REAL,
                       chi2 REAL, -- chi2 of fit in this specific frame.
+                      relative_loss_differential REAL, -- absolute change in last 10% of the iterations vs beginning
                       FOREIGN KEY (frame_id) REFERENCES frames(id),
                       FOREIGN KEY (star_gaia_id) REFERENCES stars(gaia_id),
                       FOREIGN KEY (combined_footprint_hash) REFERENCES combined_footprint(hash),

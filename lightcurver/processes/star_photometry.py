@@ -164,8 +164,8 @@ def update_star_fluxes(flux_data):
         # upon ON CONFLICT (integrity error due to trying to insert a flux for a given star and frame again),
         # as we would if we "redo", then we do indeed erase the previous values and add the new ones.
         insert_query = """
-        INSERT INTO star_flux_in_frame (combined_footprint_hash, frame_id, star_gaia_id, flux, flux_uncertainty, chi2)
-        VALUES (?, ?, ?, ?, ?, ?)
+        INSERT INTO star_flux_in_frame (combined_footprint_hash, frame_id, star_gaia_id, flux, flux_uncertainty, chi2, relative_loss_differential)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(combined_footprint_hash, frame_id, star_gaia_id) DO UPDATE SET
         flux=excluded.flux, flux_uncertainty=excluded.flux_uncertainty
         """
@@ -244,14 +244,19 @@ def do_star_photometry():
         # ok, plot the diagnostic
         plot_deconv_dir = user_config['plots_dir'] / 'deconvolutions' / str(combined_footprint_hash)
         plot_deconv_dir.mkdir(exist_ok=True, parents=True)
+        loss_history = result['loss_curve']
 
         plot_file = plot_deconv_dir / f"{time_now}_joint_deconv_star_{star['name']}.jpg"
         plot_joint_deconv_diagnostic(datas=data, noisemaps=noisemap,
                                      residuals=result['residuals'],
-                                     chi2_per_frame=result['chi2_per_frame'], loss_curve=result['loss_curve'],
+                                     chi2_per_frame=result['chi2_per_frame'], loss_curve=loss_history,
                                      save_path=plot_file)
 
         # now we can insert our results in our dedicated database table.
+        loss_index = int(0.9 * np.array(loss_history).size)
+        initial_change = np.nanmax(loss_history[:loss_index]) - np.nanmin(loss_history[:loss_index])
+        end_change = np.nanmax(loss_history[loss_index:]) - np.nanmin(loss_history[loss_index:])
+        relative_loss_differential = float(end_change / initial_change)
         # flux_data should be a list of tuples, each containing (frame_id, star_gaia_id, flux, flux_uncertainty)
         flux_data = []
         # the order of the frames is the same as before, and the same as that of our arrays and fluxes.
@@ -261,7 +266,8 @@ def do_star_photometry():
             flux = float(result['fluxes'][j])
             flux_uncertainty = float(result['fluxes_uncertainties'][j])
             chi2 = float(result['chi2_per_frame'][j])
-            flux_data.append((combined_footprint_hash, frame_id, gaia_id, flux, flux_uncertainty, chi2))
+            flux_data.append((combined_footprint_hash, frame_id, gaia_id, flux, flux_uncertainty,
+                              chi2, relative_loss_differential))
 
         # big insert while updating if value already in DB...
         update_star_fluxes(flux_data)

@@ -49,12 +49,25 @@ def model_all_psfs():
             datas = np.array([data_group[name][...] for name in sorted(stars['name'])])
             noisemaps = np.array([noisemap_group[name][...] for name in sorted(stars['name'])])
             cosmics_masks = np.array([mask_group[name][...] for name in sorted(stars['name'])]).astype(bool)
+            # for just after:
+            masked_counts_per_slice = np.sum(cosmics_masks, axis=(1, 2))
             # invert because the cosmics are marked as True, but we want the healthy pixels to be marked as True:
             cosmics_masks = ~cosmics_masks
         isnan = np.where(np.isnan(datas)*np.isnan(noisemaps))
+        # we'll delete the slices with too many masked pixels
+        mask_threshold_fraction = 0.5
+        total_elements_per_slice = datas.shape[1] * datas.shape[2]
+        slices_to_remove = masked_counts_per_slice > (mask_threshold_fraction * total_elements_per_slice)
+        slices_to_keep = ~slices_to_remove
+        # before eliminating entire slices, 'mask' the NaNs
         datas[isnan] = 0.
         noisemaps[isnan] = 1.0
         cosmics_masks[isnan] = False
+        # now eliminate slices, which changes the shapes.
+        datas = datas[slices_to_keep]
+        noisemaps = noisemaps[slices_to_keep]
+        cosmics_masks = cosmics_masks[slices_to_keep]
+
         # we set the initial guess for the position of the star to the center (guess_method thing)
         # because we are confident that is where the star will be (plate solving + gaia proper motions)
         result = build_psf(datas, noisemaps, subsampling_factor=user_config['subsampling_factor'],
@@ -66,12 +79,13 @@ def model_all_psfs():
         psf_plots_dir.mkdir(exist_ok=True, parents=True)
         frame_name = Path(frame['image_relpath']).stem
         seeing = frame['seeing_pixels'] * frame['pixel_scale']
+        loss_history = result['adabelief_extra_fields']['loss_history']
         plot_psf_diagnostic(datas=datas, noisemaps=noisemaps, residuals=result['residuals'],
                             full_psf=result['full_psf'],
-                            loss_curve=result['adabelief_extra_fields']['loss_history'],
+                            loss_curve=loss_history,
                             masks=cosmics_masks, names=sorted(stars['name']),
                             diagnostic_text=f"{frame_name}\nseeing: {seeing:.02f}",
-                            save_path=psf_plots_dir / f"{frame_name}.jpg")
+                            save_path=psf_plots_dir / f"{frame['id']}_{frame_name}.jpg")
 
         # now we can do the bookkeeping stuff
         with h5py.File(regions_file, 'r+') as f:
@@ -84,12 +98,16 @@ def model_all_psfs():
             psf_group['full_psf'] = np.array(result['full_psf'])
 
         # and update the database.
+        loss_index = int(0.9 * np.array(loss_history).size)
+        initial_change = np.nanmax(loss_history[:loss_index]) - np.nanmin(loss_history[:loss_index])
+        end_change = np.nanmax(loss_history[loss_index:]) - np.nanmin(loss_history[loss_index:])
+        relative_loss_differential = float(end_change / initial_change)
         delete_query = "DELETE FROM PSFs WHERE frame_id = ? AND psf_ref = ? AND combined_footprint_hash = ?"
         delete_params = (frame['id'], psf_ref, combined_footprint_hash)
         execute_sqlite_query(delete_query, delete_params, is_select=False)
-        insert_params = (frame['id'], float(result['chi2']), psf_ref,
+        insert_params = (frame['id'], float(result['chi2']), relative_loss_differential, psf_ref,
                          combined_footprint_hash, user_config['subsampling_factor'])
-        insert_query = "INSERT INTO PSFs (frame_id, chi2, psf_ref, combined_footprint_hash, subsampling_factor) "
+        insert_query = "INSERT INTO PSFs (frame_id, chi2, relative_loss_differential, psf_ref, combined_footprint_hash, subsampling_factor) "
         insert_query += f"VALUES ({','.join(len(insert_params)*['?'])})"
 
         execute_sqlite_query(insert_query, insert_params, is_select=False)

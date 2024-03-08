@@ -15,7 +15,7 @@ def get_user_config():
         config = yaml.safe_load(file)
 
     roi_keys = list(config['ROI'].keys())
-    config['roi_name'] = roi_keys[0]
+    config['roi_name'] = roi_name = roi_keys[0]
     ra, dec = config['ROI'][config['roi_name']]['coordinates']
     config['ROI_ra_deg'] = ra
     config['ROI_dec_deg'] = dec
@@ -47,4 +47,8 @@ def get_user_config():
         config['stars_to_use_psf'] = [c for c in config['stars_to_use_psf']]
     if type(config['stars_to_use_norm']) is str:
         config['stars_to_use_norm'] = [c for c in config['stars_to_use_norm']]
+
+    # where we save the ready to deconvolve cutouts:
+    if config['prepared_roi_cutouts_path'] is None:
+        config['prepared_roi_cutouts_path'] = config['workdir'] / 'prepared_roi_cutouts' / f"cutouts_{roi_name}.h5"
     return config

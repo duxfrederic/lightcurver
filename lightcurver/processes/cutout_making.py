@@ -18,7 +18,7 @@ from ..structure.database import get_pandas, query_stars_for_frame_and_footprint
 from ..utilities.footprint import get_combined_footprint_hash
 
 
-def extract_stamp(data, header, exptime, sky_coord, cutout_size):
+def extract_stamp(data, header, exptime, sky_coord, cutout_size, background_rms_electron_per_second):
     """
     :param data: 2d numpy array containing the full image
     :param header: fits header for WCS info
@@ -37,14 +37,7 @@ def extract_stamp(data, header, exptime, sky_coord, cutout_size):
     # now just take the numpy array
     data_cutout_electrons = exptime * data_cutout.data
 
-    # noise map given that the data is now in electrons ...
-    stddev = np.nanmean([
-           np.nanstd(data_cutout_electrons[:, 0]),
-           np.nanstd(data_cutout_electrons[0, :]),
-           np.nanstd(data_cutout_electrons[:, -1]),
-           np.nanstd(data_cutout_electrons[-1, :]),
-    ])
-    noisemap = stddev + np.sqrt(np.abs(data_cutout_electrons))
+    noisemap = exptime * background_rms_electron_per_second + np.sqrt(np.abs(data_cutout_electrons))
     # remove zeros if there are any ...
     noisemap[noisemap < 1e-7] = 1e-7
 
@@ -65,14 +58,9 @@ def extract_all_stamps():
     # where we'll save our stamps
     regions_file = user_config['regions_path']
 
-    if user_config['redo_stamp_extraction']:
-        # start from scratch ...
-        if regions_file.exists():
-            # delete if exists.
-            regions_file.unlink()
-
     # query frames
-    frames_to_process = get_pandas(columns=['id', 'image_relpath', 'exptime', 'mjd'],
+    frames_to_process = get_pandas(columns=['id', 'image_relpath', 'exptime', 'mjd',
+                                            'background_rms_electron_per_second'],
                                    conditions=['plate_solved = 1', 'eliminated = 0', 'roi_in_footprint = 1'])
 
     # we'll need to know what combined_footprint we're working with.
@@ -94,7 +82,7 @@ def extract_all_stamps():
 
             image_file = user_config['workdir'] / frame['image_relpath']
             data, header = fits.getdata(image_file), fits.getheader(image_file)
-
+            global_rms = frame['background_rms_electron_per_second']
             # organize hdf5 file
             if frame['image_relpath'] not in reg_f.keys():
                 frame_set = reg_f.create_group(frame['image_relpath'])
@@ -122,7 +110,8 @@ def extract_all_stamps():
                 cutout, noisemap, wcs_str = extract_stamp(data=data, header=header,
                                                           exptime=frame['exptime'],
                                                           sky_coord=user_config['ROI_SkyCoord'],
-                                                          cutout_size=user_config['stamp_size_ROI'])
+                                                          cutout_size=user_config['stamp_size_ROI'],
+                                                          background_rms_electron_per_second=global_rms)
                 # clean the cosmics
                 mask, cleaned = detect_cosmics(cutout, invar=noisemap**2)
                 data_set['ROI'] = cleaned
@@ -147,7 +136,8 @@ def extract_all_stamps():
                     cutout, noisemap, wcs_str = extract_stamp(data=data, header=header,
                                                              exptime=frame['exptime'],
                                                              sky_coord=corrected_coord,
-                                                             cutout_size=user_config['stamp_size_stars'])
+                                                             cutout_size=user_config['stamp_size_stars'],
+                                                             background_rms_electron_per_second=global_rms)
 
                     # again, clean the cosmics.
                     mask, cleaned = detect_cosmics(cutout, invar=noisemap**2)

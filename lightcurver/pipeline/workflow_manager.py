@@ -12,6 +12,7 @@ from ..processes.star_querying import query_gaia_stars
 from ..processes.psf_modelling import model_all_psfs
 from ..processes.star_photometry import do_star_photometry
 from ..processes.normalization_calculation import calculate_coefficient
+from ..processes.roi_deconv_file_preparation import prepare_roi_deconv_file
 
 
 class WorkflowManager:
@@ -22,7 +23,6 @@ class WorkflowManager:
         self.task_graph = {}
         self.build_dependency_graph()
 
-        _tmp_decoy = lambda: 1
         self.task_attribution = {
             'initialize_database': initialize_database,
             'read_convert_skysub_character_catalog': read_convert_skysub_character_catalog,
@@ -33,7 +33,7 @@ class WorkflowManager:
             'psf_modeling': model_all_psfs,
             'star_photometry': do_star_photometry,
             'calculate_normalization_coefficient': calculate_coefficient,
-            'prepare_calibrated_cutouts': _tmp_decoy,
+            'prepare_calibrated_cutouts': prepare_roi_deconv_file,
         }
         assert set(self.task_attribution.keys()) == set([entry['name'] for entry in self.pipe_config['tasks']])
 

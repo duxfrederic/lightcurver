@@ -94,7 +94,7 @@ stars_to_use_norm: null
 # Stamp extraction -- squares of size defined below.
 stamp_size_stars: 32
 stamp_size_ROI: 64
-redo_stamp_extraction: false
+redo_stamp_extraction: true
 
 
 # PSF modelling
@@ -124,3 +124,18 @@ star_deconv_n_iter: 2000
 # excluding the measured star fluxes we do not trust. same as for the PSF above.
 fluxes_fit_exclude_strategy:
   sigma_clip: 2.5
+
+
+# and finally! the preparation of the ROI.
+# we provide another chance of eliminating more frames here.
+# you can filter on any column of the 'frames' table of the sqlite3 database.
+# we'll provide below the structure you should follow with some examples.
+constraints_on_frame_columns_for_roi:
+  seeing_arcseconds: [0.0, 3.0]
+#  sky_level_electron_per_second: [0., 1000.]
+#  ellipticity: [0.0, 0.5]
+# we will not include anything beyond those limits.
+
+# and where do you want your prepared cutouts? (a single hdf5 file)
+# by default, null --> "$workdir/prepared_roi_cutouts"
+prepared_roi_cutouts_path: null
