@@ -119,6 +119,9 @@ def extract_all_stamps():
                 wcs_set['ROI'] = wcs_str
                 cosmic_mask['ROI'] = mask
 
+            # set proper motion to 0 when not available
+            stars[np.isnan(stars['pmra'])] = 0.
+            stars[np.isnan(stars['pmdec'])] = 0.
             # extract the stars
             for j, star in stars.iterrows():
                 star_name = str(star['name'])
