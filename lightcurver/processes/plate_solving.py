@@ -4,6 +4,7 @@ from astropy.table import Table
 from astropy.wcs import WCS
 from astropy.wcs.utils import proj_plane_pixel_scales
 from widefield_plate_solver import plate_solve
+from widefield_plate_solver.exceptions import CouldNotSolveError
 
 from ..structure.database import execute_sqlite_query
 from ..utilities.footprint import database_insert_single_footprint
@@ -47,8 +48,11 @@ def solve_one_image_and_update_database(image_path, sources_path, user_config, f
         nothing
     """
     if not user_config['already_plate_solved']:
-        wcs = solve_one_image(image_path, sources_path, user_config, logger)
-        success = wcs.is_celestial
+        try:
+            wcs = solve_one_image(image_path, sources_path, user_config, logger)
+            success = wcs.is_celestial
+        except CouldNotSolveError:
+            success = False
     else:
         success = True
 
