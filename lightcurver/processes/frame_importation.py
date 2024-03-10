@@ -3,6 +3,7 @@ import sqlite3
 from pathlib import Path
 from astropy.io import fits
 from astropy.wcs import WCS
+from time import sleep
 
 from .background_estimation import subtract_background
 from .star_extraction import extract_stars
@@ -96,7 +97,6 @@ def process_new_frame(fits_file, user_config, logger):
             eph_dict = None
 
     # now we're ready for registering our new frame!
-    conn = sqlite3.connect(user_config['database_path'], timeout=15.0)
     add_frame_to_database(original_image_path=fits_file,
                           copied_image_relpath=copied_image_relpath,
                           sources_relpath=sources_file_relpath,
@@ -109,10 +109,8 @@ def process_new_frame(fits_file, user_config, logger):
                           seeing_pixels=seeing_pixels,
                           ellipticity=ellipticity,
                           ephemeris_dictionary=eph_dict,
-                          database_connexion=conn,
-                          telescope_information=telescope_information)
-    conn.commit()
-    conn.close()
+                          telescope_information=telescope_information,
+                          user_config=user_config)
     return header
 
 
@@ -120,8 +118,7 @@ def add_frame_to_database(original_image_path, copied_image_relpath, sources_rel
                           mjd, gain,
                           sky_level_electron_per_second, background_rms_electron_per_second,
                           filter, exptime,
-                          seeing_pixels, ellipticity,
-                          database_connexion,
+                          seeing_pixels, ellipticity, user_config,
                           telescope_information=None,
                           ephemeris_dictionary=None):
     """
@@ -153,7 +150,7 @@ def add_frame_to_database(original_image_path, copied_image_relpath, sources_rel
     :param exptime: float, exposure time
     :param seeing_pixels: Seeing value measured for this frame, float.
     :param ellipticity: ellipticity of the psf, calculated as 1 - b/a
-    :param database_connexion: SQLite3 connection object to the database
+    :param user_config: dictionary containing the user config
     :param telescope_information: Optional dictionary with telescope information
     :param ephemeris_dictionary: dictionary as returned by the ephemeris function of frame_characterization.
     :return: None
@@ -187,7 +184,7 @@ def add_frame_to_database(original_image_path, copied_image_relpath, sources_rel
         columns.append('altitude')
         values.append(ephemeris_dictionary['target_info']['altitude_deg'])
 
-    # we'll return this whole thing at the end for further use
+    # we'll return this whole thing at the end for potential further use
     frame_info = {key: value for key, value in zip(columns, values)}
 
     # construct the SQL query based on the columns
@@ -196,10 +193,26 @@ def add_frame_to_database(original_image_path, copied_image_relpath, sources_rel
     query = f'INSERT INTO frames ({column_names}) VALUES ({placeholders})'
 
     # the query
-    cursor = database_connexion.cursor()
     try:
-        cursor.execute(query, values)
-        database_connexion.commit()
+        inserted = False
+        while not inserted:
+            try:
+                conn = sqlite3.connect(user_config['database_path'], timeout=2.5)
+                cursor = conn.cursor()
+                # cursor.execute("PRAGMA journal_mode=WAL")
+                # cursor.execute("PRAGMA busy_timeout=2500")
+                cursor.execute(query, values)
+                conn.commit()
+                inserted = True
+                conn.close()
+            except sqlite3.OperationalError:
+                print('database locked, waiting')
+                sleep(np.random.uniform(0, 0.5))  # retry after random wait
+            finally:
+                try:
+                    conn.close()
+                except:
+                    pass
     except sqlite3.IntegrityError as IntE:
         print("Error: most likely, we are inserting an already existing image again in the database.")
         print("You most likely overwrote an existing file already, leaving us in an inconsistent state.")
