@@ -15,6 +15,7 @@ from ..structure.database import execute_sqlite_query, get_pandas
 from ..utilities.gaia import query_gaia_stars
 from ..plotting.sources_plotting import plot_coordinates_and_sources_on_image
 from ..processes.plate_solving import post_plate_solve_steps
+from ..structure.user_config import get_user_config
 
 
 def create_initial_wcs(pixel_scale, image_shape, center_ra, center_dec, rotation_angle_deg):
@@ -50,14 +51,14 @@ def refine_wcs_with_astroalign(sources, gaia_star_coords, wcs):
     image_positions = np.column_stack((sources['x'], sources['y']))
 
     try:
-        transf, (source_idx, gaia_idx) = aa.find_transform(image_positions, gaia_pix_positions)
+        transformation, (source_idx, gaia_idx) = aa.find_transform(image_positions, gaia_pix_positions)
     except Exception as e:
         print(f"Error finding transformation with astroalign: {e}")
         raise
 
-    crpix = transf.inverse.params[:2, :2] @ wcs.wcs.crpix + transf.inverse.translation
+    crpix = transformation.inverse.params[:2, :2] @ wcs.wcs.crpix + transformation.inverse.translation
 
-    new_cd = transf.inverse.params[:2, :2] @ wcs.wcs.cd
+    new_cd = transformation.inverse.params[:2, :2] @ wcs.wcs.cd
     wcs_updated = wcs.deepcopy()
     wcs_updated.wcs.crpix = crpix
     wcs_updated.wcs.cd = new_cd
@@ -65,8 +66,8 @@ def refine_wcs_with_astroalign(sources, gaia_star_coords, wcs):
     return wcs_updated
 
 
-def alternate_plate_solve(user_config):
-
+def alternate_plate_solve():
+    user_config = get_user_config()
     ra, dec = user_config['ROI_ra_deg'], user_config['ROI_dec_deg']
     center_radius = {'center': (ra, dec), 'radius':  user_config['alternate_plate_solve_gaia_radius']/3600.}
     gaia_stars = query_gaia_stars('circle', center_radius=center_radius)

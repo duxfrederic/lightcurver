@@ -107,5 +107,6 @@ def plot_psf_diagnostic(datas, noisemaps, residuals, full_psf,
     plt.subplots_adjust(wspace=0, hspace=0)
     if save_path is not None:
         plt.savefig(save_path, pad_inches=0, bbox_inches='tight')
+        plt.close()
     else:
-        plt.show()
+        return fig, ax

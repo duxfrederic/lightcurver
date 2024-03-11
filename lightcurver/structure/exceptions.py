@@ -5,3 +5,8 @@ e.g. export LIGHTCURVER_CONFIG="/path/to/user_config.yaml"
 Then re-run the pipeline.
 """
         super().__init__(message)
+
+
+class TaskWasNotSuccessful(Exception):
+    def __init__(self, message):
+        super().__init__(message)

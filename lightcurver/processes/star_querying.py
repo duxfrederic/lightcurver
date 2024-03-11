@@ -1,5 +1,7 @@
 import logging
 from astropy.coordinates import SkyCoord
+import json
+import numpy as np
 
 from ..utilities.footprint import load_combined_footprint_from_db, get_frames_hash
 from ..structure.user_config import get_user_config
@@ -7,6 +9,7 @@ from ..processes.frame_star_assignment import populate_stars_in_frames
 from ..utilities.gaia import find_gaia_stars_in_circle, find_gaia_stars_in_polygon
 from ..utilities.star_naming import generate_star_names
 from ..structure.database import get_pandas, execute_sqlite_query
+from ..plotting.sources_plotting import plot_footprints_with_stars
 
 
 def query_gaia_stars():
@@ -76,6 +79,8 @@ def query_gaia_stars():
     insert_query = f"INSERT INTO stars ({', '.join(columns)}) VALUES ({', '.join(len(columns)*['?'])})"
     stars_coord = SkyCoord(ra=stars_table['ra'], dec=stars_table['dec'])
     stars_table['distance_to_roi'] = stars_coord.separation(user_config['ROI_SkyCoord']).arcsecond
+    # we do not want the ROI itself as a reference:
+    stars_table = stars_table[stars_table['distance_to_roi'] > user_config['ROI_size']]
     stars_table.sort('distance_to_roi')
     # add a friendly name to each star (a, b, c, ....)
     stars_table['name'] = generate_star_names(len(stars_table))
@@ -86,4 +91,16 @@ def query_gaia_stars():
                      float(star['pmra']), float(star['pmdec']), float(star['ref_epoch']), int(star['source_id']),
                      star['distance_to_roi'])
         execute_sqlite_query(insert_query, params=star_data, is_select=False)
+
     populate_stars_in_frames()
+    # let us also make a plot of how the gaia stars we queried are distributed within our footprint.
+    query = """
+    SELECT frames.id, footprints.polygon
+    FROM footprints 
+    JOIN frames ON footprints.frame_id = frames.id 
+    WHERE frames.eliminated != 1;
+    """
+    results = execute_sqlite_query(query)
+    polygon_list = [np.array(json.loads(result[1])) for result in results]
+    save_path = user_config['plots_dir'] / 'footprints_with_gaia_stars.jpg'
+    plot_footprints_with_stars(footprint_arrays=polygon_list, stars=stars_table.to_pandas(), save_path=save_path)

@@ -74,12 +74,25 @@ def extract_all_stamps():
             # check what stars need be extracted
             stars = query_stars_for_frame_and_footprint(frame_id=frame['id'],
                                                         combined_footprint_hash=combined_footprint_hash)
-            if frame['image_relpath'] in reg_f.keys():
-                if len(reg_f[frame['image_relpath']]['data'].keys()) == len(stars) + 1:
-                    # let's say that if we have the right number of cutouts ...we good
-                    # TODO implement a better check
-                    continue
 
+            # chance to skip this frame if both 'not redo' and 'all was extracted'
+            if (not user_config['redo_stamp_extraction']) and (frame['image_relpath'] in reg_f.keys()):
+                if not len(reg_f[frame['image_relpath']]['data'].keys()) == len(stars) + 1:
+                    # not the right number of cutouts ...have to extract.
+                    pass
+                else:
+                    # right number of cutouts, but gotta make sure the keys match.
+                    keys = reg_f[frame['image_relpath']]['data'].keys()
+                    all_there = True
+                    for j, star in stars.iterrows():
+                        if star['name'] not in keys:
+                            all_there = False
+                            break
+                    if 'ROI' not in keys:
+                        all_there = False
+                    if all_there:
+                        # all good, skip to next frame.
+                        continue
             image_file = user_config['workdir'] / frame['image_relpath']
             data, header = fits.getdata(image_file), fits.getheader(image_file)
             global_rms = frame['background_rms_electron_per_second']
@@ -120,8 +133,9 @@ def extract_all_stamps():
                 cosmic_mask['ROI'] = mask
 
             # set proper motion to 0 when not available
-            stars[np.isnan(stars['pmra'])] = 0.
-            stars[np.isnan(stars['pmdec'])] = 0.
+            if len(stars) > 0:  # if 0 stars, then frame will not be queried downstream.
+                stars['pmra'][np.isnan(stars['pmra'])] = 0.
+                stars['pmdec'][np.isnan(stars['pmdec'])] = 0.
             # extract the stars
             for j, star in stars.iterrows():
                 star_name = str(star['name'])

@@ -54,6 +54,7 @@ def post_plate_solve_steps(frame_path, user_config, frame_id):
     anisotropy = abs(psx - psy) / (psx + psy)
     message = "Your pixels seem to be a bit rectangular! I did not implement support for this. "
     message += f"Anisotropy: {anisotropy:.01%}%"
+    message += "Uncomment this assert line if you think you will be fine."
     assert abs(psx - psy) / (psx + psy) < 1e-2, message
     pixel_scale = 0.5 * (psx + psy) * 3600  # to arcsecond / pixel
     execute_sqlite_query(query="UPDATE frames SET pixel_scale = ? WHERE id = ?",

@@ -90,7 +90,7 @@ def prepare_roi_deconv_file():
         mask = ~(np.array(mask).astype(bool))  # so we invert it.
         # oh, we invert it again to boost the noisemap where mask is False,
         # but better have the masks loaded the right way for the future.
-        noisemap[np.where(~mask)[0]] *= 1000.
+        noisemap[~mask] *= 1000.
         # ok now that everything is ready let's get out of the context manager, also to close the file,
         # and we can open the deconvolution ready file.
 

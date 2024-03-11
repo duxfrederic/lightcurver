@@ -18,7 +18,7 @@ from ..structure.database import get_pandas, execute_sqlite_query
 from ..processes.frame_importation import process_new_frame
 from ..processes.plate_solving import solve_one_image_and_update_database
 from ..utilities.footprint import (calc_common_and_total_footprint, get_frames_hash,
-                                   save_combined_footprints_to_db)
+                                   save_combined_footprints_to_db, identify_and_eliminate_bad_pointings)
 from ..plotting.footprint_plotting import plot_footprints
 
 
@@ -123,6 +123,9 @@ def calc_common_and_total_footprint_and_save():
     Returns: None
 
     """
+    # so, before we do anything, let us eliminate the really obvious bad pointings.
+    identify_and_eliminate_bad_pointings()
+    # ok, keep going.
     logger = logging.getLogger("calc_footprints")
     query = """
     SELECT frames.id, footprints.polygon

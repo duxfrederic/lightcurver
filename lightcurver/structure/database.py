@@ -48,6 +48,15 @@ def execute_sqlite_query(query, params=(), is_select=True, timeout=15.0, use_pan
 
 
 def get_count_based_on_conditions(conditions, table='frames'):
+    """
+
+    Args:
+        conditions: string, e.g. 'plate_solved = 1 and eliminated = 0'
+        table:
+
+    Returns:
+
+    """
     db_path = get_user_config()['database_path']
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()

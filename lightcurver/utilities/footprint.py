@@ -2,8 +2,11 @@ import numpy as np
 from shapely.geometry import Polygon, mapping
 from functools import reduce
 import json
+from astropy.io import fits
+from astropy.wcs import WCS
 
-from ..structure.database import execute_sqlite_query
+from ..structure.database import execute_sqlite_query, get_pandas
+from ..structure.user_config import get_user_config
 
 
 def get_combined_footprint_hash(user_config, frames_id_list):
@@ -113,3 +116,79 @@ def load_combined_footprint_from_db(frames_hash):
         return largest, common
     else:
         return None
+
+
+def check_in_footprint_for_all_images():
+    """
+    Just a wrapper for running the footprint check. Can be useful to manually execute in some cases.
+    Will
+     - load the footprints from db or load all the headers of the plate solved images depending on function argument
+     - check if the ROI coord is in the footprint defined by the WCS
+     - update the frames table.
+    We skip the footprints table, as this is the ROI and not a simple star we want a better check
+    than the simple gnonomic projection we are forced to rely on when using the footprint table.
+
+    Returns:
+        Nothing
+    """
+    frames_to_process = get_pandas(columns=['id', 'image_relpath'],
+                                   conditions=['plate_solved = 1', 'eliminated = 0'])
+    user_config = get_user_config()
+
+    for i, frame in frames_to_process.iterrows():
+        frame_id = frame['id']
+        frame_path = user_config['workdir'] / frame['image_relpath']
+        final_header = fits.getheader(frame_path)
+        wcs = WCS(final_header)
+        in_footprint = user_config['ROI_SkyCoord'].contained_by(wcs)
+        execute_sqlite_query(query="UPDATE frames SET roi_in_footprint = ? WHERE id = ?",
+                             params=(int(in_footprint), frame_id), is_select=False)
+
+
+def identify_and_eliminate_bad_pointings():
+    """
+    Called after calculating the footprints. Will identify pointings that are ~really~ different, and
+    flag them in the database ('eliminated = 1', 'comment = "bad_pointing"')
+    Returns: nothing
+
+    """
+
+    select_query = """
+    SELECT frames.id, footprints.polygon
+    FROM footprints 
+    JOIN frames ON footprints.frame_id = frames.id
+    WHERE frames.eliminated != 1;
+    """
+    update_query = """
+    UPDATE frames
+    SET comment = 'bad_pointing', eliminated = 1
+    WHERE id = ?;
+    """
+
+    results = execute_sqlite_query(select_query, is_select=True, use_pandas=True)
+    mean_positions = []
+
+    for i, row in results.iterrows():
+        frame_id = row['id']
+        polygon = row['polygon']
+        polygon = np.array(json.loads(polygon))
+        mean_position = np.mean(polygon, axis=0)
+        mean_positions.append((frame_id, mean_position))
+
+    all_means = np.array([pos for _, pos in mean_positions])
+    overall_mean = np.mean(all_means, axis=0)
+
+    # distance of each frame's mean position from the overall mean
+    deviations = [(frame_id, np.linalg.norm(mean_pos - overall_mean)) for frame_id, mean_pos in mean_positions]
+
+    # threshold
+    deviation_values = [dev for _, dev in deviations]
+    mean_deviation = np.mean(deviation_values)
+    std_deviation = np.std(deviation_values)
+    threshold = mean_deviation + 5 * std_deviation  # quite a generous threshold.
+
+    # flag frames with significant deviation
+    bad_frames = [frame_id for frame_id, dev in deviations if dev > threshold]
+
+    for frame_id in bad_frames:
+        execute_sqlite_query(update_query, params=(frame_id,))

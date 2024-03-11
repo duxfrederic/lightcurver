@@ -29,5 +29,6 @@ def plot_image(image, wcs=None, save_path=None, colorbar=False, **imshow_kwargs)
     if save_path is not None:
         plt.tight_layout()
         plt.savefig(save_path, bbox_inches='tight', pad_inches=0.)
-
-    return fig, ax
+        plt.close()
+    else:
+        return fig, ax

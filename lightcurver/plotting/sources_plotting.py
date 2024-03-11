@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 
 from .image_plotting import plot_image
+from .footprint_plotting import plot_footprints
 
 
 def plot_sources(sources, image, wcs=None, save_path=None, sources_label=None,
@@ -40,8 +41,9 @@ def plot_sources(sources, image, wcs=None, save_path=None, sources_label=None,
     if save_path is not None:
         plt.tight_layout()
         plt.savefig(save_path, bbox_inches='tight', pad_inches=0.)
-
-    return fig, ax
+        plt.close()
+    else:
+        return fig, ax
 
 
 def plot_coordinates_and_sources_on_image(data, sources, gaia_coords, wcs, save_path, **kwargs_imshow):
@@ -75,6 +77,29 @@ def plot_coordinates_and_sources_on_image(data, sources, gaia_coords, wcs, save_
 
     if save_path is not None:
         plt.savefig(save_path, bbox_inches='tight', pad_inches=0)
+        plt.close()
     else:
-        plt.show()
+        return fig, ax
 
+
+def plot_footprints_with_stars(footprint_arrays, stars, save_path=None):
+    """
+
+    Args:
+        footprint_arrays:  list of arrays where each array represents a footprint's corners.
+        stars: pandas dataframe of stars, with columns 'name', 'ra', 'dec'
+        save_path: str or path
+
+    Returns:
+
+    """
+    fig, ax = plot_footprints(footprint_arrays, common_footprint=None, largest_footprint=None, save_path=None)
+    for _, star in stars.iterrows():
+        ax.plot(star['ra'], star['dec'], 'o', color='red', markersize=5, mfc='None')
+        ax.text(star['ra'], star['dec'], star['name'], fontsize=8, ha='right')
+
+    if save_path is not None:
+        plt.savefig(save_path, bbox_inches='tight', pad_inches=0, dpi=300)
+        plt.close()
+    else:
+        return fig, ax

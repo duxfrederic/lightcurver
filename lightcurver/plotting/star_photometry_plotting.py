@@ -84,5 +84,6 @@ def plot_joint_deconv_diagnostic(datas, noisemaps, residuals, loss_curve, chi2_p
 
     if save_path is not None:
         plt.savefig(save_path, pad_inches=0, bbox_inches='tight', dpi=130)
+        plt.close()
     else:
         plt.show()

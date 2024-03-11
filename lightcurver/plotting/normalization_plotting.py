@@ -111,5 +111,6 @@ def plot_normalized_star_curves(combined_footprint_hash, save_path=None):
 
     if save_path is not None:
         plt.savefig(save_path, pad_inches=0, bbox_inches='tight', dpi=150)
+        plt.close()
     else:
-        plt.show()
+        return fig, axs
