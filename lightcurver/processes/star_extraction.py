@@ -1,5 +1,4 @@
 import numpy as np
-from scipy.ndimage import median_filter
 from astropy.table import Table
 import sep
 
@@ -20,9 +19,8 @@ def extract_stars(image_background_subtracted, background_rms, detection_thresho
     Returns:
     astropy.table.Table: Table of detected sources.
     """
-    image_filtered = median_filter(image_background_subtracted, size=2)
 
-    objects = sep.extract(data=image_filtered,
+    objects = sep.extract(data=image_background_subtracted,
                           thresh=detection_threshold,
                           err=background_rms,
                           minarea=min_area)

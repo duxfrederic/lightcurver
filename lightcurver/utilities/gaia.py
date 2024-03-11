@@ -63,8 +63,9 @@ def find_gaia_stars_in_circle(center_radius, release='dr3', astrometric_excess_n
 
     adql_query = f"""
     SELECT * FROM {query_table}
-    WHERE {where_clause}
     """
+    if where_clause:
+        adql_query += f" WHERE {where_clause}"
     job = Gaia.launch_job_async(adql_query)
     result = job.get_results()
     return result

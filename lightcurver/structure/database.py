@@ -229,7 +229,7 @@ def initialize_database(db_path=None):
         "azimuth REAL DEFAULT NULL",
         "altitude REAL DEFAULT NULL",
         "comment TEXT DEFAULT NULL",
-        "roi_in_footprint INTEGER DEFAULT 1",
+        "roi_in_footprint INTEGER DEFAULT 0",
         # potential new stuff to keep track on in future here
     ]
 

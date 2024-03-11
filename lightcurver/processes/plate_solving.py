@@ -34,6 +34,34 @@ def solve_one_image(image_path, sources_path, user_config, logger):
     return WCS(wcs)
 
 
+def post_plate_solve_steps(frame_path, user_config, frame_id):
+    # our object might be out of the footprint of the image!
+    final_header = fits.getheader(frame_path)
+    # replace the wcs above with the WCS we saved in the header of the image (contains naxis)
+    wcs = WCS(final_header)
+    in_footprint = user_config['ROI_SkyCoord'].contained_by(wcs)
+    if not in_footprint:
+        execute_sqlite_query(query="UPDATE frames SET roi_in_footprint = ? WHERE id = ?",
+                             params=(0, frame_id), is_select=False)
+    # also, let us save the actual footprint
+    footprint_array = wcs.calc_footprint()
+    database_insert_single_footprint(frame_id, footprint_array)
+    # and let us compute the pixel scale!
+    psx, psy = proj_plane_pixel_scales(wcs)
+    # these are most likely in deg/pixel. astropy says that wcs should carry a cunit attribute,
+    # but it does not. Anyway, let us assume deg/pixel -- never seen anything else when working with wcs
+    # of wide field images.
+    anisotropy = abs(psx - psy) / (psx + psy)
+    message = "Your pixels seem to be a bit rectangular! I did not implement support for this. "
+    message += f"Anisotropy: {anisotropy:.01%}%"
+    assert abs(psx - psy) / (psx + psy) < 1e-2, message
+    pixel_scale = 0.5 * (psx + psy) * 3600  # to arcsecond / pixel
+    execute_sqlite_query(query="UPDATE frames SET pixel_scale = ? WHERE id = ?",
+                         params=(pixel_scale, frame_id), is_select=False)
+    execute_sqlite_query(query="UPDATE frames SET seeing_arcseconds = pixel_scale * seeing_pixels WHERE id = ?",
+                         params=(frame_id,), is_select=False)
+
+
 def solve_one_image_and_update_database(image_path, sources_path, user_config, frame_id, logger):
     """
     solves image using the sources in sources_path, then adds useful things to the database.
@@ -57,31 +85,7 @@ def solve_one_image_and_update_database(image_path, sources_path, user_config, f
         success = True
 
     if success:
-        # but our object might be out of the footprint of the image!
-        final_header = fits.getheader(image_path)
-        # replace the wcs above with the WCS we saved in the header of the image (contains naxis)
-        wcs = WCS(final_header)
-        in_footprint = user_config['ROI_SkyCoord'].contained_by(wcs)
-        if not in_footprint:
-            execute_sqlite_query(query="UPDATE frames SET roi_in_footprint = ? WHERE id = ?",
-                                 params=(0, frame_id), is_select=False)
-        # also, let us save the actual footprint
-        footprint_array = wcs.calc_footprint()
-        database_insert_single_footprint(frame_id, footprint_array)
-        # and let us compute the pixel scale!
-        psx, psy = proj_plane_pixel_scales(wcs)
-        # these are most likely in deg/pixel. astropy says that wcs should carry a cunit attribute,
-        # but it does not. Anyway, let us assume deg/pixel -- never seen anything else when working with wcs
-        # of wide field images.
-        anisotropy = abs(psx-psy)/(psx+psy)
-        message = "Your pixels seem to be a bit rectangular! I did not implement support for this. "
-        message += f"Anisotropy: {anisotropy:.01%}%"
-        assert abs(psx-psy)/(psx+psy) < 1e-2, message
-        pixel_scale = 0.5 * (psx + psy) * 3600  # to arcsecond / pixel
-        execute_sqlite_query(query="UPDATE frames SET pixel_scale = ? WHERE id = ?",
-                             params=(pixel_scale, frame_id), is_select=False)
-        execute_sqlite_query(query="UPDATE frames SET seeing_arcseconds = pixel_scale * seeing_pixels WHERE id = ?",
-                             params=(frame_id,), is_select=False)
+        post_plate_solve_steps(frame_id=frame_id, frame_path=image_path, user_config=user_config)
     # at the end, set the image to plate solved in db
     execute_sqlite_query(query="UPDATE frames SET plate_solved = ? WHERE id = ?",
                          params=(1 if success else 0, frame_id), is_select=False)

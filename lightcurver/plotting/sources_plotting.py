@@ -42,3 +42,39 @@ def plot_sources(sources, image, wcs=None, save_path=None, sources_label=None,
         plt.savefig(save_path, bbox_inches='tight', pad_inches=0.)
 
     return fig, ax
+
+
+def plot_coordinates_and_sources_on_image(data, sources, gaia_coords, wcs, save_path, **kwargs_imshow):
+    """
+    This is similar to the above, but we want to focus on the quality of the WCS.
+    Args:
+        data: image
+        sources: astropy Table
+        gaia_coords: Skycoord, usually from gaia
+        wcs: wcs object astropy
+        save_path: where to save
+        **kwargs_imshow:
+
+    Returns:
+
+    """
+
+    kwargs_imshow = {} if kwargs_imshow is None else kwargs_imshow
+    fig, ax = plot_image(image=data,
+                         wcs=wcs,
+                         save_path=save_path,
+                         **kwargs_imshow)
+
+    ax.scatter(gaia_coords.ra, gaia_coords.dec, transform=ax.get_transform('world'), s=10, edgecolor='r',
+               facecolor='none', label='Gaia Stars')
+
+    ax.scatter(sources['x'], sources['y'], s=10, color='blue', label='Detections', alpha=0.7)
+
+    ax.set_xlabel('RA')
+    ax.set_ylabel('Dec')
+
+    if save_path is not None:
+        plt.savefig(save_path, bbox_inches='tight', pad_inches=0)
+    else:
+        plt.show()
+

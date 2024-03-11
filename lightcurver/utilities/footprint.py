@@ -56,7 +56,7 @@ def database_insert_single_footprint(frame_id, footprint_array):
     polygon_list = footprint_array.tolist()
     polygon_str = json.dumps(polygon_list)
 
-    execute_sqlite_query(query="INSERT INTO footprints (frame_id, polygon) VALUES (?, ?)",
+    execute_sqlite_query(query="INSERT OR REPLACE INTO footprints (frame_id, polygon) VALUES (?, ?)",
                          params=(frame_id, polygon_str),
                          is_select=False)
 
