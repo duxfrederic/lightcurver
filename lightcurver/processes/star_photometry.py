@@ -134,7 +134,7 @@ def get_frames_for_star(combined_footprint_hash, gaia_id,
 
     # keep building the query
     query += """
-    JOIN PSFs ps ON f.id = ps.frame_id
+    JOIN PSFs ps ON f.id = ps.frame_id AND sif.combined_footprint_hash = ps.combined_footprint_hash
     WHERE sif.star_gaia_id = ? 
     """
     # the condition for frames without flux measurements
