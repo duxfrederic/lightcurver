@@ -67,10 +67,11 @@ def plot_coordinates_and_sources_on_image(data, sources, gaia_coords, wcs, save_
                          save_path=save_path,
                          **kwargs_imshow)
 
-    ax.scatter(gaia_coords.ra, gaia_coords.dec, transform=ax.get_transform('world'), s=10, edgecolor='r',
-               facecolor='none', label='Gaia Stars')
-
-    ax.scatter(sources['x'], sources['y'], s=10, color='blue', label='Detections', alpha=0.7)
+    if gaia_coords is not None:
+        ax.scatter(gaia_coords.ra, gaia_coords.dec, transform=ax.get_transform('world'), s=10, edgecolor='r',
+                   facecolor='none', label='Gaia Stars')
+    if sources is not None:
+        ax.scatter(sources['x'], sources['y'], s=10, color='blue', label='Detections', alpha=0.7)
 
     ax.set_xlabel('RA')
     ax.set_ylabel('Dec')
