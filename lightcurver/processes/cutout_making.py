@@ -85,7 +85,7 @@ def extract_all_stamps():
                     keys = reg_f[frame['image_relpath']]['data'].keys()
                     all_there = True
                     for j, star in stars.iterrows():
-                        if star['name'] not in keys:
+                        if star['gaia_id'] not in keys:
                             all_there = False
                             break
                     if 'ROI' not in keys:
@@ -138,7 +138,7 @@ def extract_all_stamps():
                 stars.loc[np.isnan(stars['pmdec']), 'pmdec'] = 0.0
             # extract the stars
             for j, star in stars.iterrows():
-                star_name = str(star['name'])
+                star_name = str(star['gaia_id'])
                 if star_name not in cosmic_mask.keys():
                     # make a sky coord with our star and its proper motion
                     star_coord = SkyCoord(ra=star['ra'] * u.deg,

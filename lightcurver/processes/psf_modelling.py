@@ -65,6 +65,7 @@ def model_all_psfs():
         stars = select_stars_for_a_frame(frame_id=frame['id'],
                                          combined_footprint_hash=combined_footprint_hash,
                                          stars_to_use=stars_to_use)
+        stars.sort_values(by=['name'])
         if len(stars) == 0:
             # we simply do not build a PSF. the frame will not be considered in the joint queries later.
             continue
@@ -79,9 +80,9 @@ def model_all_psfs():
             data_group = f[f"{frame['image_relpath']}/data"]
             noisemap_group = f[f"{frame['image_relpath']}/noisemap"]
             mask_group = f[f"{frame['image_relpath']}/cosmicsmask"]
-            datas = np.array([data_group[name][...] for name in sorted(stars['name'])])
-            noisemaps = np.array([noisemap_group[name][...] for name in sorted(stars['name'])])
-            cosmics_masks = np.array([mask_group[name][...] for name in sorted(stars['name'])]).astype(bool)
+            datas = np.array([data_group[gaia_id][...] for gaia_id in list(stars['gaia_id'])])
+            noisemaps = np.array([noisemap_group[name][...] for name in list(stars['gaia_id'])])
+            cosmics_masks = np.array([mask_group[name][...] for name in list(stars['gaia_id'])]).astype(bool)
             # invert because the cosmics are marked as True, but we want the healthy pixels to be marked as True:
             cosmics_masks = ~cosmics_masks
         # now we'll prepare automatic masks (masking other objects in the field)
