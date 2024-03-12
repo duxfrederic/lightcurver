@@ -32,6 +32,9 @@ def get_fluxes(combined_footprint_hash, photometry_chi2_min, photometry_chi2_max
        frames f
     JOIN star_flux_in_frame sff ON f.id = sff.frame_id 
     JOIN stars s ON sff.star_gaia_id = s.gaia_id AND sff.combined_footprint_hash = s.combined_footprint_hash
+    JOIN stars_in_frames sif ON sif.star_gaia_id = s.gaia_id
+                                AND sif.frame_id = f.id 
+                                AND sif.combined_footprint_hash = s.combined_footprint_hash 
     WHERE 
         sff.combined_footprint_hash = ?
     AND 
@@ -85,9 +88,10 @@ def calculate_coefficient():
     df = get_fluxes(combined_footprint_hash=combined_footprint_hash,
                     photometry_chi2_min=fluxes_fit_chi2_min,
                     photometry_chi2_max=fluxes_fit_chi2_max)
+    breakpoint()
 
     # get a reference flux by star as the mean of all fluxes for this star
-    reference_flux = df.groupby('star_gaia_id')['flux'].mean().reset_index()
+    reference_flux = df.groupby('star_gaia_id')['flux'].median().reset_index()
     reference_flux.rename(columns={'flux': 'reference_flux'}, inplace=True)
 
     # merge the reference flux with the original dataframe

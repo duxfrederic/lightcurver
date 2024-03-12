@@ -13,7 +13,7 @@ multiprocessing_cpu_count: 8
 ROI:
   PSJ1721+8842: 
     coordinates: [260.43437, 88.70599]  # [ra, dec] in degrees
-ROI_size: 5  # in arcseconds, will not consider reference stars this close
+ROI_size: 3.5  # in arcseconds, will not consider reference stars this close
 # the ROI will be used as a position starting point for the plate solving.
 
 # telescope information:
@@ -74,20 +74,20 @@ plate_solving_min_success_fraction: 0.85
 # I recomment the latter, seems to work well.
 star_selection_strategy: 'ROI_disk'
 # so, if the above is 'ROI_disk', provide here the radius in arcseconds:
-ROI_disk_radius_arcseconds: 300
+ROI_disk_radius_arcseconds: 211
 # now the stars, depending on your setup you will need to probe a different range
 # of magnitudes to both provide high S/N constraints to your normalization and PSF models,
 # while avoiding saturation -- set to null for no contraints
-star_min_gmag: 16.0
-star_max_gmag: 19.5
+star_min_gmag: 14.0
+star_max_gmag: 20.5
 # we discard stars that were not well fitted by a point source solution in gaia
 # (could be galaxies, or very crowded fields, or doubles ...which we need to avoid)
 # set to null for no constraints
-star_max_astrometric_excess_noise: 1.8
+star_max_astrometric_excess_noise: 9.0
 # finally, we can also request a small photometric error,
 # as the photometric error will go up with variability. this way we can select
 # more stable stars.
-star_max_phot_g_mean_flux_error: 2.5
+star_max_phot_g_mean_flux_error: 9.0
 # number criterion
 min_number_stars: 6
 # and whether we query again ...can be useful, but in principle querying once should work.
@@ -98,7 +98,7 @@ gaia_query_redo: false
 # these stars will be used for the PSF model and normalization.
 # if null: uses the top 10 closest star to the ROI.
 stars_to_use_psf: null
-stars_to_use_norm: null
+stars_to_use_norm: 20
 
 # Stamp extraction -- squares of size defined below.
 stamp_size_stars: 32
@@ -107,10 +107,10 @@ redo_stamp_extraction: true
 
 
 # PSF modelling
-redo_psf: true
+redo_psf: false
 subsampling_factor: 2
-psf_n_iter_analytic: 30 # number of iterations (l-bfgs-b) spent fitting a moffat
-psf_n_iter_pixels: 3000 # number of iterations (adabelief) spent fitting the pixel grid.
+psf_n_iter_analytic: 200 # number of iterations (l-bfgs-b) spent fitting a moffat
+psf_n_iter_pixels: 4000 # number of iterations (adabelief) spent fitting the pixel grid.
 
 # General preparation beyond PSF.
 # we'll have saved a chi2 value for each PSF fit.
@@ -126,13 +126,13 @@ psf_fit_exclude_strategy:
 #    threshold: [0, 1.5] # range of values of chi2 that we keep.
 
 # star photometry
-redo_star_photometry: false
+redo_star_photometry: true
 star_deconv_n_iter: 3000
 
 # normalization coefficient
 # excluding the measured star fluxes we do not trust. same as for the PSF above.
 fluxes_fit_exclude_strategy:
-  sigma_clip: 2.5
+  sigma_clip: 3.0
 
 
 # and finally! the preparation of the ROI.
