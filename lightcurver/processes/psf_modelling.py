@@ -85,7 +85,6 @@ def model_all_psfs():
             # invert because the cosmics are marked as True, but we want the healthy pixels to be marked as True:
             cosmics_masks = ~cosmics_masks
         # now we'll prepare automatic masks (masking other objects in the field)
-        print(f'loaded data after {time()-t0:.01f} seconds')
         automatic_masks = []
         for data, noisemap in zip(datas, noisemaps):
             mask = mask_surrounding_stars(data, noisemap)
@@ -115,13 +114,11 @@ def model_all_psfs():
 
         # we set the initial guess for the position of the star to the center (guess_method thing)
         # because we are confident that is where the star will be (plate solving + gaia proper motions)
-        print(f'prepared masked data after {time()-t0:.01f} seconds')
         result = build_psf(datas, noisemaps, subsampling_factor=user_config['subsampling_factor'],
                            n_iter_analytic=user_config['psf_n_iter_analytic'],
                            n_iter_adabelief=user_config['psf_n_iter_pixels'],
                            masks=masks,
                            guess_method_star_position='center')
-        print(f'done starred after {time()-t0:.01f} seconds')
         psf_plots_dir = user_config['plots_dir'] / 'PSFs' / str(combined_footprint_hash)
         psf_plots_dir.mkdir(exist_ok=True, parents=True)
         frame_name = Path(frame['image_relpath']).stem
@@ -133,7 +130,6 @@ def model_all_psfs():
                             masks=masks, names=names,
                             diagnostic_text=f"{frame_name}\nseeing: {seeing:.02f}",
                             save_path=psf_plots_dir / f"{frame['id']}_{frame_name}.jpg")
-        print(f'done plots after {time()-t0:.01f} seconds')
 
         # now we can do the bookkeeping stuff
         with h5py.File(regions_file, 'r+') as f:
@@ -144,7 +140,6 @@ def model_all_psfs():
             psf_group = frame_group.create_group(psf_ref)
             psf_group['narrow_psf'] = np.array(result['narrow_psf'])
             psf_group['full_psf'] = np.array(result['full_psf'])
-        print(f'done writing h5 after {time()-t0:.01f} seconds')
 
         # and update the database.
         loss_index = int(0.9 * np.array(loss_history).size)
@@ -153,11 +148,11 @@ def model_all_psfs():
         relative_loss_differential = float(end_change / initial_change)
         insert_params = (frame['id'], float(result['chi2']), relative_loss_differential, psf_ref,
                          combined_footprint_hash, user_config['subsampling_factor'])
-        insert_query = "REPLACE INTO PSFs (frame_id, chi2, relative_loss_differential, psf_ref, combined_footprint_hash, subsampling_factor) "
+        insert_query = "REPLACE INTO PSFs "
+        insert_query += "(frame_id, chi2, relative_loss_differential, psf_ref, combined_footprint_hash, subsampling_factor) "
         insert_query += f"VALUES ({','.join(['?'] * len(insert_params))})"
 
         execute_sqlite_query(insert_query, insert_params, is_select=False)
-        print(f'done update sqlite after {time() - t0:.01f} seconds')
 
 
 
