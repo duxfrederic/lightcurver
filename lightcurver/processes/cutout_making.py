@@ -134,8 +134,8 @@ def extract_all_stamps():
 
             # set proper motion to 0 when not available
             if len(stars) > 0:  # if 0 stars, then frame will not be queried downstream.
-                stars['pmra'][np.isnan(stars['pmra'])] = 0.
-                stars['pmdec'][np.isnan(stars['pmdec'])] = 0.
+                stars.loc[np.isnan(stars['pmra']), 'pmra'] = 0.0
+                stars.loc[np.isnan(stars['pmdec']), 'pmdec'] = 0.0
             # extract the stars
             for j, star in stars.iterrows():
                 star_name = str(star['name'])
@@ -162,4 +162,3 @@ def extract_all_stamps():
                     noise_set[star_name] = noisemap
                     wcs_set[star_name] = wcs_str
                     cosmic_mask[star_name] = mask
-
