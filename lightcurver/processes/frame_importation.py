@@ -45,8 +45,9 @@ def process_new_frame(fits_file, user_config, logger):
             wcs.wcs.crpix[0] -= trim_horizontal
             wcs.wcs.crpix[1] -= trim_vertical
 
-        header['BUNIT'] = "e-/s"
+        header['BUNIT'] = "ELPERSEC"
         mjd_gain_filter_exptime_dict = header_parser_function(header)
+        logger.info(f'  file {fits_file}: finished reading and parsed header.')
         cutout_data *= mjd_gain_filter_exptime_dict['gain'] / mjd_gain_filter_exptime_dict['exptime']
         # unit: electron per second
 
@@ -54,6 +55,7 @@ def process_new_frame(fits_file, user_config, logger):
         cutout_data_sub, bkg = subtract_background(cutout_data)
         sky_level_electron_per_second = float(bkg.globalback)
         background_rms_electron_per_second = float(bkg.globalrms)
+        logger.info(f'  file {fits_file}: background estimated.')
 
         # before we write, let's keep as much as we can from our previous header
         new_header = wcs.to_header()
@@ -63,8 +65,10 @@ def process_new_frame(fits_file, user_config, logger):
                     'CRPIX') and not key.startswith('CRVAL') and not key.startswith('CDELT') and not key.startswith(
                     'CTYPE') and not key.startswith('CUNIT') and not key.startswith('CD') and key not in ['COMMENT',
                                                                                                           'HISTORY']:
-                new_header[key] = header[key]
+                if key.strip():  # some headers are weird
+                    new_header[key] = header[key]
         # now we can write the file
+        logger.info('    Writing file: ', user_config['workdir'] / copied_image_relpath)
         fits.writeto(user_config['workdir'] / copied_image_relpath, cutout_data_sub.astype(np.float32),
                      header=new_header, overwrite=True)
         # and find sources

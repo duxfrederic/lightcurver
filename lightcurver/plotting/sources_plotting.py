@@ -18,7 +18,7 @@ def plot_sources(sources, image, wcs=None, save_path=None, sources_label=None,
     kwargs_imshow = {} if kwargs_imshow is None else kwargs_imshow
     fig, ax = plot_image(image=image,
                          wcs=wcs,
-                         save_path=save_path,
+                         save_path=None,
                          **kwargs_imshow)
 
     base_plot_options = {'marker': 'o',
@@ -64,7 +64,7 @@ def plot_coordinates_and_sources_on_image(data, sources, gaia_coords, wcs, save_
     kwargs_imshow = {} if kwargs_imshow is None else kwargs_imshow
     fig, ax = plot_image(image=data,
                          wcs=wcs,
-                         save_path=save_path,
+                         save_path=None,
                          **kwargs_imshow)
 
     if gaia_coords is not None:

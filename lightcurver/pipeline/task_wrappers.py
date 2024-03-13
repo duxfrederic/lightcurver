@@ -53,7 +53,7 @@ def read_convert_skysub_character_catalog():
 
     # find the new frames, we compare on file name!
     user_config = get_user_config()
-    available_frames = sum([list(raw_dir.glob('*.fits')) for raw_dir in user_config['raw_dirs']], start=[])
+    available_frames = sum([list(raw_dir.glob('*')) for raw_dir in user_config['raw_dirs']], start=[])
     df_available_frames = pd.DataFrame({'frame_name': [frame.name for frame in available_frames]})
     already_imported = get_pandas(columns=['original_image_path', 'id'])
     if not already_imported.empty:
@@ -64,6 +64,8 @@ def read_convert_skysub_character_catalog():
     new_frames_df = df_available_frames[~df_available_frames['frame_name'].isin(already_imported['name'])]
     new_frames = [frame for frame in available_frames if frame.name in new_frames_df['frame_name'].tolist()]
     logger.info(f"Importing {len(new_frames)} new frames.")
+    logger.info(f"Will write them to {user_config['workdir'] / 'frames'}")
+    logger.info(f"Database will be at {user_config['workdir'] / 'database.sqlite3'}")
 
     with Pool(processes=user_config['multiprocessing_cpu_count'],
               initializer=worker_init, initargs=(log_queue,)) as pool:
