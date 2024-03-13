@@ -94,9 +94,14 @@ def prepare_roi_deconv_file():
         # ok now that everything is ready let's get out of the context manager, also to close the file,
         # and we can open the deconvolution ready file.
 
+    # where we save the ready to deconvolve cutouts:
     save_path = user_config['prepared_roi_cutouts_path']
+    
+    if save_path is None:
+        roi = user_config['roi_name']
+        save_path = user_config['workdir'] / 'prepared_roi_cutouts' / f"cutouts_{combined_footprint_hash}_{roi}.h5"
     save_path.parent.mkdir(exist_ok=True, parents=True)
-    with h5py.File(user_config['prepared_roi_cutouts_path'], 'w') as f:
+    with h5py.File(save_path, 'w') as f:
         f['frame_id'] = np.array(frame_id)
         f['data'] = np.array(data)
         f['noisemap'] = np.array(noisemap)

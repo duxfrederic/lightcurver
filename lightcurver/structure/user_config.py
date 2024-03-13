@@ -48,7 +48,4 @@ def get_user_config():
     if type(config['stars_to_use_norm']) is str:
         config['stars_to_use_norm'] = [c for c in config['stars_to_use_norm']]
 
-    # where we save the ready to deconvolve cutouts:
-    if config['prepared_roi_cutouts_path'] is None:
-        config['prepared_roi_cutouts_path'] = config['workdir'] / 'prepared_roi_cutouts' / f"cutouts_{roi_name}.h5"
     return config
