@@ -17,8 +17,8 @@ the `lightcurver` / `STARRED` model, and the Hubble Space Telescope image of the
 ## Features
 * Uses plate solving to keep track of the footprint of each frame, allowing for an independent selection of reference stars in each frame.
 * Leverages _Gaia_ information to select the right reference stars in the field of view.
-* Provides an extremely precise relative flux calibration between epochs.
-* Leverages `STARRED` for the PSF modelling and photometry.
+* Never interpolates: essential to preserve the sub-pixel information that can be reocovered by `STARRED` in a multi-epoch deconvolution.
+* Provides an extremely precise relative flux calibration between epochs and a state-of-the-art PSF model for each epoch.
 * Uses `sqlite3` queries to dynamically determine which process needs be executed on which frame. (adding a new frame does not require the reprocessing of everything).
 * Attempts to keep the number of created files to a minimum, this is crucial when working on servers with high lattency storage.
 
