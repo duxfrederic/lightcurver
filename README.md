@@ -14,6 +14,15 @@ the `lightcurver` / `STARRED` model, and the Hubble Space Telescope image of the
 
 ![example_deconvolution](docs/example_result.jpg)
 
+## Features
+* Uses plate solving to keep track of the footprint of each frame, allowing for an independent selection of reference stars in each frame.
+* Leverages _Gaia_ information to select the right reference stars in the field of view.
+* Provides an extremely precise relative flux calibration between epochs.
+* Leverages `STARRED` for the PSF modelling and photometry.
+* Uses `sqlite3` queries to dynamically determine which process needs be executed on which frame. (adding a new frame does not require the reprocessing of everything).
+* Attempts to keep the number of created files to a minimum, this is crucial when working on servers with high lattency storage.
+
+
 ## Getting Started
 
 0. **Requirements**: on top of the python libraries listed in `requirements.txt`, we need either
@@ -48,9 +57,14 @@ Now you can run `lightcurver`:
 ## The implemented processing steps
 ![flowdiagram](docs/flow_diagram/workflow_diagram.svg)
 
+## Roadmap 
+- Finish the logging system: we should be left with one unified logging interface.
+- refactor some of the tasks, ideally all functions that do database queries should go in `processes`.
+
 ## Contributing
 
-We welcome contributions from the community! Whether you're fixing a bug, implementing a new feature, or improving documentation, your efforts are highly appreciated. Please read our [contribution guidelines](CONTRIBUTING.md) to get started.
+Whether you're fixing a bug, implementing a new feature, or improving documentation, your efforts are highly appreciated. 
+If you are using this code and are encountering issues, feel free to contact me or to directly open an issue or pull request.
 
 ## License
 
@@ -58,4 +72,4 @@ LightCurver is licensed under the GPL v3.0 License. See the [LICENSE](LICENSE) f
 
 ## Contact
 
-Have questions or suggestions? Feel free to open an issue, a pull request, or [reach out](#)!
+Have questions or suggestions? Feel free to open an issue, a pull request, or [reach out](mailto:frederic.dux@epfl.ch)!
