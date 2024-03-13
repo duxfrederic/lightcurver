@@ -214,8 +214,8 @@ def do_star_photometry():
             mask = []
             psf = []
             for j, frame in frames.iterrows():
-                data.append(h5f[f"{frame['image_relpath']}/data/{star['name']}"][...])
-                noisemap.append(h5f[f"{frame['image_relpath']}/noisemap/{star['name']}"][...])
+                data.append(h5f[f"{frame['image_relpath']}/data/{star['gaia_id']}"][...])
+                noisemap.append(h5f[f"{frame['image_relpath']}/noisemap/{star['gaia_id']}"][...])
                 # more difficult for the psf.
                 # we need to reconstruct which stars were used in the psf given our
                 # accepted stars in 'stars_to_use_psf'.
@@ -223,7 +223,7 @@ def do_star_photometry():
                                                      stars_to_use=user_config['stars_to_use_psf'],
                                                      combined_footprint_hash=combined_footprint_hash)
                 psf_ref = 'psf_' + ''.join(sorted(stars_psf['name']))
-                mask.append(h5f[f"{frame['image_relpath']}/cosmicsmask/{star['name']}"][...])
+                mask.append(h5f[f"{frame['image_relpath']}/cosmicsmask/{star['gaia_id']}"][...])
                 psf.append(h5f[f"{frame['image_relpath']}/{psf_ref}/narrow_psf"][...])
             data, noisemap, mask, psf = np.array(data), np.array(noisemap), np.array(mask), np.array(psf)
             # just like for the PSF, we need to remove the NaNs ...
