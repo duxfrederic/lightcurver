@@ -118,7 +118,7 @@ def extract_all_stamps():
             else:
                 cosmic_mask = frame_set['cosmicsmask']
 
-            if 'ROI' not in cosmic_mask.keys():
+            if user_config['redo_stamp_extraction'] or ('ROI' not in cosmic_mask.keys()):
                 # extract the ROI -- assuming no proper motion.
                 cutout, noisemap, wcs_str = extract_stamp(data=data, header=header,
                                                           exptime=frame['exptime'],
@@ -127,9 +127,17 @@ def extract_all_stamps():
                                                           background_rms_electron_per_second=global_rms)
                 # clean the cosmics
                 mask, cleaned = detect_cosmics(cutout, invar=noisemap**2)
+                if 'ROI' in data_set:
+                    del data_set['ROI']
                 data_set['ROI'] = cleaned
+                if 'ROI' in noise_set:
+                    del noise_set['ROI']
                 noise_set['ROI'] = noisemap
+                if 'ROI' in wcs_set:
+                    del wcs_set['ROI']
                 wcs_set['ROI'] = wcs_str
+                if 'ROI' in cosmic_mask:
+                    del cosmic_mask['ROI']
                 cosmic_mask['ROI'] = mask
 
             # set proper motion to 0 when not available
@@ -139,7 +147,7 @@ def extract_all_stamps():
             # extract the stars
             for j, star in stars.iterrows():
                 star_name = str(star['gaia_id'])
-                if star_name not in cosmic_mask.keys():
+                if user_config['redo_stamp_extraction'] or (star_name not in cosmic_mask.keys()):
                     # make a sky coord with our star and its proper motion
                     star_coord = SkyCoord(ra=star['ra'] * u.deg,
                                           dec=star['dec'] * u.deg,
@@ -158,7 +166,15 @@ def extract_all_stamps():
 
                     # again, clean the cosmics.
                     mask, cleaned = detect_cosmics(cutout, invar=noisemap**2)
+                    if star_name in data_set:
+                        del data_set[star_name]
                     data_set[star_name] = cleaned
+                    if star_name in noise_set:
+                        del noise_set[star_name]
                     noise_set[star_name] = noisemap
+                    if star_name in wcs_set:
+                        del wcs_set[star_name]
                     wcs_set[star_name] = wcs_str
+                    if star_name in cosmic_mask:
+                        del cosmic_mask[star_name]
                     cosmic_mask[star_name] = mask
