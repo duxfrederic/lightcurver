@@ -68,7 +68,7 @@ def process_new_frame(fits_file, user_config, logger):
                 if key.strip():  # some headers are weird
                     new_header[key] = header[key]
         # now we can write the file
-        logger.info('    Writing file: ', user_config['workdir'] / copied_image_relpath)
+        logger.info(f'    Writing file: { user_config['workdir'] / copied_image_relpath}')
         fits.writeto(user_config['workdir'] / copied_image_relpath, cutout_data_sub.astype(np.float32),
                      header=new_header, overwrite=True)
         # and find sources
