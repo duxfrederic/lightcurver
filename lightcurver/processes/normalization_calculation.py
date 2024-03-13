@@ -1,5 +1,8 @@
 from scipy.stats import median_abs_deviation
 import sqlite3
+import numpy as np
+from scipy.optimize import minimize
+import pandas as pd
 
 from ..structure.database import execute_sqlite_query, get_pandas
 from ..structure.user_config import get_user_config
@@ -65,6 +68,67 @@ def update_normalization_coefficients(norm_data):
         conn.commit()
 
 
+def cost_function_scatter_in_frame(scaling_factors, normalized_flux_pivot, normalized_d_flux_pivot):
+    """
+    This is a utility for the calculation of the coef. We compare the fluxes of stars divided by their global median
+    in each frame. We scale each star light-curve by a global coefficient.
+    This function gives us the average scatter in each frame between the different star fluxes given a set of
+    scaling factors.
+    Args:
+        scaling_factors: 1d array, one value per star
+        normalized_flux_pivot: pivot table with frame_id as columns and star_gaia_id as rows, for fluxes
+        normalized_d_flux_pivot: same but for uncertainties
+
+    Returns: scalar, a variance representative of the scatter in each frame with the available stars in that frame.
+    """
+    scaled_fluxes = normalized_flux_pivot.mul(scaling_factors, axis=0)
+
+    weights = 1 / normalized_d_flux_pivot
+
+    weighted_means = (scaled_fluxes * weights).sum(axis=0) / weights.sum(axis=0)
+    weighted_variance = (
+        (weights.mul((scaled_fluxes.sub(weighted_means, axis='columns'))**2)).sum(axis=0) / weights.sum(axis=0)).sum()
+    return weighted_variance
+
+
+def filter_outliers(fluxes, uncertainties, threshold=3.0):
+    """
+    Another utility function, just filtering the very off fluxes in each frame.
+    Args:
+        fluxes: pandas series index by star_gaia_id
+        uncertainties:  pandas series index by star_gaia_id
+        threshold: float
+
+    Returns:
+        same as input types, but filtered.
+
+    """
+    median_flux = fluxes.median()
+    mad = median_abs_deviation(fluxes, scale='normal')
+    is_outlier = abs(fluxes - median_flux) > (threshold * mad)
+    # Ensure both fluxes and uncertainties are filtered by the same outlier mask
+    return fluxes[~is_outlier], uncertainties[fluxes.index[~is_outlier]]
+
+
+def weighted_std(values, weights):
+    """
+    last utility function: weighted standard deviation for our estimation of the scatter in each coefficient.
+    Args:
+        values: array
+        weights:  array
+
+    Returns:
+        float, some standard deviation.
+
+    """
+    isnan = np.isnan(values) + np.isnan(weights)
+    values = values[~isnan]
+    weights = weights[~isnan]
+    average = np.average(values, weights=weights)
+    variance = np.average((values-average)**2, weights=weights)
+    return np.sqrt(variance)
+
+
 def calculate_coefficient():
     """
     this is a routine called by the workflow manager. It interfaces with the user config and the database
@@ -88,56 +152,52 @@ def calculate_coefficient():
     df = get_fluxes(combined_footprint_hash=combined_footprint_hash,
                     photometry_chi2_min=fluxes_fit_chi2_min,
                     photometry_chi2_max=fluxes_fit_chi2_max)
-    breakpoint()
+    # 1. normalize by median in each star -- get a 'norm' of each frame for each individual star.
+    median_flux_per_star = df.groupby('star_gaia_id')['flux'].median().rename('median_flux')
+    df2 = df.merge(median_flux_per_star, on='star_gaia_id')
+    df2['normalized_flux'] = df2['flux'] / df2['median_flux']
+    df2['normalized_d_flux'] = df2['d_flux'] / df2['median_flux']
 
-    # get a reference flux by star as the mean of all fluxes for this star
-    reference_flux = df.groupby('star_gaia_id')['flux'].median().reset_index()
-    reference_flux.rename(columns={'flux': 'reference_flux'}, inplace=True)
+    # we'll pivot the table to have frame_id as columns and star_gaia_id as rows
+    # (useful to conduct operations within each frame)
+    normalized_flux_pivot = df2.pivot(index='star_gaia_id', columns='frame_id', values='normalized_flux')
+    normalized_d_flux_pivot = df2.pivot(index='star_gaia_id', columns='frame_id', values='normalized_d_flux')
 
-    # merge the reference flux with the original dataframe
-    df_merged = df.merge(reference_flux, on='star_gaia_id')
-    df_merged['relative_flux'] = df_merged['flux'] / df_merged['reference_flux']
-    df_merged['relative_d_flux'] = df_merged['d_flux'] / df_merged['reference_flux']
-    medians = df_merged.groupby('frame_id')['relative_flux'].median()
-    mad = df_merged.groupby('frame_id')['relative_flux'].apply(median_abs_deviation)
-    df_merged = df_merged.merge(medians.rename('median'), on='frame_id')
-    df_merged = df_merged.merge(mad.rename('mad'), on='frame_id')
-    n_star_per_frame = df_merged.groupby('frame_id')['relative_flux'].apply(len)
-    df_merged = df_merged.merge(n_star_per_frame.rename('star_count_before_filtering'), on='frame_id')
+    # now, these fluxes are just, for each star, 'star flux / median star flux'.
+    # we could easily have scaling differences, so we'll align the curves by indivudally scaling them,
+    # minimizing the dispersion in eah frame.
+    # we will do this with the constraint that the mean of the coefs should be 1
+    # (else, the optimizer will just set everything to 0 to minimize dispersion ...)
+    constraint = ({'type': 'eq', 'fun': lambda coeffs: 1 - np.nanmean(coeffs)})
+    initial_star_scaling_factors = np.ones(normalized_flux_pivot.shape[0])
+    result = minimize(cost_function_scatter_in_frame, initial_star_scaling_factors,
+                      args=(normalized_flux_pivot, normalized_d_flux_pivot), constraints=constraint, method='SLSQP')
+    optimized_star_scaling_factors_with_reference = result.x
 
-    df_merged['z_score'] = abs((df_merged['relative_flux'] - df_merged['median']) / df_merged['mad'])
+    # ok, scale each star light-curve by its optimized scaling
+    adjusted_normalized_fluxes = normalized_flux_pivot.mul(optimized_star_scaling_factors_with_reference, axis=0)
+    adjusted_normalized_d_fluxes = normalized_d_flux_pivot.mul(optimized_star_scaling_factors_with_reference, axis=0)
 
-    df_filtered = df_merged[df_merged['z_score'] <= 3]
-    n_star_per_frame = df_filtered.groupby('frame_id')['relative_flux'].apply(len)
-    df_filtered = df_filtered.merge(n_star_per_frame.rename('star_count_after_filtering'), on='frame_id')
-    df_filtered['weights'] = 1 / (df_filtered['relative_d_flux'])
-    scatter = df_filtered.groupby('frame_id')['relative_flux'].std()
-    df_filtered = df_filtered.merge(scatter.rename('scatter'), on='frame_id')
+    # now, let's eliminate the obvious outliers
+    filtered_fluxes = adjusted_normalized_fluxes.copy()
+    filtered_uncertainties = adjusted_normalized_d_fluxes.copy()
 
-    weighted_avg = df_filtered.groupby('frame_id').apply(
-        lambda x: (x['relative_flux'] * x['weights']).sum() / x['weights'].sum())
-    df_filtered = df_filtered.merge(weighted_avg.rename('combined_rel_flux'), on='frame_id')
-    weighted_error = df_filtered.groupby('frame_id')['relative_d_flux'].mean()
-    df_filtered = df_filtered.merge(weighted_error.rename('combined_uncertainties'), on='frame_id')
-    df_filtered['combined_uncertainties'] = df_filtered['combined_uncertainties'] + df_filtered['scatter']
-
-    frame_normalization = df_filtered.groupby('frame_id').agg({
-        'combined_rel_flux': 'mean',
-        'combined_uncertainties': 'mean'
-    }).reset_index()
-
-    # rename for clarity
-    frame_normalization.rename(columns={'combined_rel_flux': 'normalization',
-                                        'combined_uncertainties': 'normalization_error'},
-                               inplace=True)
+    filtered_weights = 1. / filtered_uncertainties
+    norm_err = filtered_fluxes.columns.map(
+        lambda frame_id: weighted_std(filtered_fluxes[frame_id], filtered_weights[frame_id])
+    )
+    norm_coeff = (filtered_fluxes.multiply(filtered_weights)).sum(axis=0) / filtered_weights.sum(axis=0)
+    # restore index:
+    norm_err = pd.Series(norm_err, index=filtered_fluxes.columns)
+    # case with only one star: norm_err is 0, just set it to something relatively big.
+    norm_err.loc[norm_err == 0.] = 0.1 * norm_coeff.loc[norm_err == 0.]
 
     # ok, prepare the insert into the db
     norm_data = []
-    for _, frame_norm in frame_normalization.iterrows():
-        frame_id = frame_norm['frame_id']
-        norm = float(frame_norm['normalization'])
-        norm_err = float(frame_norm['normalization_error'])
-        norm_data.append((frame_id, combined_footprint_hash, norm, norm_err))
+    for frame_id in norm_coeff.keys():
+        norm = float(norm_coeff[frame_id])
+        err = float(norm_err[frame_id])
+        norm_data.append((frame_id, combined_footprint_hash, norm, err))
 
     update_normalization_coefficients(norm_data)
 
