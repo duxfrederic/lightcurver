@@ -20,6 +20,7 @@ from ..processes.plate_solving import solve_one_image_and_update_database
 from ..utilities.footprint import (calc_common_and_total_footprint, get_frames_hash,
                                    save_combined_footprints_to_db, identify_and_eliminate_bad_pointings)
 from ..plotting.footprint_plotting import plot_footprints
+from ..processes.star_extraction import extract_sources_from_sky_sub_image
 
 
 def worker_init(log_queue):
@@ -156,3 +157,43 @@ def calc_common_and_total_footprint_and_save():
     save_combined_footprints_to_db(frames_hash, common_footprint, largest_footprint)
     logger.info(f'Footprint with (hash {frames_hash} saved to db')
 
+
+@log_process
+def extract_sources_from_sky_sub_image_wrapper(*args):
+    extract_sources_from_sky_sub_image(*args)
+
+
+def source_extract_all_images():
+    """
+    This is not called directly in the pipeline, but can be useful if you want to re-extract all the sources
+    with different parameters.
+    Returns: None
+
+    """
+    log_queue = Manager().Queue()
+    listener = logging.handlers.QueueListener(log_queue, *logging.getLogger().handlers)
+    listener.start()
+
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+    logger = logging.getLogger("PlateSolveLogger")
+    user_config = get_user_config()
+    workdir = Path(user_config['workdir'])
+
+    frames_to_process = get_pandas(columns=['id', 'image_relpath', 'sources_relpath'],
+                                   conditions=['plate_solved = 0', 'eliminated = 0'])
+    logger.info(f"Ready to extract sources: {len(frames_to_process)} frames.")
+
+    with Pool(processes=user_config['multiprocessing_cpu_count'],
+              initializer=worker_init, initargs=(log_queue,)) as pool:
+        pool.map(extract_sources_from_sky_sub_image_wrapper, [
+            (workdir / row['image_relpath'],
+             workdir / row['sources_relpath'],
+             user_config['source_extraction_threshold'],
+             user_config['source_extraction_min_area'],
+             user_config['plots_dir'] / 'source_extraction' / f"{Path(row['image_relpath']).stem}.jpg",
+             row['id'])  # duplicating row['id'] for logger naming
+            for index, row in frames_to_process.iterrows()
+        ])
+
+    listener.stop()

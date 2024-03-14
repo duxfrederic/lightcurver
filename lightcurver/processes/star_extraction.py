@@ -1,7 +1,7 @@
 import numpy as np
 from astropy.table import Table
 import sep
-
+from astropy.io import fits
 from ..plotting.sources_plotting import plot_sources
 
 
@@ -60,3 +60,30 @@ def extract_stars(image_background_subtracted, background_rms, detection_thresho
         plot_sources(sources=sources, image=image_background_subtracted, save_path=debug_plot_path)
 
     return sources
+
+
+def extract_sources_from_sky_sub_image(image_path, sources_path, detection_threshold, min_area, debug_plot_path):
+    """
+      Not used in the main pipeline but can be useful. Given an image, extracts
+      sources, and save them in sources_path
+    Args:
+        image_path:  path, str: fits file containing an image.
+        sources_path:  path, str: where the sources are saved
+        detection_threshold: float, significance for acceptance
+        min_area: int, minimum number of pixels above threshold
+        debug_plot_path: where we (potentially) save a plot of our sources.
+    Returns:
+        Nothing
+    """
+    image = fits.getdata(image_path).astype(float)
+
+    bkg = sep.Background(image)
+
+    sources = extract_stars(image_background_subtracted=image - bkg.back(),
+                            detection_threshold=detection_threshold,
+                            background_rms=bkg.globalrms,
+                            min_area=min_area,
+                            debug_plot_path=debug_plot_path)
+
+    sources.write(sources_path, overwrite=True)
+

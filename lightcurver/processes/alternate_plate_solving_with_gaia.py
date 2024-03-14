@@ -5,11 +5,9 @@ import numpy as np
 from astropy.coordinates import SkyCoord
 from astropy.time import Time
 from astropy.wcs import WCS
-from astropy.wcs.utils import proj_plane_pixel_scales
 from astropy.table import Table
 from astropy.io import fits
 import astroalign as aa
-import sep
 
 from ..structure.database import execute_sqlite_query, get_pandas
 from ..utilities.gaia import query_gaia_stars
@@ -91,10 +89,8 @@ def alternate_plate_solve():
         frame_path = user_config['workdir'] / frame['image_relpath']
         frame_id = frame['id']
         image = fits.getdata(frame_path).astype(float)
-        # sources_path = user_config['workdir'] / frame['sources_relpath']
-        # sources = Table(fits.getdata(sources_path))
-        bck = sep.Background(image.astype(float), bw=128, bh=128)
-        sources = Table(sep.extract(image, thresh=3., err=bck.globalrms, minarea=15))
+        sources_path = user_config['workdir'] / frame['sources_relpath']
+        sources = Table(fits.getdata(sources_path))
         initial_wcs = create_initial_wcs(pixel_scale=pixel_scale, center_ra=ra, center_dec=dec, rotation_angle_deg=0,
                                          image_shape=image.shape)
         try:

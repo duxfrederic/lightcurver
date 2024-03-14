@@ -24,6 +24,9 @@ telescope:
   elevation: 2382.0
   imager_name: StanCAM
 
+# source detection
+source_extraction_threshold: 3.0
+source_extraction_min_area: 10
 # do plots of extracted sources?
 source_extraction_do_plots: 1
 # trimming the images upon importation, in pixels
