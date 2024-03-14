@@ -1,0 +1,8 @@
+site_name: LightCurver
+docs_dir: 'site'
+theme:
+  name: readthedocs
+  highlightjs: true
+  hljs_languages:
+    - yaml
+    - rust
