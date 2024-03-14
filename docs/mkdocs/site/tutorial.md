@@ -20,6 +20,7 @@ Where the `config.yaml` file needs to be carefully tuned before execution. You s
 Rather than executing the pipeline through the `WorkflowManager`, we will first execute each step manually in this tutorial.
 
 I will provide you with some wide field images that you can use to follow along. Note the following:
+
 * the images are already plate solved, such that you will not need to install `Astrometry.net` on your computer.
 Your real life examples will most likely not be, so you should consider installing it.
 * Things will be excruciatingly slow if you do not have a GPU. I would consider using only 4-5 frames in this case.
@@ -54,7 +55,12 @@ def parse_header(header):
     time = Time(parser.parse(header['obstart']))
     return {'exptime': exptime, 'gain': gain, 'filter': filter, 'mjd': time.mjd}
 ```
-in this file: `/scratch/lightcurver_tutorial/header_parser/parse_header.py`.
+in this file: `/scratch/lightcurver_tutorial/header_parser/parse_header.py`. 
+The pipeline expects to find this file at this exact location relative to your working directory.
+You will need to adapt the function to your own fits files, the point is: you must return a dictionary of the same
+structure as the one seen above. You can of course use placeholder values should you not care, for example, about
+the filter information. 
+> **__NOTE:__** We will use the `exptime` and `gain` information to convert the images to electrons per second, assuming that the starting unit is ADU. Please adapt the values you return within this function should your units be different.
 
 Now, we need to set up the configuration file of the pipeline. This file could be anywhere, but we will put it in
 our working directory. 
@@ -77,7 +83,7 @@ At this point, you could just run the code block at the very beginning of this p
 run to the end, producing an `hdf5` file with calibrated cutouts and PSFs of our region of interest.
 However, we will execute each step separately, so you get a chance to look at the outputs.
 
-# Initialize database and frame importation
+## Initializing database and frame importation
 Now would be a good time to fire up a jupyter notebook, each code block below being a new cell.
 You first need to add the location of your config file to the environment, then you can start executing tasks:
 ```python
@@ -96,10 +102,11 @@ read_convert_skysub_character_catalog()
 This last command will read all the frames, convert them to electron / second (we are assuming ADU as initial units),
 subtract the sky, look for sources in the image, calculate ephemeris and finally store everything in our database, at
 `/scratch/lightcurver_tutorial/database.sqlite3`.
-At any moment, you can query the database to see what is going on. For example, at the moment we have:
-```bash
-$ sqlite3 /scratch/lightcurver_tutorial/database.sqlite3 "select count(*) from frames"
-87
-```
-87 frames imported. The database contains the frames, and later will contain stars, links between stars and frames, and more.
+> **_NOTE:_** You may query the database at any time to understand what is going on.
+>For example, at the moment we have:
+>>`$ sqlite3 /scratch/lightcurver_tutorial/database.sqlite3 "select count(*) from frames"`
+>>`87`
+> 
+>87 frames imported. The database contains the frames, and later will contain stars, links between stars and frames, and more.
+
 We can now proceed to the next step.
