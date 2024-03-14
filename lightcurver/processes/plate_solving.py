@@ -40,9 +40,9 @@ def post_plate_solve_steps(frame_path, user_config, frame_id):
     # replace the wcs above with the WCS we saved in the header of the image (contains naxis)
     wcs = WCS(final_header)
     in_footprint = user_config['ROI_SkyCoord'].contained_by(wcs)
-    if not in_footprint:
+    if in_footprint:
         execute_sqlite_query(query="UPDATE frames SET roi_in_footprint = ? WHERE id = ?",
-                             params=(0, frame_id), is_select=False)
+                             params=(1, frame_id), is_select=False)
     # also, let us save the actual footprint
     footprint_array = wcs.calc_footprint()
     database_insert_single_footprint(frame_id, footprint_array)
