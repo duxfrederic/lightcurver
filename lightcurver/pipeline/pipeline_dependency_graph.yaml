@@ -42,7 +42,11 @@ tasks:
     description: "Given the star photometry, calculates a representative relative flux for each image. This flux will be 1 for a reference image (must be user defined in config). Saves the normalization coefficient and its uncertainty in the database."
     dependencies: [star_photometry]
     nature: all_missing_frames_at_once
+  - name: calculate_absolute_zeropoints
+    description: "Uses Gaia magnitudes to estimate the zeropoint in our band."
+    dependencies: [star_photometry]
+    nature: all_frames_at_once
   - name: prepare_calibrated_cutouts
     description: "Prepares cutouts for each ROI and each frame, calibrated in flux by the normalization coefficient."
-    dependencies: [calculate_normalization_coefficient]
-    nature: all_missing_frames_at_once
+    dependencies: [calculate_absolute_zeropoints, calculate_normalization_coefficient]
+    nature: all_frames_at_once

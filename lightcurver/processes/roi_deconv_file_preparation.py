@@ -40,6 +40,56 @@ def get_frames_for_roi(combined_footprint_hash, psf_fit_chi2_min, psf_fit_chi2_m
     return execute_sqlite_query(query, tuple(params), is_select=True, use_pandas=True)
 
 
+def fetch_and_adjust_zeropoints(combined_footprint_hash):
+    """
+    Just a helper function.
+    We query our normalization coefficients and zeropoints.
+    We adjust the zeropoints by the normalization coefficient.
+    We check that the scatter in zeropoints after normalizing is smaller than the scatter before.
+    (just a sanity check really)
+
+    we return the global zeropoint of normalized data, and a scatter we can use as STATISTICAL uncertainty.
+
+    Params:
+        combined_footprint_hash: as usual the hash of the footprint we're working with at the moment.
+
+    """
+
+    zeropoint_query = """
+    SELECT 
+        az.frame_id, 
+        az.zeropoint, 
+        az.zeropoint_uncertainty, 
+        nc.coefficient
+    FROM 
+        approximate_zeropoints az
+    JOIN 
+        normalization_coefficients nc ON az.frame_id = nc.frame_id
+    AND
+        az.combined_footprint_hash = nc.combined_footprint_hash
+    WHERE 
+        az.combined_footprint_hash = ? 
+    """
+    zeropoints_data = execute_sqlite_query(zeropoint_query, (combined_footprint_hash,), is_select=True, use_pandas=True)
+
+    if zeropoints_data.empty:
+        return None, None
+
+    # convert normalization coefficient to magnitude adjustment,
+    # then adjust the zeropoint by subtracting the magnitude adjustment
+    zeropoints_data['norm_adjustment'] = -2.5 * np.log10(zeropoints_data['coefficient'])
+    zeropoints_data['adjusted_zeropoint'] = zeropoints_data['zeropoint'] + zeropoints_data['norm_adjustment']
+
+    zp_scatter_not_normalized = zeropoints_data['zeropoint'].std()
+    zp_scatter_normalized = zeropoints_data['adjusted_zeropoint'].std()
+    global_zp = zeropoints_data['adjusted_zeropoint'].median()
+
+    message = "The scatter in zeropoints before normalizing is lower than after normalizing? Not normal, investigate."
+    assert zp_scatter_normalized < zp_scatter_not_normalized, message
+
+    return global_zp, zp_scatter_normalized
+
+
 def prepare_roi_deconv_file():
     user_config = get_user_config()
 
@@ -94,6 +144,9 @@ def prepare_roi_deconv_file():
         # ok now that everything is ready let's get out of the context manager, also to close the file,
         # and we can open the deconvolution ready file.
 
+    # get the zeropoint:
+    global_zp, global_zp_scatter = fetch_and_adjust_zeropoints(combined_footprint_hash=combined_footprint_hash)
+
     # where we save the ready to deconvolve cutouts:
     save_path = user_config['prepared_roi_cutouts_path']
     
@@ -109,7 +162,8 @@ def prepare_roi_deconv_file():
         f['seeing'] = np.array(seeing)
         f['sky_level_electron_per_second'] = np.array(sky_level_electron_per_second)
         f['mjd'] = np.array(mjd)
-        #f['global_zeropoint'] = None  # TODO
+        f['global_zeropoint'] = np.array(float(global_zp))
+        f['global_zeropoint_scatter'] = np.array(float(global_zp_scatter))
         f['relative_normalization_error'] = np.array(normalization_uncertainty)
         f['wcs'] = np.array(wcs)
         f['pixel_scale'] = np.array(pixel_scale)
