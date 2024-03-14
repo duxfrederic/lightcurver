@@ -28,15 +28,16 @@ def process_new_frame(fits_file, user_config, logger):
     """
     trim_vertical = user_config.get('trim_vertical', 0)
     trim_horizontal = user_config.get('trim_horizontal', 0)
-    copied_image_relpath = Path('frames') / fits_file.name
-    logger.info(f'  Importing {fits_file}.')
+    copied_image_relpath = Path('frames') / f"{fits_file.stem}.fits"
     with fits.open(str(fits_file), mode='readonly', ignore_missing_end=True, memmap=True) as hdu:
+        logger.info(f'  Importing {fits_file}.')
         hdu_index = 1 if len(hdu) > 1 else 0
         data_shape = hdu[hdu_index].data.shape
         cutout_data = hdu[hdu_index].section[
                       trim_vertical:data_shape[0] - trim_vertical,
                       trim_horizontal:data_shape[1] - trim_horizontal
                       ]
+        logger.info(f'  Finished reading {fits_file}.')
         cutout_data = cutout_data.astype(float)
         header = hdu[hdu_index].header
         wcs = WCS(header)
@@ -47,7 +48,7 @@ def process_new_frame(fits_file, user_config, logger):
 
         header['BUNIT'] = "ELPERSEC"
         mjd_gain_filter_exptime_dict = header_parser_function(header)
-        logger.info(f'  file {fits_file}: finished reading and parsed header.')
+        logger.info(f'  file {fits_file}: parsed header.')
         cutout_data *= mjd_gain_filter_exptime_dict['gain'] / mjd_gain_filter_exptime_dict['exptime']
         # unit: electron per second
 
@@ -68,8 +69,9 @@ def process_new_frame(fits_file, user_config, logger):
                 if key.strip():  # some headers are weird
                     new_header[key] = header[key]
         # now we can write the file
-        logger.info(f'    Writing file: { user_config['workdir'] / copied_image_relpath}')
-        fits.writeto(user_config['workdir'] / copied_image_relpath, cutout_data_sub.astype(np.float32),
+        write_file = user_config['workdir'] / copied_image_relpath
+        logger.info(f'    Writing file: {write_file}')
+        fits.writeto(write_file, cutout_data_sub.astype(np.float32),
                      header=new_header, overwrite=True)
         # and find sources
         # (do plots if toggle set)
