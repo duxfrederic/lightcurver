@@ -9,11 +9,6 @@ from .background_estimation import subtract_background
 from .star_extraction import extract_stars
 from .frame_characterization import ephemeris, estimate_seeing
 from ..structure.user_header_parser import load_custom_header_parser
-# the user defines their header parser, returning a dictionary with {'mjd':, 'gain':, 'filter':, 'exptime':}
-# it needs be located at $workdir/header_parser/parse_header.py
-# the function needs be called parse_header, and it has to accept a fits header as argument and return the
-# dictionary above.
-header_parser_function = load_custom_header_parser()
 
 
 def process_new_frame(fits_file, user_config, logger):
@@ -29,78 +24,97 @@ def process_new_frame(fits_file, user_config, logger):
     trim_vertical = user_config.get('trim_vertical', 0)
     trim_horizontal = user_config.get('trim_horizontal', 0)
     copied_image_relpath = Path('frames') / f"{fits_file.stem}.fits"
-    with fits.open(str(fits_file), mode='readonly', ignore_missing_end=True, memmap=True) as hdu:
-        logger.info(f'  Importing {fits_file}.')
-        hdu_index = 1 if len(hdu) > 1 else 0
-        data_shape = hdu[hdu_index].data.shape
-        cutout_data = hdu[hdu_index].section[
-                      trim_vertical:data_shape[0] - trim_vertical,
-                      trim_horizontal:data_shape[1] - trim_horizontal
-                      ]
-        logger.info(f'  Finished reading {fits_file}.')
-        cutout_data = cutout_data.astype(float)
-        header = hdu[hdu_index].header
-        wcs = WCS(header)
-        # so we cropped our data, thus we need to change the CRPIX of our WCS
-        if wcs.is_celestial:
-            wcs.wcs.crpix[0] -= trim_horizontal
-            wcs.wcs.crpix[1] -= trim_vertical
 
-        header['BUNIT'] = "ELPERSEC"
-        mjd_gain_filter_exptime_dict = header_parser_function(header)
-        logger.info(f'  file {fits_file}: parsed header.')
-        cutout_data *= mjd_gain_filter_exptime_dict['gain'] / mjd_gain_filter_exptime_dict['exptime']
-        # unit: electron per second
+    try:
+        with fits.open(str(fits_file), mode='readonly', ignore_missing_end=False, memmap=True) as hdu:
+            logger.info(f'  Importing {fits_file}.')
+            hdu_index = 1 if len(hdu) > 1 else 0
+            data_shape = hdu[hdu_index].data.shape
+            cutout_data = hdu[hdu_index].section[
+                          trim_vertical:data_shape[0] - trim_vertical,
+                          trim_horizontal:data_shape[1] - trim_horizontal
+                          ]
+            header = hdu[hdu_index].header
+    except ValueError:
+        # then we have some memmap problems, if  bzero, bscale, or blank are in header.
+        with fits.open(str(fits_file), mode='readonly') as hdu:
+            logger.info(f'  Importing {fits_file}.')
+            hdu_index = 1 if len(hdu) > 1 else 0
+            data_shape = hdu[hdu_index].data.shape
+            cutout_data = hdu[hdu_index].data[
+                          trim_vertical:data_shape[0] - trim_vertical,
+                          trim_horizontal:data_shape[1] - trim_horizontal
+                          ]
+            header = hdu[hdu_index].header
+    logger.info(f'  Finished reading {fits_file}.')
+    cutout_data = cutout_data.astype(float)
+    wcs = WCS(header)
+    # so we cropped our data, thus we need to change the CRPIX of our WCS
+    if wcs.is_celestial:
+        wcs.wcs.crpix[0] -= trim_horizontal
+        wcs.wcs.crpix[1] -= trim_vertical
 
-        # ok, now subtract sky!
-        cutout_data_sub, bkg = subtract_background(cutout_data)
-        sky_level_electron_per_second = float(bkg.globalback)
-        background_rms_electron_per_second = float(bkg.globalrms)
-        logger.info(f'  file {fits_file}: background estimated.')
+    header['BUNIT'] = "ELPERSEC"
 
-        # before we write, let's keep as much as we can from our previous header
-        new_header = wcs.to_header()
-        # then copy non-WCS entries from the original header
-        for key in header:
-            if key not in new_header and not key.startswith('WCSAXES') and not key.startswith(
-                    'CRPIX') and not key.startswith('CRVAL') and not key.startswith('CDELT') and not key.startswith(
-                    'CTYPE') and not key.startswith('CUNIT') and not key.startswith('CD') and key not in ['COMMENT',
-                                                                                                          'HISTORY']:
-                if key.strip():  # some headers are weird
-                    new_header[key] = header[key]
-        # now we can write the file
-        write_file = user_config['workdir'] / copied_image_relpath
-        logger.info(f'    Writing file: {write_file}')
-        fits.writeto(write_file, cutout_data_sub.astype(np.float32),
-                     header=new_header, overwrite=True)
-        # and find sources
-        # (do plots if toggle set)
-        do_plot = user_config.get('source_extraction_do_plots', False)
-        plot_path = user_config['plots_dir'] / 'source_extraction' / f'{fits_file.stem}.jpg' if do_plot else None
-        sources_table = extract_stars(image_background_subtracted=cutout_data_sub,
-                                      background_rms=bkg.globalrms,
-                                      detection_threshold=user_config.get('source_extraction_threshold', 3),
-                                      min_area=user_config.get('source_extraction_min_area', 10),
-                                      debug_plot_path=plot_path)
+    # the user defines their header parser, returning a dictionary with {'mjd':, 'gain':, 'filter':, 'exptime':}
+    # it needs be located at $workdir/header_parser/parse_header.py
+    # the function needs be called parse_header, and it has to accept a fits header as argument and return the
+    # dictionary above.
+    header_parser_function = load_custom_header_parser()
+    mjd_gain_filter_exptime_dict = header_parser_function(header)
+    logger.info(f'  file {fits_file}: parsed header.')
+    cutout_data *= mjd_gain_filter_exptime_dict['gain'] / mjd_gain_filter_exptime_dict['exptime']
+    # unit: electron per second
 
-        # saving the sources in the same dir as the frame itself
-        sources_file_filename = f"{copied_image_relpath.stem}_sources{copied_image_relpath.suffix}"
-        sources_file_relpath = copied_image_relpath.parent / sources_file_filename
-        sources_table.write(user_config['workdir'] / sources_file_relpath, format='fits', overwrite=True)
+    # ok, now subtract sky!
+    cutout_data_sub, bkg = subtract_background(cutout_data)
+    sky_level_electron_per_second = float(bkg.globalback)
+    background_rms_electron_per_second = float(bkg.globalrms)
+    logger.info(f'  file {fits_file}: background estimated.')
 
-        seeing_pixels = estimate_seeing(sources_table)
-        ellipticity = np.nanmedian(sources_table['ellipticity'])
-        if 'telescope' in user_config:
-            eph_dict = ephemeris(mjd=mjd_gain_filter_exptime_dict['mjd'],
-                                 ra_object=user_config['ROI_ra_deg'],
-                                 dec_object=user_config['ROI_dec_deg'],
-                                 telescope_longitude=user_config['telescope']['longitude'],
-                                 telescope_latitude=user_config['telescope']['latitude'],
-                                 telescope_elevation=user_config['telescope']['elevation'])
-            telescope_information = {k: v for k, v in user_config['telescope'].items()}
-        else:
-            telescope_information = None
-            eph_dict = None
+    # before we write, let's keep as much as we can from our previous header
+    new_header = wcs.to_header()
+    # then copy non-WCS entries from the original header
+    for key in header:
+        if key not in new_header and not key.startswith('WCSAXES') and not key.startswith(
+                'CRPIX') and not key.startswith('CRVAL') and not key.startswith('CDELT') and not key.startswith(
+                'CTYPE') and not key.startswith('CUNIT') and not key.startswith('CD') and key not in ['COMMENT',
+                                                                                                      'HISTORY']:
+            if key.strip():  # some headers are weird
+                new_header[key] = header[key]
+    # now we can write the file
+    write_file = user_config['workdir'] / copied_image_relpath
+    logger.info(f'    Writing file: {write_file}')
+    fits.writeto(write_file, cutout_data_sub.astype(np.float32),
+                 header=new_header, overwrite=True)
+    # and find sources
+    # (do plots if toggle set)
+    do_plot = user_config.get('source_extraction_do_plots', False)
+    plot_path = user_config['plots_dir'] / 'source_extraction' / f'{fits_file.stem}.jpg' if do_plot else None
+    sources_table = extract_stars(image_background_subtracted=cutout_data_sub,
+                                  background_rms=bkg.globalrms,
+                                  detection_threshold=user_config.get('source_extraction_threshold', 3),
+                                  min_area=user_config.get('source_extraction_min_area', 10),
+                                  debug_plot_path=plot_path)
+
+    # saving the sources in the same dir as the frame itself
+    sources_file_filename = f"{copied_image_relpath.stem}_sources{copied_image_relpath.suffix}"
+    sources_file_relpath = copied_image_relpath.parent / sources_file_filename
+    sources_table.write(user_config['workdir'] / sources_file_relpath, format='fits', overwrite=True)
+
+    seeing_pixels = estimate_seeing(sources_table)
+    ellipticity = np.nanmedian(sources_table['ellipticity'])
+    if 'telescope' in user_config:
+        eph_dict = ephemeris(mjd=mjd_gain_filter_exptime_dict['mjd'],
+                             ra_object=user_config['ROI_ra_deg'],
+                             dec_object=user_config['ROI_dec_deg'],
+                             telescope_longitude=user_config['telescope']['longitude'],
+                             telescope_latitude=user_config['telescope']['latitude'],
+                             telescope_elevation=user_config['telescope']['elevation'])
+        telescope_information = {k: v for k, v in user_config['telescope'].items()}
+    else:
+        telescope_information = None
+        eph_dict = None
 
     # now we're ready for registering our new frame!
     add_frame_to_database(original_image_path=fits_file,
