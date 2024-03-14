@@ -37,7 +37,6 @@ def get_user_config():
     config['frames_dir'] = config['workdir'] / 'frames'
     config['regions_path'] = config['workdir'] / 'regions.h5'
     config['psfs_path'] = config['workdir'] / 'psfs.h5'
-    config['log_directory'] = Path(config['log_directory'])
     for directory in [config['plots_dir'], config['logs_dir'], config['frames_dir']]:
         directory.mkdir(parents=True, exist_ok=True)
 
