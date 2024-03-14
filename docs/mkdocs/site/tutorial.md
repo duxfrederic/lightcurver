@@ -73,3 +73,33 @@ already_plate_solved: 1
 This last line informs the pipeline about the plate solved status of our files.
 You can also read through the configuration file to learn about the different options of the pipeline.
 
+At this point, you could just run the code block at the very beginning of this page, and the pipeline would likely
+run to the end, producing an `hdf5` file with calibrated cutouts and PSFs of our region of interest.
+However, we will execute each step separately, so you get a chance to look at the outputs.
+
+# Initialize database and frame importation
+Now would be a good time to fire up a jupyter notebook, each code block below being a new cell.
+You first need to add the location of your config file to the environment, then you can start executing tasks:
+```python
+import os
+# replace with your actual path:
+os.environ['LIGHTCURVER_CONFIG'] = "/scratch/lightcurver_tutorial/config.yaml"
+
+from lightcurver.structure.user_config import get_user_config
+from lightcurver.structure.database import initialize_database
+from lightcurver.pipeline.task_wrappers import read_convert_skysub_character_catalog
+
+initialize_database()
+read_convert_skysub_character_catalog()
+```
+
+This last command will read all the frames, convert them to electron / second (we are assuming ADU as initial units),
+subtract the sky, look for sources in the image, calculate ephemeris and finally store everything in our database, at
+`/scratch/lightcurver_tutorial/database.sqlite3`.
+At any moment, you can query the database to see what is going on. For example, at the moment we have:
+```bash
+$ sqlite3 /scratch/lightcurver_tutorial/database.sqlite3 "select count(*) from frames"
+87
+```
+87 frames imported. The database contains the frames, and later will contain stars, links between stars and frames, and more.
+We can now proceed to the next step.
