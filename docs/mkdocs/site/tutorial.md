@@ -109,4 +109,108 @@ subtract the sky, look for sources in the image, calculate ephemeris and finally
 > 
 >87 frames imported. The database contains the frames, and later will contain stars, links between stars and frames, and more.
 
-We can now proceed to the next step.
+## Plate solving and footprint calculation
+Even though we started with plate solved images, we are still going to call the plate solving routine.
+No actual plate solving will take place, but the footprint of each image will be inserted in the database,
+and we will calculate the total and common footprint to all images. This can be useful if you want to make sure
+that you are always going to use the same reference stars, in each frame. 
+Let us go ahead and run the task:
+```python
+# assuming the path to the config file is still in the environment
+from lightcurver.pipeline.task_wrappers import plate_solve_all_frames, calc_common_and_total_footprint_and_save
+plate_solve_all_frames()
+calc_common_and_total_footprint_and_save()
+```
+This will have populated the `footprints`, `combined_footprint`.
+
+> **_NOTE:_** All downstream steps from this one are linked to a hash value of the combined footprint.
+> This is due to the fact that the reference stars can be queried in the common footprint: adding a new frame
+> would potentially change the common footprint, and thus, the stars.
+
+## Querying stars from Gaia
+
+In the configuration, I recommend using
+```yaml
+star_selection_strategy: 'ROI_disk'
+ROI_disk_radius_arcseconds: 300  # think twice about this value: it has to contain enough stars, but not too many
+```
+Next, depending on your data, you will need to adjust the accepted magnitude range (to include stars that are
+bright enough, but that do not saturate the sensor.)
+If you have good seeing and are working with oversampled data, I recommend sticking to a relatively low value of
+`star_max_astrometric_excess_noise`. Gaia can sometimes mistake a galaxy for a star, and a galaxy would do no
+good to your PSF model. Keeping the astrometric excess noise low (e.g., below 3-4) largely reduces the risk
+of selecting a galaxy.
+This is how this part is executed:
+```python
+# assuming the path to the config file is still in the environment
+from lightcurver.processes.star_querying import query_gaia_stars
+query_gaia_stars()
+```
+This will populate the `stars` and `stars_in_frames` tables of the database. The latter allows us to query
+which star is available in which frame.
+
+## Extraction of cutouts
+Now that we've identified stars, let us extract them from the image. This step will
+- extract the cutouts
+- compute a noisemap (from the background noise, and photon noise estimation given that we can convert our data to electrons)
+- clean the cosmics (unless stated otherwise in the config)
+and that for each selected star, and also for our region of interest.
+These will all go into the `regions.h5` file, at the root of the working directory.
+
+## Modelling the PSF
+This is the most expensive step of the pipeline. For each frame, we are going to simultaneously fit a
+grid of pixels to all the selected stars. The grid of pixels being regulated by starlets, we delegate the heavy 
+lifting to `STARRED`.
+I recommend sticking to a subsampling factor of 2 unless you have good reasons to go beyond.
+You can expect the process to last 2-3 seconds per frame on a middle range gaming GPU, including the loading of the data,
+the modelling, the plotting, and database update.
+
+```python
+# assuming the path to the config file is still in the environment
+from lightcurver.processes.psf_modelling import model_all_psfs
+model_all_psfs()
+```
+
+This will populate the `PSFs` table in the database, saving the subsampling factor, the reduced $\chi^2$ of the fit,
+and a string reminding which stars were used to compute the model.
+
+## PSF photometry of the reference stars
+This step will, for each star
+- select which frames contain this star
+- eliminate frames with a poorly fit PSF (looking at the $\chi^2$ values, check the config file for how this is done)
+- jointly fit the PSF to the star in question in all the selected frames.
+
+```python
+# assuming the path to the config file is still in the environment
+from lightcurver.processes.star_photometry import do_star_photometry
+do_star_photometry()
+```
+The fitted fluxes will be saved in the `star_flux_in_frame` table, together with, again, a $\chi^2$ value that
+will be used downwstream to eliminate the badly fitted frames.
+
+## Calculating a normalization coefficient
+This step leverages all the extracted star fluxes, and scales them as to minimize the scatter of the fluxes of
+different stars in overlaping frames.
+Once this is done, the fluxes available in each frame will be averaged with sigma-clipping rejection.
+The average will be taken as the "normalization coefficient", and the residual scatter as the uncertainty on the
+coefficient.
+
+```python
+# assuming the path to the config file is still in the environment
+from lightcurver.processes.normalization_calculation import calculate_coefficient
+calculate_coefficient()
+```
+This process fills in the `normalization_coefficients` table.
+
+## Calculating zero points and preparing calibrated cutouts of our region of interest
+All the heavy lifting having been done, we can use our Gaia stars to estimate the absolute zero point of our images.
+This is an approximate calibration, but it is nice to have. 
+Then, we will use our normalization coefficient to prepare the calibrated cutouts.
+```python
+# assuming the path to the config file is still in the environment
+from lightcurver.utilities.zeropoint_from_gaia import calculate_zeropoints
+from lightcurver.processes.roi_deconv_file_preparation import prepare_roi_deconv_file
+calculate_zeropoints()
+prepare_roi_deconv_file()
+```
+You will find your calibrated cutouts in the `prepared_roi_cutouts`, relative to the working directory
