@@ -16,7 +16,7 @@ but also recovering the subpixel information to provide a high signal-to-noise r
 The example below shows a cutout of a wide-field image (one in a set of a hundred), 
 the `lightcurver` / `STARRED` model, and the Hubble Space Telescope image of the same region.
 
-![example_deconvolution](docs/example_result.jpg)
+![example_deconvolution](docs/mkdocs/site/example_deconv.png)
 
 ## Features
 * Uses plate solving to keep track of the footprint of each frame, allowing for an independent selection of reference stars in each frame.
