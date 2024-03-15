@@ -172,7 +172,7 @@ These will all go into the `regions.h5` file, at the root of the working directo
 This is the most expensive step of the pipeline. For each frame, we are going to simultaneously fit a
 grid of pixels to all the selected stars. The grid of pixels being regulated by starlets, we delegate the heavy 
 lifting to `STARRED`.
-I recommend sticking to a subsampling factor of 2 unless you have good reasons to go beyond.
+I recommend sticking to a subsampling factor of 2 unless you have good reasons to go beyond this.
 You can expect the process to last 2-3 seconds per frame on a middle range gaming GPU, including the loading of the data,
 the modelling, the plotting, and database update.
 
@@ -241,7 +241,7 @@ light curve of one of the reference stars.
 
 ## Calculating zero points and preparing calibrated cutouts of our region of interest
 All the heavy lifting having been done, we can use our Gaia stars to estimate the absolute zero point of our images.
-This is an approximate calibration, but it is nice to have. 
+This is an approximate calibration only, but it is nice to have still. 
 Then, we will use our normalization coefficient to prepare the calibrated cutouts.
 ```python
 # assuming the path to the config file is still in the environment
