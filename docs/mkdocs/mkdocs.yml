@@ -1,8 +1,39 @@
 site_name: LightCurver
 docs_dir: 'site'
 theme:
-  name: readthedocs
+  name: material
   highlightjs: true
   hljs_languages:
     - yaml
     - rust
+    - python
+    - bash
+  icon:
+    annotation: material/plus-circle
+    admonition:
+      <type>: material/alert-circle
+  logo: ./lightcurver_logo.svg
+  palette:
+    # Palette toggle for light mode
+    - scheme: default
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+
+    # Palette toggle for dark mode
+    - scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.instant
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - pymdownx.superfences
+plugins:
+  - search
+  - mkdocs-nav-weight
+copyright: Copyright &copy; 2024 Frédéric Dux
+repo_url: https://github.com/duxfrederic/lightcurver/

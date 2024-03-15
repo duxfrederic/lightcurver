@@ -1,4 +1,4 @@
-![LightCurver Logo](docs/logo/lightcurver_logo.svg)
+![LightCurver Logo](docs/mkdocs/site/lightcurver_logo.svg)
 
 ![tests](https://github.com/duxfrederic/lightcurver/actions/workflows/python-app.yml/badge.svg)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)

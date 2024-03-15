@@ -1,3 +1,7 @@
+---
+title: Tutorial
+weight_index: 8
+---
 # LightCurver tutorial
 
 ## Introduction
@@ -17,32 +21,35 @@ wf_manager.run()
 Where the `config.yaml` file needs to be carefully tuned before execution. You should always start from 
 [this template](https://github.com/duxfrederic/lightcurver/blob/main/docs/example_config_file/config.yaml).
 
-Rather than executing the pipeline through the `WorkflowManager`, we will first execute each step manually in this tutorial.
+In this tutorial, we will first execute each step manually rather than executing the pipeline through the `WorkflowManager`.
 
 I will provide you with some wide field images that you can use to follow along. Note the following:
 
-* the images are already plate solved, such that you will not need to install `Astrometry.net` on your computer.
+* The images are already plate solved, such that you will not need to install `Astrometry.net` on your computer.
 Your real life examples will most likely not be, so you should consider installing it.
 * Things will be excruciatingly slow if you do not have a GPU. I would consider using only 4-5 frames in this case.
 
 You can work in a jupyter notebook or just write python scripts with the commands we will execute below.
 ## Preparing the working directory and data
 
-The example dataset consists of a few frames from the monitoring of a lensed quasar with the VLT survey telescope.
+The example dataset consists of a few frames from the monitoring of a lensed quasar with the VLT Survey Telescope (VST).
 You can find it at this [link](https://www.astro.unige.ch/~dux/vst_dataset_example.zip), but we will download it below anyway.
 Start by creating a working directory. I will assume the working directory `/scratch/lightcurver_tutorial`, please
 replace this with your own.
 ```bash
-mkdir /scratch/lightcurver_tutorial
+export workdir='/scratch/lightcurver_tutorial'
+mkdir $workdir
 ```
 Let us store our raw data in this working directory as well for the sake of the example, but of course it could be
 anywhere, including on a network drive.
 ```bash
-cd /scratch/lightcurver_tutorial
+cd $workdir
 wget https://www.astro.unige.ch/~dux/vst_dataset_example.zip
 unzip vst_dataset_example.zip
 ```
-Your data will now be at `/scratch/lightcurver_tutorial/raw`.
+Your data will now be at `/scratch/lightcurver_tutorial/raw`, here is what a single frame looks like, with the region
+of interest marked:
+![single_frame_wide_field.jpg](single_frame_wide_field.jpg)
 
 The pipeline also expects a function able to read the header of your fits files. Store the following python function:
 ```python
@@ -55,18 +62,28 @@ def parse_header(header):
     time = Time(parser.parse(header['obstart']))
     return {'exptime': exptime, 'gain': gain, 'filter': filter, 'mjd': time.mjd}
 ```
-in this file: `/scratch/lightcurver_tutorial/header_parser/parse_header.py`. 
+in this file: `$workdir/header_parser/parse_header.py`. 
 The pipeline expects to find this file at this exact location relative to your working directory.
 You will need to adapt the function to your own fits files, the point is: you must return a dictionary of the same
 structure as the one seen above. You can of course use placeholder values should you not care, for example, about
 the filter information. 
-> **__NOTE:__** We will use the `exptime` and `gain` information to convert the images to electrons per second, assuming that the starting unit is ADU. Please adapt the values you return within this function should your units be different.
+
+!!! note "Units of your data"
+
+    We will use the `exptime` and `gain` information to convert the images to electrons per second, assuming that the starting unit is ADU. 
+    Please adapt the values you return within this function should your units be different.
+
+!!! warning "Time units"
+
+    We correct for the proper motion of stars when extracting cutouts later in the pipeline,
+    so you need to stick to providing time information (`mjd`) as Modified Julian Days.
+
 
 Now, we need to set up the configuration file of the pipeline. This file could be anywhere, but we will put it in
 our working directory. 
 I provide a [fairly generic configuration](https://github.com/duxfrederic/lightcurver/blob/main/docs/example_config_file/config.yaml) 
 which works well for this particular dataset.
-Paste the contents of the file in `/scratch/lightcurver_tutorial/config.yaml`.
+Paste the contents of the file in `$workdir/config.yaml`.
 You will most probably need to adapt these lines at least:
 ```yaml
 workdir: /scratch/lightcurver_tutorial 
@@ -74,14 +91,14 @@ workdir: /scratch/lightcurver_tutorial
 raw_dirs:
   - /scratch/lightcurver_tutorial/raw
 # further below ...
-already_plate_solved: 1
+already_plate_solved: true
 ```
 This last line informs the pipeline about the plate solved status of our files.
 You can also read through the configuration file to learn about the different options of the pipeline.
 
-At this point, you could just run the code block at the very beginning of this page, and the pipeline would likely
+At any point, you could just run the code block at the very beginning of this page, and the pipeline would likely
 run to the end, producing an `hdf5` file with calibrated cutouts and PSFs of our region of interest.
-However, we will execute each step separately, so you get a chance to look at the outputs.
+We will keep executing each step separately however, so you get a chance to look at the outputs.
 
 ## Initializing database and frame importation
 Now would be a good time to fire up a jupyter notebook, each code block below being a new cell.
@@ -102,12 +119,16 @@ read_convert_skysub_character_catalog()
 This last command will read all the frames, convert them to electron / second (we are assuming ADU as initial units),
 subtract the sky, look for sources in the image, calculate ephemeris and finally store everything in our database, at
 `/scratch/lightcurver_tutorial/database.sqlite3`.
-> **_NOTE:_** You may query the database at any time to understand what is going on.
->For example, at the moment we have:
->>`$ sqlite3 /scratch/lightcurver_tutorial/database.sqlite3 "select count(*) from frames"`
->>`87`
-> 
->87 frames imported. The database contains the frames, and later will contain stars, links between stars and frames, and more.
+
+!!! Database queries
+
+    You may query the database at any time to understand what is going on.
+    For example, at the moment we have:
+    ```bash
+     $ sqlite3 $workdir/database.sqlite3 "select count(*) from frames"
+     87
+    ```
+    The database contains the frames, and later will contain stars, links between stars and frames, and more.
 
 ## Plate solving and footprint calculation
 Even though we started with plate solved images, we are still going to call the plate solving routine.
@@ -115,34 +136,46 @@ No actual plate solving will take place, but the footprint of each image will be
 and we will calculate the total and common footprint to all images. This can be useful if you want to make sure
 that you are always going to use the same reference stars, in each frame. 
 Let us go ahead and run the task:
+
 ```python
-# assuming the path to the config file is still in the environment
+# Assuming the path to the config file is still in the environment.
 from lightcurver.pipeline.task_wrappers import plate_solve_all_frames, calc_common_and_total_footprint_and_save
-plate_solve_all_frames()
+plate_solve_all_frames() # (1)
 calc_common_and_total_footprint_and_save()
 ```
+
+
 This will have populated the `footprints`, `combined_footprint`.
 
-> **_NOTE:_** All downstream steps from this one are linked to a hash value of the combined footprint.
-> This is due to the fact that the reference stars can be queried in the common footprint: adding a new frame
-> would potentially change the common footprint, and thus, the stars.
+!!! warning "Footprint shenanigans"
 
-At this point, you can open the `footprints.jpg` diagnostic plot which looks like the following.
+    All downstream steps from this one are linked to a hash value of the combined footprint.
+    If your Gaia stars selection of the next section is made with the `ROI_disk` strategy, the hash value
+    bypasses the actual footprint and is simply set to the radius of the disk. Thus, adding new frames will not 
+    trigger the reprocessing of everything (but changing the radius will).
+
+
+At this point, you can open the `footprints.jpg` diagnostic plot which might look something like the following.
 
 ![footprints_plot_example.jpg](footprints_plot_example.jpg)
 
-Note that the pipeline eliminates the pointings that do not contain your region of interest, these are not
-shown in the diagnostic plot.
+Note that the pipeline eliminates the pointings (sets `ROI_in_footprint = 0`) in the frames table of the database) 
+that do not contain your region of interest, these are not shown in the diagnostic plot.
 
 ## Querying stars from Gaia
 
-In the configuration, I recommend using
+Back to the configuration file, I recommend using
+<div class="annotate" markdown>
 ```yaml
 star_selection_strategy: 'ROI_disk'
-ROI_disk_radius_arcseconds: 300  # think twice about this value: it has to contain enough stars, but not too many
+ROI_disk_radius_arcseconds: 300 (1)
 ```
-Next, depending on your data, you will need to adjust the accepted magnitude range (to include stars that are
-bright enough, but that do not saturate the sensor.)
+</div>
+1. Think twice about this value: it has to contain enough stars, but not too many either. Aim for ~20 stars, look at your
+image and do a rough inventory of what is available within a certain distance from your region of interest.
+
+Next, depending on your data, you will need to adjust the acceptable magnitude range (to include stars that are
+bright enough while not saturating the sensor.)
 If you have good seeing and are working with oversampled data, I recommend sticking to a relatively low value of
 `star_max_astrometric_excess_noise`. Gaia can sometimes mistake a galaxy for a star, and a galaxy would do no
 good to your PSF model. Keeping the astrometric excess noise low (e.g., below 3-4) largely reduces the risk
@@ -156,17 +189,40 @@ query_gaia_stars()
 This will populate the `stars` and `stars_in_frames` tables of the database. The latter allows us to query
 which star is available in which frame.
 
-The plot you can look at to make sure things look reasonable is `footprints_with_gaia_stars.jpg`, which looks like this:
+The plot you can look at to make sure things look reasonable is `footprints_with_gaia_stars.jpg`, which might look something like this:
 
 ![footprints_with_gaia_stars_plot_example.jpg](footprints_with_gaia_stars_plot_example.jpg)
 
 ## Extraction of cutouts
 Now that we've identified stars, let us extract them from the image. This step will
-- extract the cutouts
-- compute a noisemap (from the background noise, and photon noise estimation given that we can convert our data to electrons)
-- clean the cosmics (unless stated otherwise in the config)
-and that for each selected star, and also for our region of interest.
+
+- extract the cutouts,
+- compute a noisemap (from the background noise, and photon noise estimation given that we can convert our data to electrons),
+- clean the cosmics (unless stated otherwise in the config),
+
+and those for each selected star, and also for our region of interest.
 These will all go into the `regions.h5` file, at the root of the working directory.
+
+Here is a snippet to see what the cutouts look like:
+```python
+import h5py
+import matplotlib.pyplot as plt
+
+with h5py.File('regions.h5', 'r') as f:
+    frames = f['frames']  # main set is called frames
+    frame = frames[list(f['frames'].keys())[1]]  # listing the frames and picking one.
+    data = frame['data']  # looking at data, but you can also go for `mask` or `noisemap`
+    objs = sorted(data.keys())
+    # keep just the last 5
+    objs = objs[-5:]
+    fig, axs = plt.subplots(1, len(objs), figsize=(10, 2))
+    for obj, ax in zip(objs, axs.flatten()):
+        ax.imshow(data[obj], origin='lower')
+        ax.axis('off')
+plt.tight_layout()
+plt.show()
+```
+![cutouts.png](cutouts.png)
 
 ## Modelling the PSF
 This is the most expensive step of the pipeline. For each frame, we are going to simultaneously fit a
@@ -183,7 +239,7 @@ model_all_psfs()
 ```
 
 This will populate the `PSFs` table in the database, saving the subsampling factor, the reduced $\chi^2$ of the fit,
-and a string reminding which stars were used to compute the model.
+and some text reminding which stars were used to compute the model.
 You can check the plots at `$workdir/plots/PSFs/`, here is an example:
 
 ![psf_plot_example.jpg](psf_plot_example.jpg)
@@ -194,8 +250,11 @@ The last column shows the loss curve of the fit, as well as the PSF model.
 You might want to skim through some of the PSF plots to make sure there isn't something fishy.
 If you notice that a star is causing problems in particular, you can exclude it by defining what stars
 the PSF model can use in the config file.
-
-
+For example, say we need to eliminate star `a` in the plot above, we'd set:
+```yaml
+stars_to_use_psf: bcdefghijklmnop
+```
+Then you'd have to re-run the PSF process with `redo_psf: true`.
 
 ## PSF photometry of the reference stars
 This step will, for each star
@@ -213,8 +272,8 @@ will be used downwstream to eliminate the badly fitted frames.
 Again it is a good idea to check the diagnostic plot, one of which is generated per star.
 ![starphotom_plot_example.jpg](starphotom_plot_example.jpg)
 
-From left to right, we have the mean of all the cutouts of that stared that went into the PSF photometry,
-the residuals after subtraction from the fitted model, both in data and noise units, the loss curve, and the distribution
+From left to right, we have the mean (stack) of all the cutouts of that stared that went into the PSF photometry,
+the stacked residuals after subtraction from the fitted model, once in data and once in noise units, the loss curve, and the distribution
 of $\chi^2$ values of the fit on individual frames.
 
 ## Calculating a normalization coefficient
@@ -242,12 +301,19 @@ light curve of one of the reference stars.
 ## Calculating zero points and preparing calibrated cutouts of our region of interest
 All the heavy lifting having been done, we can use our Gaia stars to estimate the absolute zero point of our images.
 This is an approximate calibration only, but it is nice to have still. 
-Then, we will use our normalization coefficient to prepare the calibrated cutouts.
 ```python
 # assuming the path to the config file is still in the environment
 from lightcurver.utilities.zeropoint_from_gaia import calculate_zeropoints
-from lightcurver.processes.roi_deconv_file_preparation import prepare_roi_deconv_file
 calculate_zeropoints()
+```
+Last step, we use our normalization coefficient to prepare the calibrated cutouts.
+```python
+# assuming the path to the config file is still in the environment
+from lightcurver.processes.roi_deconv_file_preparation import prepare_roi_deconv_file
 prepare_roi_deconv_file()
 ```
 You will find your calibrated cutouts in the `prepared_roi_cutouts`, relative to the working directory.
+
+
+
+
