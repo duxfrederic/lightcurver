@@ -126,7 +126,11 @@ def extract_all_stamps():
                                                           cutout_size=user_config['stamp_size_ROI'],
                                                           background_rms_electron_per_second=global_rms)
                 # clean the cosmics
-                mask, cleaned = detect_cosmics(cutout, invar=noisemap**2)
+                if user_config['clean_cosmics']:
+                    mask, cleaned = detect_cosmics(cutout, invar=noisemap**2)
+                else:
+                    mask = np.zeros_like(cutout, dtype=bool)
+                    cleaned = cutout
                 if 'ROI' in data_set:
                     del data_set['ROI']
                 data_set['ROI'] = cleaned
@@ -165,7 +169,11 @@ def extract_all_stamps():
                                                              background_rms_electron_per_second=global_rms)
 
                     # again, clean the cosmics.
-                    mask, cleaned = detect_cosmics(cutout, invar=noisemap**2)
+                    if user_config['clean_cosmics']:
+                        mask, cleaned = detect_cosmics(cutout, invar=noisemap ** 2)
+                    else:
+                        mask = np.zeros_like(cutout, dtype=bool)
+                        cleaned = cutout
                     if star_name in data_set:
                         del data_set[star_name]
                     data_set[star_name] = cleaned

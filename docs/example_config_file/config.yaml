@@ -155,6 +155,7 @@ stars_to_use_norm: 20
 stamp_size_stars: 32
 stamp_size_ROI: 48 
 redo_stamp_extraction: false
+clean_cosmics: true
 
 
 
