@@ -127,6 +127,13 @@ This will have populated the `footprints`, `combined_footprint`.
 > This is due to the fact that the reference stars can be queried in the common footprint: adding a new frame
 > would potentially change the common footprint, and thus, the stars.
 
+At this point, you can open the `footprints.jpg` diagnostic plot which looks like the following.
+
+![footprints_plot_example.jpg](footprints_plot_example.jpg)
+
+Note that the pipeline eliminates the pointings that do not contain your region of interest, these are not
+shown in the diagnostic plot.
+
 ## Querying stars from Gaia
 
 In the configuration, I recommend using
@@ -148,6 +155,10 @@ query_gaia_stars()
 ```
 This will populate the `stars` and `stars_in_frames` tables of the database. The latter allows us to query
 which star is available in which frame.
+
+The plot you can look at to make sure things look reasonable is `footprints_with_gaia_stars.jpg`, which looks like this:
+
+![footprints_with_gaia_stars_plot_example.jpg](footprints_with_gaia_stars_plot_example.jpg)
 
 ## Extraction of cutouts
 Now that we've identified stars, let us extract them from the image. This step will
@@ -239,4 +250,4 @@ from lightcurver.processes.roi_deconv_file_preparation import prepare_roi_deconv
 calculate_zeropoints()
 prepare_roi_deconv_file()
 ```
-You will find your calibrated cutouts in the `prepared_roi_cutouts`, relative to the working directory
+You will find your calibrated cutouts in the `prepared_roi_cutouts`, relative to the working directory.
