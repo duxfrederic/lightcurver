@@ -173,6 +173,18 @@ model_all_psfs()
 
 This will populate the `PSFs` table in the database, saving the subsampling factor, the reduced $\chi^2$ of the fit,
 and a string reminding which stars were used to compute the model.
+You can check the plots at `$workdir/plots/PSFs/`, here is an example:
+
+![psf_plot_example.jpg](psf_plot_example.jpg)
+
+The plot shows all the stars that contributed to the PSF models and their noisemaps. 
+The last row shows the fit residuals after subtraction of the model, in units of the noise.
+The last column shows the loss curve of the fit, as well as the PSF model.
+You might want to skim through some of the PSF plots to make sure there isn't something fishy.
+If you notice that a star is causing problems in particular, you can exclude it by defining what stars
+the PSF model can use in the config file.
+
+
 
 ## PSF photometry of the reference stars
 This step will, for each star
@@ -187,6 +199,12 @@ do_star_photometry()
 ```
 The fitted fluxes will be saved in the `star_flux_in_frame` table, together with, again, a $\chi^2$ value that
 will be used downwstream to eliminate the badly fitted frames.
+Again it is a good idea to check the diagnostic plot, one of which is generated per star.
+![starphotom_plot_example.jpg](starphotom_plot_example.jpg)
+
+From left to right, we have the mean of all the cutouts of that stared that went into the PSF photometry,
+the residuals after subtraction from the fitted model, both in data and noise units, the loss curve, and the distribution
+of $\chi^2$ values of the fit on individual frames.
 
 ## Calculating a normalization coefficient
 This step leverages all the extracted star fluxes, and scales them as to minimize the scatter of the fluxes of
@@ -201,6 +219,14 @@ from lightcurver.processes.normalization_calculation import calculate_coefficien
 calculate_coefficient()
 ```
 This process fills in the `normalization_coefficients` table.
+You can check that the normalization is indeed appropriately flattening the curves of your reference star in the
+diagnostic plot:
+
+![norm_coeff_plot_example.png](norm_coeff_plot_example.png)
+
+At the top the normalization coefficient, per frame, plotted in function of the frame. At the bottom the
+light curve of one of the reference stars.
+
 
 ## Calculating zero points and preparing calibrated cutouts of our region of interest
 All the heavy lifting having been done, we can use our Gaia stars to estimate the absolute zero point of our images.
