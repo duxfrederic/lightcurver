@@ -8,14 +8,16 @@ weight: 7
 Here I will add example situations and how to fix them.
 
 ## Some of my images were imported, but cannot be plate solved due to low quality
-This is a classic. High airmass observations, clouds, tracking problems ...
-If you imported such images and are confident that you will not be able to extract value from them, you can 
-simply execute them with a database operation:
+High airmass observations, clouds, tracking problems ...
+If you have such images and are confident that you will not be able to extract value from them, 
+you can remove them from consideration by flagging them in the database:
 ````sqlite3
-'UPDATE frames SET comment='cannot be plate solved', eliminated = 1 where PLATE_SOLVED=0;'
+'UPDATE frames SET comment='cannot be plate solved', eliminated = 1 WHERE plate_solved=0;'
 ````
+
 ## I manually plate solved my images after importation, how can I make my pipeline aware of this?
-You need to manually run the process storing the footprints in the database and checking that your region of interest
+If my plate solving step failed you, and if you managed to add a WCS yourself to the fits files in your `frames` directory,
+then you will need to manually run the process storing the footprints in the database and checking that your region of interest
 is in the frame.
 Here is how you might do that, with your current directory set to your working directory.
 ```python
@@ -28,6 +30,7 @@ from astropy.wcs import WCS
 from lightcurver.processes.plate_solving import post_plate_solve_steps
 from lightcurver.structure.user_config import get_user_config
 from lightcurver.structure.database import execute_sqlite_query
+from lightcurver.processes.frame_star_assignment import populate_stars_in_frames
 
 user_config = get_user_config()
 
@@ -53,4 +56,7 @@ for s in solved:
 
     execute_sqlite_query(query="UPDATE frames SET plate_solved = ? WHERE id = ?",
                          params=(1, frame_id), is_select=False)
+    
+# now that we know what our footprints are, populate the table telling us which frame has which star.
+populate_stars_in_frames()
 ```
