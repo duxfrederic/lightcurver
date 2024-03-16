@@ -16,7 +16,7 @@ Finally, `STARRED` models the pixels of the region of interest,
 yielding of course high quality light curves of the point sources in the region of interest, 
 but also recovering the subpixel information to provide a high signal-to-noise ratio deconvolution of the region of interest itself.
 The example below shows a cutout of a wide-field image (one in a set of a hundred), 
-the `lightcurver` / `STARRED` model, and the Hubble Space Telescope image of the same region.
+the model/deconvolution, and the Hubble Space Telescope image of the same region.
 
 ![example_deconvolution](docs/mkdocs/contents/example_deconv.png)
 
