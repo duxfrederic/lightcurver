@@ -2,7 +2,6 @@ name: doc
 on:
   push:
     branches:
-      - master
       - main
 permissions:
   contents: write
@@ -26,4 +25,4 @@ jobs:
           restore-keys: |
             mkdocs-material-
       - run: pip install mkdocs-material mkdocs-nav-weight pymdown-extensions pdoc
-      - run: mkdocs gh-deploy --force
+      - run: mkdocs gh-deploy --force --config-file ./docs/mkdocs/mkdocs.yml
