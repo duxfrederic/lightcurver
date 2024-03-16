@@ -1,4 +1,4 @@
-![LightCurver Logo](docs/mkdocs/site/lightcurver_logo.svg)
+![LightCurver Logo](docs/mkdocs/contents/lightcurver_logo.svg)
 
 ![tests](https://github.com/duxfrederic/lightcurver/actions/workflows/python-app.yml/badge.svg)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
@@ -16,7 +16,7 @@ but also recovering the subpixel information to provide a high signal-to-noise r
 The example below shows a cutout of a wide-field image (one in a set of a hundred), 
 the `lightcurver` / `STARRED` model, and the Hubble Space Telescope image of the same region.
 
-![example_deconvolution](docs/mkdocs/site/example_deconv.png)
+![example_deconvolution](docs/mkdocs/contents/example_deconv.png)
 
 ## Features
 * Uses plate solving (https://astrometry.net/) to keep track of the footprint of each frame, allowing for an independent selection of reference stars in each frame.
