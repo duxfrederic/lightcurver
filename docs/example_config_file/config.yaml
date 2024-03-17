@@ -13,11 +13,11 @@
 
 #################################################### Import ############################################################
 # First, define the working directory where the files will be copied (after cropping, conversion, sky subtraction ...)
-workdir: /storage/COSMOGRAIL/NOT_PSJ1721+8842
+workdir: /scratch/lightcurver_tutorial 
 # Then, list directories in which we are to look for your images. (no securities in place for filtering
 # files that are not images)
 raw_dirs:
-  - /mnt/lestafs/PRERED/NOT/PSJ1721+8842_R
+  - /scratch/lightcurver_tutorial/raw
 
 # we can trim the images upon importation, in pixels. Useful if your images are big and the ROI is
 # near the center always. Default 0 pixel trimmed.
@@ -26,7 +26,7 @@ trim_horizontal: 0
 
 # some processes can be parallelized, especially in the initial steps that do not use the GPU
 # limit how many subprocesses we can run in parallel here.
-multiprocessing_cpu_count: 8
+multiprocessing_cpu_count: 1
 
 
 
@@ -36,8 +36,8 @@ multiprocessing_cpu_count: 8
 # the ROI will be extracted, and have flux calibrated cutouts prepared.
 # please keep the formatting the same.
 ROI:
-  PSJ1721+8842: 
-    coordinates: [260.43437, 88.70599]  # [ra, dec] in degrees
+  J0248: 
+    coordinates: [42.2031, 19.22528]  # [ra, dec] in degrees
 ROI_size: 3.5  # in arcseconds, will not consider reference stars this close
 # the ROI also will be used as a position starting point for the plate solving.
 # frames that do not contain it (determined after plate solving) will not undergo further processing.
@@ -46,9 +46,9 @@ ROI_size: 3.5  # in arcseconds, will not consider reference stars this close
 # will be used to calculate airmass, distance to moon, this type of stuff.
 telescope:
   name: NOT
-  longitude: +28.75
-  latitude: -17.89
-  elevation: 2382.0
+  latitude: -24.6
+  longitude: -70.4
+  elevation: 2635.0
   imager_name: StanCAM
 
 
@@ -66,7 +66,7 @@ source_extraction_do_plots: 1
 
 # Ok, everyhing plate solving now.
 # Are your images already plate solved? if yes, we will skip the plate solving step
-already_plate_solved: 0
+already_plate_solved: 1
 # plate solving strategy: plate solve with astrometry.net (`plate_solve`) or try and match the image detections
 # with gaia stars (`alternate_gaia_solve`)
 # I recommend the first one for most cases.
@@ -75,7 +75,7 @@ plate_solving_strategy: 'plate_solve'
 # this is a plate scale interval to speed up the plate solving, 
 # you can make it more precise if you know the plate scale of your instrument. 
 # In arcseconds per pixel.
-plate_scale_interval: [0.15, 0.2]
+plate_scale_interval: [0.2, 0.23]
 
 # if the plate solving is to be made with gaia, you need the following argument as well:
 # this is the radius in which to query (all) gaia stars around the ROI, in arcseconds.
@@ -113,25 +113,25 @@ plate_solving_min_success_fraction: 0.85
 # I recommend the latter, seems to work well.
 star_selection_strategy: 'ROI_disk'
 # So, if the above is 'ROI_disk', provide here the radius in arcseconds:
-ROI_disk_radius_arcseconds: 211
+ROI_disk_radius_arcseconds: 300
 # if your field is absolutely crowded with stars, use a much smaller radius.
 # Try and aim for a radius that will yield about 20-30 stars.
 
 # Of course, depending on your setup you will need to probe a different range
 # of magnitudes to both provide high S/N constraints to your normalization and PSF models,
 # while avoiding saturation  -- set to null for no contraints
-star_min_gmag: 14.0
-star_max_gmag: 20.5
+star_min_gmag: 16.0
+star_max_gmag: 20.0
 
 # we also do not consider stars that were not well-fitted by a point source solution in gaia
 # (could be galaxies, or very crowded fields, or doubles ...which we need to avoid)
 # set to null for no constraints
-star_max_astrometric_excess_noise: 9.0
+star_max_astrometric_excess_noise: 3.0
 
 # finally, we can also request a small photometric error,
 # as the photometric error will go up with variability. this way we can select
 # more stable stars.
-star_max_phot_g_mean_flux_error: 9.0
+star_max_phot_g_mean_flux_error: 3.0
 
 # Some absolute minimum number of stars criterion -- will crash if under this.
 min_number_stars: 6
@@ -145,15 +145,15 @@ gaia_query_redo: false
 # if null: uses the top 10 closest stars to the ROI.
 # if an integer N: select the top N closest stars to the ROI.
 stars_to_use_psf: null
-stars_to_use_norm: 20
+stars_to_use_norm: null
 
 
 
 ############################################## Extraction of cutouts ###################################################
 
 # We are now ready to extract cutouts, of all the stars and of our ROI. -- squares of size defined below in pixels.
-stamp_size_stars: 32
-stamp_size_ROI: 48 
+stamp_size_stars: 24
+stamp_size_ROI: 32
 redo_stamp_extraction: false
 clean_cosmics: true
 
@@ -165,8 +165,8 @@ clean_cosmics: true
 # STARRED will do it, here are some parameters you can tweak but that hopefully constitute reasonable defaults.
 redo_psf: false
 subsampling_factor: 2
-psf_n_iter_analytic: 200 # number of iterations (l-bfgs-b) spent fitting a moffat
-psf_n_iter_pixels: 4000 # number of iterations (adabelief) spent fitting the pixel grid.
+psf_n_iter_analytic: 100 # number of iterations (l-bfgs-b) spent fitting a moffat
+psf_n_iter_pixels: 3000 # number of iterations (adabelief) spent fitting the pixel grid.
 
 
 
@@ -186,7 +186,7 @@ psf_fit_exclude_strategy:
 
 # after selection of the PSFs we want to move forward with, some parameters of the star photometry:
 redo_star_photometry: false
-star_deconv_n_iter: 3000
+star_deconv_n_iter: 2000
 
 
 
@@ -220,3 +220,30 @@ prepared_roi_cutouts_path: null
 # now you can load up the cutouts and do a starred deconvolution.
 # TODO prepare example notebooks and scripts
 # in the meantime see starred repo for examples.
+
+
+
+################################################ Modelling the ROI #######################################################
+# this is where we model the calibrated cutouts we struggled to prepare until now.
+# for most cases, I would use the h5 file produced and reduce it in a jupyter notebook with starred.
+# (because this is the satisfying part)
+# if you are running this as a pipeline, you can:
+# - give below the astrometry of your point sources
+# - optionally, give a pre-optimized background to use as a starting point (path to a fits or npy file)
+# - decide if you want to further optimize the said background.
+do_ROI_model: true
+point_sources: #  'label: [ra, dec]'
+   A: [42.202991, 19.225400]
+   B: [42.202944, 19.225186]
+   C: [42.203227, 19.225010]
+   D: [42.203249, 19.225389]
+
+# so, null or a path for this one (path either relative to workdir, or absolute path starting with /):
+starting_background: null
+# if null above, and false here, then you will not include a background (kinda ruining the point of the entire pipeline, but well...)
+further_optimize_background: true
+
+# and these should mostly work as is, how many iterations of the optimizer do we do?
+roi_deconv_translations_iters: 300
+roi_deconv_all_iters: 2000
+# keep in mind that this is going to be relatively slow on a CPU. (a few minutes at least). Count 30min for the whole pipeline.

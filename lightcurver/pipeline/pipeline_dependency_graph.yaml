@@ -50,3 +50,9 @@ tasks:
     description: "Prepares cutouts for each ROI and each frame, calibrated in flux by the normalization coefficient."
     dependencies: [calculate_absolute_zeropoints, calculate_normalization_coefficient]
     nature: all_frames_at_once
+  - name: model_calibrated_cutouts
+    description: "This is the final step, we jointly model all the pixels of the ROI using STARRED."
+    dependencies: [prepare_calibrated_cutouts, psf_modeling, stamp_extraction]
+    nature: all_frames_at_once
+
+

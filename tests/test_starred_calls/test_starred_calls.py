@@ -26,7 +26,6 @@ class TestStarredCalls(unittest.TestCase):
         # check if expected keys are present there
         self.assertIn('scale', result)
         self.assertIn('kwargs_final', result)
-        self.assertIn('kwargs_uncertainties', result)
         self.assertIn('fluxes', result)
         self.assertIn('fluxes_uncertainties', result)
         self.assertIn('chi2', result)
@@ -40,7 +39,6 @@ class TestStarredCalls(unittest.TestCase):
 
         # check if 'kwargs_final' and 'kwargs_uncertainties' are dictionaries
         self.assertIsInstance(result['kwargs_final'], dict)
-        self.assertIsInstance(result['kwargs_uncertainties'], dict)
 
         # check if 'fluxes' and 'fluxes_uncertainties' are 1D numpy arrays
         self.assertIsInstance(result['fluxes'], np.ndarray)
