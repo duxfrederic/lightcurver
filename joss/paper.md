@@ -22,17 +22,17 @@ bibliography: paper.bib
 
 `lightcurver` is a photometry pipeline of cadenced astronomical imaging data,
 designed for the semi-automatic extraction of precise light curves in small, blended targets.
-Such targets include, for instance, lensed quasars, supernovae, or cepheids in crowded fields.
-It is thereby not a general purpose photometry, astrometry and classification pipeline such as the `legacypipe` [@legacypipe].
+Such targets include but are not limited to lensed quasars, supernovae, or cepheids in crowded fields.
+`lightcurver` is thereby not a general purpose photometry, astrometry and classification pipeline such as the `legacypipe` [@legacypipe].
 Rather, it is a framework made for the precise study a small region of interest (ROI) in wide-field images, 
 using stars surrounding the ROI to calibrate the frames.
 At its core, `lightcurver` leverages `STARRED` [@starred] to generate state-of-the-art Point Spead Function (PSF) models for each image.
 It then determines the relative zeropoints between images by combining the PSF-photometry fluxes of several stars in the field of view.
 Finally, `STARRED` is used again to simultaneously model the calibrated pixels of the ROI of all epochs at once.
 This process yields light curves of the point sources, and a high resolution image model of the ROI cumulating the signal of all epochs.
-`lightcurver` aims at being maintainable and fast, and as such will be useful in handling the massive quantities of wide-field images 
-expected from the upcoming Rubin Observatory Legacy Survey of Space and Time LSST [@LSST], 
-which will periodically revisit the same regions of the sky with irregular pointings due to its observing strategy.
+`lightcurver` aims at being maintainable and fast, and as such will hopefully allow the daily photometric analysis of 
+a large number of blended targets in the context of the upcoming Rubin Observatory Legacy Survey of Space and Time LSST [@LSST].
+LSST will revisit the same regions of the sky every four days, with irregular pointings due to its observing strategy.
 
 
 # Statement of need
@@ -52,7 +52,8 @@ Such a precise relative zero-point calibration comes with challenges, especially
 `lightcurver` addresses this challenge by automatically selecting calibration stars, modelling them, and combining
 their fluxes to calibrate the zeropoints in a robust way.
 To make it suitable as a daily running pipeline on a large number of ROIs, 
-`lightcurver` was designed to be fast, precise, and able to automatically reduce new data.
+`lightcurver` was designed to be fast, precise, and able to reduce new images automatically.
+
 
 # Functionality
 
@@ -61,22 +62,24 @@ identifying the processing required at each step.
 The potential stars are extracted with `sep` [@Barbary2016, @sextractor], and their positions serve to plate solve 
 each frame with `Astrometry.net` [@astrometry] or other alternative strategies.
 This then allows for an automatic selection of calibration stars around the ROI by querying Gaia [@gaia] with `astroquery` [@astroquery] for suitable stars.
-Cutouts of the ROI and stars are subsequently extracted using `astropy` [@astropy], masked, cleaned from cosmics with the help of `astroscrappy` [@astroscrappy, @lacosmic] and stored in an HDF5 file [@fortner1998hdf].
+Cutouts of the ROI and stars are subsequently extracted using `astropy` [@astropy], masked, 
+cleaned from cosmics with the help of `astroscrappy` [@astroscrappy, @lacosmic] and stored in an HDF5 file [@fortner1998hdf].
 At every step, the database is used to check which calibration stars are available in which frames.
 The PSF model is then calculated for each frame with `STARRED`, before being stored in the same HDF5 file.
-Then, the fluxes of all the calibration stars in all frames is measured with PSF photometry. 
-The relative fluxes of the stars are scaled and combined to precisely calculate the relative zeropoints.
+Next, the fluxes of all the calibration stars in all frames is measured with PSF photometry, 
+and the resulting fluxes of the stars are scaled and combined to obtain precise relative zeropoints.
 To avoid clearly failed fits spoiling the reduction, each fitting procedure (PSF or photometry) stores its reduced $\chi^2$ statistic in
 the database, allowing the downstream steps to filter which frame / PSF / flux it moves forward with. 
 The software architecture is divided into three main subpackages: `processes`, which contains individual data processing tasks, 
 `pipeline`, which defines the sequence of these tasks to ensure orderly data analysis,
 and `structure`, which contains the database schema and handles the user configuration.
-Users can customize the processing of datasets through a YAML configuration file, allowing for flexibility in the handling of various data characteristics. 
-Typically, the YAML configuration file needs be configured by the user once for the first few frames, 
+Users can customize the processing of datasets through a YAML configuration file, 
+allowing for flexibility in the handling of various data characteristics. 
+Typically, the YAML configuration file needs be configured by the user once when executing the pipeline on the first few frames, 
 but the subsequent addition of new frames as they are observed should require no further manual intervention.
 
-`lightcurver` is made to be fast, and in comparison to other codes performing the same task, achieves equal or better photometric precision, in a much more automated way.
+`lightcurver` is made to be fast, and in comparison to `COSMOULINE`, achieves equal or better photometric precision, in a much more automated way.
 We provide in the figure below the light curve of a lensed image of a quasar, extracted from the same dataset using both `COSMOULINE` and `lightcurver`.
 
 
-![Light curve of a lensed image of a quasar (J0659+1629), extracted once with the existing code base (COSMOULINE), requiring a week of investigor's time, and another time with `LightCurver`, requiring about two hours of investigator's time.](plot/comparison_with_legacy_pipeline.jpg)
+![Light curve of a lensed image of a quasar (J0659+1629), extracted once with the existing code base (COSMOULINE), requiring a week of investigor's time, and another time with `LightCurver`, requiring about an hour of investigator's time. HST image: PI Tommaso Treu, proposal GO 15652](plot/comparison_with_legacy_pipeline.jpg)
