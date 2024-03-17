@@ -7,7 +7,7 @@ from astropy.visualization import simple_norm
 cosmouline_df = pd.read_csv('J0659_VST_D_cosmouline.csv')
 lightcurver_df = pd.read_csv('J0659_VST_D_lightcurver.csv')
 
-plt.figure(figsize=(8, 6))
+plt.figure(figsize=(6, 4))
 
 plt.errorbar(cosmouline_df['mhjd'], cosmouline_df['mag'], yerr=cosmouline_df['magerr'],
              fmt='o', color='orange', alpha=0.5, zorder=1, label='Cosmouline (legacy pipeline)',

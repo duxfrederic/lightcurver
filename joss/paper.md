@@ -80,6 +80,6 @@ but the subsequent addition of new frames as they are observed should require no
 
 `lightcurver` is made to be fast, and in comparison to `COSMOULINE`, achieves equal or better photometric precision, in a much more automated way.
 We provide in the figure below the light curve of a lensed image of a quasar, extracted from the same dataset using both `COSMOULINE` and `lightcurver`.
+The stable zeropoint across frames allows `STARRED` to recover very faint galaxies, as confirmed by Hubble Space Telescope imaging.
 
-
-![Light curve of a lensed image of a quasar (J0659+1629), extracted once with the existing code base (COSMOULINE), requiring a week of investigor's time, and another time with `LightCurver`, requiring about an hour of investigator's time. HST image: PI Tommaso Treu, proposal GO 15652](plot/comparison_with_legacy_pipeline.jpg)
+![Light curve of a lensed image of a quasar (J0659+1629), extracted once with the existing code base (COSMOULINE), requiring a week of investigor's time, and another time with `LightCurver`, requiring about an hour of investigator's time. HST image: PI Tommaso Treu, proposal GO 15652.](plot/comparison_with_legacy_pipeline.jpg)
