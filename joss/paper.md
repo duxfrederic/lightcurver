@@ -55,6 +55,12 @@ To make it suitable as a daily running pipeline on a large number of ROIs,
 `lightcurver` was designed to be fast, precise, and able to reduce new images automatically.
 
 
+![Light curve of a lensed image of a quasar (J0659+1629), extracted once with the existing code base (COSMOULINE), 
+requiring a week of investigor's time, and another time with `LightCurver`, requiring about an hour of investigator's time. 
+HST image: PI Tommaso Treu, proposal GO 15652.](plot/comparison_with_legacy_pipeline.jpg)
+
+
+
 # Functionality
 
 `lightcurver` uses an SQLite3 database to track data processing stages and relies on SQL queries to manage its workflow, 
@@ -79,7 +85,6 @@ Typically, the YAML configuration file needs be configured by the user once when
 but the subsequent addition of new frames as they are observed should require no further manual intervention.
 
 `lightcurver` is made to be fast, and in comparison to `COSMOULINE`, achieves equal or better photometric precision, in a much more automated way.
-We provide in the figure below the light curve of a lensed image of a quasar, extracted from the same dataset using both `COSMOULINE` and `lightcurver`.
+We provide in Figure 1 the light curve of the westernmost lensed image of a quasar, extracted from the same dataset using both `COSMOULINE` and `lightcurver`.
 The stable zeropoint across frames allows `STARRED` to recover very faint galaxies, as confirmed by Hubble Space Telescope imaging.
 
-![Light curve of a lensed image of a quasar (J0659+1629), extracted once with the existing code base (COSMOULINE), requiring a week of investigor's time, and another time with `LightCurver`, requiring about an hour of investigator's time. HST image: PI Tommaso Treu, proposal GO 15652.](plot/comparison_with_legacy_pipeline.jpg)
