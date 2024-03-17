@@ -60,10 +60,10 @@ To make it suitable as a daily running pipeline on a large number of ROIs,
 `lightcurver` uses an SQLite3 database to track data processing stages and relies on SQL queries to manage its workflow, 
 identifying the processing required at each step. 
 The potential stars are extracted with `sep` [@Barbary2016, @sextractor], and their positions serve to plate solve 
-each frame with `Astrometry.net` [@astrometry] or other alternative strategies.
+each frame, mainly with `Astrometry.net` [@astrometry]. 
 This then allows for an automatic selection of calibration stars around the ROI by querying Gaia [@gaia] with `astroquery` [@astroquery] for suitable stars.
 Cutouts of the ROI and stars are subsequently extracted using `astropy` [@astropy], masked, 
-cleaned from cosmics with the help of `astroscrappy` [@astroscrappy, @lacosmic] and stored in an HDF5 file [@fortner1998hdf].
+cleaned from cosmics with the help of `astroscrappy` [@astroscrappy; @lacosmic] and stored in an HDF5 file [@fortner1998hdf].
 At every step, the database is used to check which calibration stars are available in which frames.
 The PSF model is then calculated for each frame with `STARRED`, before being stored in the same HDF5 file.
 Next, the fluxes of all the calibration stars in all frames is measured with PSF photometry, 
