@@ -5,12 +5,13 @@ from datetime import datetime
 from starred.deconvolution.deconvolution import setup_model
 from starred.deconvolution.loss import Loss
 from starred.deconvolution.parameters import ParametersDeconv
-from starred.optim.optimization import Optimizer, FisherCovariance
+from starred.optim.optimization import Optimizer
 
 from ..structure.database import execute_sqlite_query, select_stars, select_stars_for_a_frame, get_pandas
 from ..structure.user_config import get_user_config
 from ..utilities.chi2_selector import get_chi2_bounds
 from ..utilities.footprint import get_combined_footprint_hash
+from ..utilities.starred_utilities import get_flux_uncertainties
 from ..plotting.star_photometry_plotting import plot_joint_deconv_diagnostic
 
 
@@ -89,15 +90,13 @@ def do_one_deconvolution(data, noisemap, psf, subsampling_factor, n_iter=2000):
     fluxes = scale * np.array(kwargs_final['kwargs_analytic']['a'])
 
     # let us calculate the uncertainties ~ equivalent to photon noise / read noise
-    fish = FisherCovariance(parameters, optim, diagonal_only=True)
-    fish.compute_fisher_information()
-    k_errs = fish.get_kwargs_sigma()
-    fluxes_uncertainties = scale * np.array(k_errs['kwargs_analytic']['a'])
+    flux_uncertainties = get_flux_uncertainties(kwargs=kwargs_final, kwargs_down=kwargs_down, kwargs_up=kwargs_up,
+                                                data=data, noisemap=noisemap, model=model)
+    fluxes_uncertainties = scale * flux_uncertainties
 
     result = {
         'scale': scale,
         'kwargs_final': kwargs_final,
-        'kwargs_uncertainties': k_errs,
         'fluxes': fluxes,
         'fluxes_uncertainties': fluxes_uncertainties,
         'chi2': float(chi2),

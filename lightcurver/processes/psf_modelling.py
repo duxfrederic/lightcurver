@@ -141,6 +141,7 @@ def model_all_psfs():
             psf_group = frame_group.create_group(psf_ref)
             psf_group['narrow_psf'] = np.array(result['narrow_psf'])
             psf_group['full_psf'] = np.array(result['full_psf'])
+            psf_group['subsampling_factor'] = np.array([user_config['subsampling_factor']])
 
         # and update the database.
         loss_index = int(0.9 * np.array(loss_history).size)

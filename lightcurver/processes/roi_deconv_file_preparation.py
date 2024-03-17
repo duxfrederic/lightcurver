@@ -1,10 +1,10 @@
 import h5py
 import numpy as np
 
-from lightcurver.structure.database import get_pandas, execute_sqlite_query
-from lightcurver.utilities.footprint import get_combined_footprint_hash
-from lightcurver.utilities.chi2_selector import get_chi2_bounds
-from lightcurver.structure.user_config import get_user_config
+from ..structure.database import get_pandas, execute_sqlite_query
+from ..utilities.footprint import get_combined_footprint_hash
+from ..utilities.chi2_selector import get_chi2_bounds
+from ..structure.user_config import get_user_config
 
 
 def get_frames_for_roi(combined_footprint_hash, psf_fit_chi2_min, psf_fit_chi2_max, **constraints_on_frame_columns_dict):
@@ -113,6 +113,8 @@ def prepare_roi_deconv_file():
         mask = []
         psf = []
         frame_id = []
+        subsampling_factors = []  # should be a unique value but this way we can check
+        angles_to_north = []
         # we'll include some more stuff for reference
         seeing, pixel_scale, wcs, mjd, exptime, sky_level_electron_per_second = [], [], [], [], [], []
         normalization_uncertainty = []
@@ -123,6 +125,7 @@ def prepare_roi_deconv_file():
             mask.append(h5f[f"{frame['image_relpath']}/cosmicsmask/ROI"][...])
             psf_ref = frame['psf_ref']
             psf.append(h5f[f"{frame['image_relpath']}/{psf_ref}/narrow_psf"][...])
+            subsampling_factors.append(h5f[f"{frame['image_relpath']}/{psf_ref}/subsampling_factor"][...])
             seeing.append(frame['seeing_arcseconds'])
             pixel_scale.append(frame['pixel_scale'])
             wcs.append(h5f[f"{frame['image_relpath']}/wcs/ROI"][()])
@@ -131,6 +134,7 @@ def prepare_roi_deconv_file():
             mjd.append(frame['mjd'])
             frame_id.append(frame['id'])
             normalization_uncertainty.append(frame['coefficient_uncertainty'])
+            angles_to_north.append(frame['angle_to_north'])
         data, noisemap, mask, psf = np.array(data), np.array(noisemap), np.array(mask), np.array(psf)
         # just like for the PSF, we need to remove the NaNs ...
         isnan = np.where(np.isnan(data) * np.isnan(noisemap))
@@ -167,4 +171,6 @@ def prepare_roi_deconv_file():
         f['relative_normalization_error'] = np.array(normalization_uncertainty)
         f['wcs'] = np.array(wcs)
         f['pixel_scale'] = np.array(pixel_scale)
+        f['subsampling_factor'] = np.array(subsampling_factors)
+        f['angle_to_north'] = np.array(angles_to_north)
 
