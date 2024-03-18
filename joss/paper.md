@@ -45,7 +45,7 @@ Processing data at this cadence will require robust pipelines capable of ingesti
 and providing immediate photometric calibration and analysis. 
 This is particularly important for time-sensitive targets of opportunity, 
 where rapid reaction to changes is essential for timely follow-up. 
-An existing pipeline that performs this precise deblending and photometric measurement task, COSMOULINE [@cosmouline; @MCS], 
+An existing pipeline that performs this precise deblending and photometric measurement task, `COSMOULINE` [@cosmouline; @MCS], 
 requires too much manual intervention to be run on a daily basis.
 
 On the other hand, `STARRED` is a powerful PSF modelling and deconvolution package, ideal for this task. 
@@ -62,7 +62,7 @@ To make it suitable as a daily running pipeline on a large number of ROIs,
 `lightcurver` was designed to be fast, incremental, and capable of automatically reducing new images.
 
 
-![Light curve of a lensed image of a quasar (J0030-1525), extracted once with the existing code base (COSMOULINE), 
+![Light curve of a lensed image of a quasar (J0030-1525), extracted once with the existing code base (`COSMOULINE`), 
 requiring a week of investigor's time, and another time with `lightcurver`, requiring about an hour of investigator's time. 
 HST image: PI Tommaso Treu, proposal GO 15652.](plot/comparison_with_legacy_pipeline.jpg)
 
@@ -96,8 +96,16 @@ Typically, the YAML configuration file needs to be configured by the user once w
 the pipeline on the first few frames, but the subsequent addition of new frames as 
 they are observed requires no further manual intervention.
 
-`lightcurver`, in comparison to `COSMOULINE`, achieves equal or better photometric precision in a much more automated manner. 
-We provide in Figure 1 the light curve of the westernmost lensed image of a quasar, J0030-1525 [@lemon2018], 
+`lightcurver`, in comparison to `COSMOULINE`, achieves equal or better photometric precision in a much more automated fashion. 
+Figure 1 presents the light curve of the northernmost lensed image of the quasar J0030-1525 [@lemon2018], 
 extracted from the same dataset (ESO program 0106.A-9005(A), PI Courbin) using both `COSMOULINE` and `lightcurver`. 
-The stable zeropoint across frames allows `STARRED` to recover very faint galaxies in its deconvolution product, 
-as confirmed by Hubble Space Telescope imaging.
+The stable zeropoint across frames enables STARRED to reliably fit the constant components, in this case, two galaxies visible in the image. 
+This reliable deblending of the different flux components yields both light curves and a high-resolution image, 
+whose morphology is confirmed by comparison with Hubble Space Telescope imaging.
+
+In summary, `lightcurver` is a robust and efficient photometry pipeline designed for the semi-automatic extraction 
+of precise light curves from small, blended targets in cadenced astronomical imaging data. 
+By leveraging the power of STARRED for state-of-the-art PSF modeling and deconvolution, 
+and employing an automated flux calibration process, `lightcurver` achieves equal or better photometric precision 
+compared to existing pipelines, while requiring significantly less manual intervention.
+
