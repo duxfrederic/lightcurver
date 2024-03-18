@@ -28,7 +28,7 @@ Such targets include, but are not limited to, lensed quasars, supernovae, or cep
 Instead, it is a framework tailored for the precise study of a small region of interest (ROI) in wide-field images, 
 utilizing stars surrounding the ROI to calibrate the frames.
 
-At its core, `lightcurver` leverages `STARRED` [@starred] to generate state-of-the-art Point Spread Function (PSF) models for each image. 
+At its core, `lightcurver` leverages `STARRED` [@starred; @starredscience] to generate state-of-the-art Point Spread Function (PSF) models for each image. 
 It then determines the relative zeropoints between images by combining the PSF-photometry fluxes of several stars in the field of view. 
 Subsequently, `STARRED` is used again to simultaneously model the calibrated pixels of the ROI across all epochs. 
 This process yields light curves of the point sources and a high-resolution image model of the ROI, cumulating the signal from all epochs.

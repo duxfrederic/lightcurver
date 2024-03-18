@@ -4,8 +4,9 @@ import numpy as np
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 from astropy.visualization import simple_norm
 
-cosmouline_df = pd.read_csv('J0659_VST_D_cosmouline.csv')
-lightcurver_df = pd.read_csv('J0659_VST_D_lightcurver.csv')
+cosmouline_df = pd.read_csv('J0030_VST_AD_cosmouline.csv')
+
+lightcurver_df = pd.read_csv('J0030_VST_AD_lightcurver.csv')
 
 plt.figure(figsize=(6, 4))
 
@@ -21,7 +22,7 @@ plt.xlabel('Modified Julian Days')
 plt.ylabel('Magnitude')
 plt.legend()
 plt.grid(True, which='both', linestyle='--', linewidth=0.5)
-
+plt.ylim((19.44, 19.251))
 
 def add_image_in_plot(image, ax, zoom, position, norm, x_offset, text):
     zoom_width = zoom_height = zoom * ax.get_figure().get_figwidth() / 100
@@ -40,9 +41,9 @@ def add_image_in_plot(image, ax, zoom, position, norm, x_offset, text):
     axins.text(0.05, 0.99, text, transform=axins.transAxes, ha="left", va="top", fontsize=6, color="white")
 
 
-hst_image = np.load('J0659+1629_hst_image.npy')
-raw_image = np.load('J0659+1629_raw_image.npy')
-deconv_image = np.load('J0659+1629_deconv_image.npy')
+hst_image = np.load('PSJ0030-1525_hst_image.npy')
+raw_image = np.load('PSJ0030-1525_raw_image.npy')
+deconv_image = np.load('PSJ0030-1525_deconv_image.npy')
 
 ax = plt.gca()
 
@@ -50,13 +51,13 @@ initial_offset = 0.03
 offset_increment = 0.145
 zoom = 39
 
-norm = simple_norm(raw_image, stretch='asinh', asinh_a=1e-1)
+norm = simple_norm(raw_image)
 add_image_in_plot(raw_image, ax, zoom=zoom, position='lower left', x_offset=initial_offset,
                   norm=norm, text='Single data cutout')
 norm = simple_norm(deconv_image, stretch='asinh', asinh_a=1e-2, percent=99.8)
 add_image_in_plot(deconv_image, ax, zoom=zoom, position='lower left', x_offset=initial_offset + offset_increment,
                   norm=norm, text='Joint deconvolution\nproduct')
-norm = simple_norm(hst_image, stretch='asinh', asinh_a=1e-3)
+norm = simple_norm(hst_image, stretch='asinh', asinh_a=1.5e-3, min_percent=3)
 add_image_in_plot(hst_image, ax, zoom=zoom, position='lower left', x_offset=initial_offset + 2*offset_increment,
                   norm=norm, text='HST image')
 
