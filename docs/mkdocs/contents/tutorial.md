@@ -199,6 +199,12 @@ Now that we've identified stars, let us extract them from the image. This step w
 
 and those for each selected star, and also for our region of interest.
 These will all go into the `regions.h5` file, at the root of the working directory.
+This is this step is called:
+```python
+# assuming the path to the config file is still in the environment
+from lightcurver.processes.cutout_making import extract_all_stamps
+extract_all_stamps()
+```
 
 Here is a snippet to see what the cutouts look like:
 ```python
