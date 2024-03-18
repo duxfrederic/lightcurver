@@ -35,7 +35,7 @@ This process yields light curves of the point sources and a high-resolution imag
 
 `lightcurver` aims to be maintainable, fast, and incremental in its processing approach. 
 As such, it can enable the daily photometric analysis of a large number of blended targets 
-in the context of the upcoming Rubin Observatory Legacy Survey of Space and Time (LSST) [@LSST]. 
+in the context of the upcoming Rubin Observatory Legacy Survey of Space and Time (LSST: @LSST)  . 
 
 # Statement of need
 
