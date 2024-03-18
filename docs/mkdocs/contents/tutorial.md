@@ -306,7 +306,7 @@ This is an approximate calibration only, but it is nice to have still.
 from lightcurver.utilities.zeropoint_from_gaia import calculate_zeropoints
 calculate_zeropoints()
 ```
-Last step, we use our normalization coefficient to prepare the calibrated cutouts.
+Next, we use our normalization coefficient to prepare the calibrated cutouts.
 ```python
 # assuming the path to the config file is still in the environment
 from lightcurver.processes.roi_deconv_file_preparation import prepare_roi_deconv_file
@@ -316,4 +316,52 @@ You will find your calibrated cutouts in the `prepared_roi_cutouts`, relative to
 
 
 
+## Modelling the ROI
+The last and most satisfying step!
+As a reminder, `STARRED` jointly deconvolves all your epochs at once. It does so by modelling the data
+as the sum of point sources (whose flux can vary from epoch to epoch) and a pixelated background regularized by wavelets.
+This part is highly non-linear, and you could follow one of the `STARRED` tutorials to deconvolve your cutouts
+yourself.
+Nevertheless, the pipeline does have a deconvolution step, so let us take a look at the available parameters.
+(Check the annotation buttons for comments)
+
+<div class="annotate" markdown>
+```yaml
+do_ROI_model: true (1)
+point_sources: (2)
+   A: [42.202991, 19.225400]
+   B: [42.202944, 19.225186]
+   C: [42.203227, 19.225010]
+   D: [42.203249, 19.225389]
+
+# so, null or a path for this one (path either relative to workdir, or absolute path starting with /):
+starting_background: null (3)
+# if null above, and false here, then you will not include a background (kinda ruining the point of the entire pipeline, but well...)
+further_optimize_background: true (4)
+
+# and these should mostly work as is, how many iterations of the optimizer do we do?
+roi_deconv_translations_iters: 300 (5)
+roi_deconv_all_iters: 2000
+# keep in mind that this is going to be relatively slow on a CPU. (a few minutes at least). Count 30min for the whole pipeline.
+```
+</div>
+1. You can set this to false if you are going to do the reduction yourself, or if you do not want the pipeline to waste time
+redoing this everytime. (This is not an incremental step, all the frames are jointly modelled.)
+2. Here, you can give `STARRED` the positions of your point sources. Since your images are plate solved, just open
+the best seeing frame with `ds9` and measure their coordinates. You only have to do it once.
+3. If you are using this as a pipeline, you might want to do the reduction manually once, save the resulting
+pixelated background in a `.fits` or `.npy` file, and provide it here. 
+4. Whether the pipeline attempts to further refine the background. In a scenario where new frames are incoming
+regularly, I would set `false` for this one provided that you did provide a good quality background just above.
+I would set `true` with manual supervision, if the aim is set more on the deconvolved product than auto-updating light curves.
+5. These values should mostly work. Take a look at the loss curve in the plots after running the pipeline to make sure
+the optimization converged.
+
+And now, in the `prepared_roi_cutouts` directory you should have 
+
+- a `csv` file containing the fluxes and uncertainties of each point source at each epoch,
+as well as additional information (MJD, seeing, $\chi^2$, zeropoint so you can convert the fluxes to magnitudes, database ID
+of the frame),
+- a `json` file containing the astrometry of the point sources,
+- two fits files containing the deconvolution product, once with point sources and once with the background only.
 

@@ -221,6 +221,12 @@ def do_deconvolution_of_roi():
         curve_norm_err = norm_errs * curve
         curves[ps] = curve
         d_curves[ps] = (curve_photon_uncertainties**2 + curve_norm_err**2)**0.5
+
+    # ok, onto the chi2
+    modelled_pixels = model.model(kwargs_final)
+    residuals = data - modelled_pixels
+    chi2_per_frame = np.nansum((residuals**2 / noisemap**2), axis=(1, 2)) / model.image_size ** 2
+
     # let's fold in some info, and save!
     df = []
     num_epochs = len(frame_ids)
@@ -229,6 +235,7 @@ def do_deconvolution_of_roi():
             'frame_id': frame_ids[epoch],
             'mjd': mjds[epoch],
             'zeropoint': zeropoint,
+            'reduced_chi2': chi2_per_frame[epoch],
         }
         for ps in ordered_ps:
             row[f'{ps}_flux'] = curves[ps][epoch]
@@ -254,10 +261,7 @@ def do_deconvolution_of_roi():
                  overwrite=True)
     fits.writeto(out_dir / f'{combined_footprint_hash}_background.fits', scale * np.array(h),
                  overwrite=True)
-    # ok, onto the chi2
-    modelled_pixels = model.model(kwargs_final)
-    residuals = data - modelled_pixels
-    chi2_per_frame = np.nansum((residuals**2 / noisemap**2), axis=(1, 2)) / model.image_size ** 2
+
     # now a diagnostic plot
     plot_deconv_dir = user_config['plots_dir'] / 'deconvolutions' / str(combined_footprint_hash)
     plot_deconv_dir.mkdir(exist_ok=True, parents=True)
