@@ -30,7 +30,7 @@ def solve_one_image(image_path, sources_path, user_config, logger):
                       scale_min=plate_scale_min, scale_max=plate_scale_max,
                       logger=logger,
                       do_debug_plot=False,
-                      odds_to_solve=1000)
+                      odds_to_solve=100000.0)
 
     return WCS(wcs)
 
