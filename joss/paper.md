@@ -18,22 +18,6 @@ date: 18 March 2024
 bibliography: paper.bib
 ---
 
-# Summary
-
-`lightcurver` is a photometry pipeline of cadenced astronomical imaging data,
-designed for the semi-automatic extraction of precise light curves in small, blended targets.
-Such targets include but are not limited to lensed quasars, supernovae, or cepheids in crowded fields.
-`lightcurver` is thereby not a general purpose photometry, astrometry and classification pipeline such as the `legacypipe` [@legacypipe].
-Rather, it is a framework made for the precise study a small region of interest (ROI) in wide-field images, 
-using stars surrounding the ROI to calibrate the frames.
-At its core, `lightcurver` leverages `STARRED` [@starred] to generate state-of-the-art Point Spead Function (PSF) models for each image.
-It then determines the relative zeropoints between images by combining the PSF-photometry fluxes of several stars in the field of view.
-Finally, `STARRED` is used again to simultaneously model the calibrated pixels of the ROI of all epochs at once.
-This process yields light curves of the point sources, and a high resolution image model of the ROI cumulating the signal of all epochs.
-`lightcurver` aims at being maintainable and fast, and as such will hopefully allow the daily photometric analysis of 
-a large number of blended targets in the context of the upcoming Rubin Observatory Legacy Survey of Space and Time LSST [@LSST].
-LSST will revisit the same regions of the sky every four days, with irregular pointings due to its observing strategy.
-Here's the paragraph with some subtle improvements to enhance readability:
 
 # Summary
 
