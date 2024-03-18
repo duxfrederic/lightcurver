@@ -9,7 +9,8 @@
 
 Welcome to `lightcurver`! 
 This is a photometry library leveraging [STARRED](https://gitlab.com/cosmograil/starred), 
-best used with time series of wide-field images. 
+best used with time series of wide-field images. You can read more about it in the [documentation](https://duxfrederic.github.io/lightcurver/).
+
 `lightcurver` essentially prepares a Point Spread Function (PSF) model for each wide-field image, before using it
 to precisely calibrate the relative zero point between each image.
 Finally, `STARRED` models the pixels of the region of interest, 
