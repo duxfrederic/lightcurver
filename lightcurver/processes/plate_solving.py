@@ -7,7 +7,7 @@ from widefield_plate_solver import plate_solve
 from widefield_plate_solver.exceptions import CouldNotSolveError
 
 from ..structure.database import execute_sqlite_query
-from ..utilities.footprint import database_insert_single_footprint
+from ..utilities.footprint import database_insert_single_footprint, get_angle_wcs
 
 
 def solve_one_image(image_path, sources_path, user_config, logger):
@@ -56,11 +56,20 @@ def post_plate_solve_steps(frame_path, user_config, frame_id):
     message += f"Anisotropy: {anisotropy:.01%}%"
     message += "Uncomment this assert line if you think you will be fine."
     assert abs(psx - psy) / (psx + psy) < 1e-2, message
+    angle_to_north = get_angle_wcs(wcs)
     pixel_scale = 0.5 * (psx + psy) * 3600  # to arcsecond / pixel
+    # first, set the pixel scale
     execute_sqlite_query(query="UPDATE frames SET pixel_scale = ? WHERE id = ?",
                          params=(pixel_scale, frame_id), is_select=False)
-    execute_sqlite_query(query="UPDATE frames SET seeing_arcseconds = pixel_scale * seeing_pixels WHERE id = ?",
-                         params=(frame_id,), is_select=False)
+    # then, use it to compute the seeing in arcseconds, and insert the angle at the same time to combine queries
+    execute_sqlite_query(query="""UPDATE 
+                                      frames 
+                                  SET 
+                                      seeing_arcseconds = pixel_scale * seeing_pixels,
+                                      angle_to_north = ?
+                                  WHERE 
+                                      id = ?""",
+                         params=(angle_to_north, frame_id), is_select=False)
 
 
 def solve_one_image_and_update_database(image_path, sources_path, user_config, frame_id, logger):

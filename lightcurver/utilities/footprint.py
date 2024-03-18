@@ -192,3 +192,28 @@ def identify_and_eliminate_bad_pointings():
 
     for frame_id in bad_frames:
         execute_sqlite_query(update_query, params=(frame_id,))
+
+
+def get_angle_wcs(wcs_object):
+    """
+     Takes a WCS object, and returns the angle in degrees to the North (so, angle relative to "North up, East left")
+    Args:
+        wcs_object: astropy WCS object
+
+    Returns:
+        angle: float, angle in degrees.
+    """
+
+    if hasattr(wcs_object.wcs, 'cd'):
+        matrix = wcs_object.wcs.cd
+    elif hasattr(wcs_object.wcs, 'pc'):
+        matrix = wcs_object.wcs.pc
+    else:
+        raise ValueError("Neither CD nor PC matrix found in WCS.")
+
+    cd1_1, cd1_2 = matrix[0, 0], matrix[0, 1]
+    cd2_1, cd2_2 = matrix[1, 0], matrix[1, 1]
+
+    angle = np.arctan2(-cd1_2, cd2_2) * 180.0 / np.pi
+
+    return angle

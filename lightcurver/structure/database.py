@@ -239,6 +239,7 @@ def initialize_database(db_path=None):
         "altitude REAL DEFAULT NULL",
         "comment TEXT DEFAULT NULL",
         "roi_in_footprint INTEGER DEFAULT 0",
+        "angle_to_north REAL DEFAULT 0.0",
         # potential new stuff to keep track on in future here
     ]
 
