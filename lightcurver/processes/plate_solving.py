@@ -29,7 +29,8 @@ def solve_one_image(image_path, sources_path, user_config, logger):
                       ra_approx=ra, dec_approx=dec,
                       scale_min=plate_scale_min, scale_max=plate_scale_max,
                       logger=logger,
-                      do_debug_plot=False)
+                      do_debug_plot=False,
+                      odds_to_solve=1000)
 
     return WCS(wcs)
 
