@@ -33,24 +33,44 @@ This process yields light curves of the point sources, and a high resolution ima
 `lightcurver` aims at being maintainable and fast, and as such will hopefully allow the daily photometric analysis of 
 a large number of blended targets in the context of the upcoming Rubin Observatory Legacy Survey of Space and Time LSST [@LSST].
 LSST will revisit the same regions of the sky every four days, with irregular pointings due to its observing strategy.
+Here's the paragraph with some subtle improvements to enhance readability:
 
+# Summary
+
+`lightcurver` is a photometry pipeline for cadenced astronomical imaging data, 
+designed for the semi-automatic extraction of precise light curves from small, blended targets. 
+Such targets include, but are not limited to, lensed quasars, supernovae, or cepheids in crowded fields. 
+`lightcurver` is not a general-purpose photometry, astrometry, and classification pipeline like `legacypipe` [@legacypipe]. 
+Instead, it is a framework tailored for the precise study of a small region of interest (ROI) in wide-field images, 
+utilizing stars surrounding the ROI to calibrate the frames.
+
+At its core, `lightcurver` leverages `STARRED` [@starred] to generate state-of-the-art Point Spread Function (PSF) models for each image. 
+It then determines the relative zeropoints between images by combining the PSF-photometry fluxes of several stars in the field of view. 
+Subsequently, `STARRED` is used again to simultaneously model the calibrated pixels of the ROI across all epochs. 
+This process yields light curves of the point sources and a high-resolution image model of the ROI, cumulating the signal from all epochs.
+
+`lightcurver` aims to be maintainable, fast, and incremental in its processing approach. 
+As such, it can enable the daily photometric analysis of a large number of blended targets 
+in the context of the upcoming Rubin Observatory Legacy Survey of Space and Time (LSST) [@LSST]. 
 
 # Statement of need
 
 The LSST survey will generate an unprecedented amount of imaging data, 
-requiring robust pipelines capable of ingesting new observations and providing immediate photometric calibration and analysis. 
+revisiting the same regions of the sky every four days, with irregular pointings due to its observing strategy.
+Processing data at this cadence will require robust pipelines capable of ingesting new observations 
+and providing immediate photometric calibration and analysis. 
 This is particularly important for time-sensitive targets of opportunity, 
 where rapid reaction to changes is essential for timely follow-up. 
-An existing pipeline that performs this precise photometric measurement task, COSMOULINE [@cosmouline; @MCS], 
+An existing pipeline that performs this precise deblending and photometric measurement task, COSMOULINE [@cosmouline; @MCS], 
 requires too much manual intervention to be run on a daily basis.
 
-On the other hand, STARRED is a powerful PSF modelling and deconvolution package, ideal for this task. 
+On the other hand, `STARRED` is a powerful PSF modelling and deconvolution package, ideal for this task. 
 However, by its nature, it cannot include an infrastructure that makes it convenient to apply to large datasets without manual intervention
 (e.g., visually identifying appropriate stars, extracting cutouts, and all subsequent processing steps leading to a light curve). 
-Particularly, STARRED modelling requires a very stable zero-point across modelled epochs, 
-as it emulates the constant components of the ROI as one pixel grid common to all epochs, 
+Particularly, `STARRED` modelling requires a very stable zero-point across modelled epochs, 
+as it emulates the constant components of the ROI as one grid of pixels common to all epochs, 
 which it simultaneously optimizes together with the fluxes of the variables. 
-Achieving such precise relative zero-point calibration, especially in an automated manner, comes with challenges.
+Achieving such precise relative zero-point calibration (typically a milimag), especially in an automated manner, comes with challenges.
 
 `lightcurver` addresses this challenge by automatically selecting calibration stars, modelling them, 
 and robustly combining their fluxes to calibrate the zeropoints.
@@ -58,11 +78,9 @@ To make it suitable as a daily running pipeline on a large number of ROIs,
 `lightcurver` was designed to be fast, incremental, and capable of automatically reducing new images.
 
 
-
 ![Light curve of a lensed image of a quasar (J0659+1629), extracted once with the existing code base (COSMOULINE), 
 requiring a week of investigor's time, and another time with `lightcurver`, requiring about an hour of investigator's time. 
 HST image: PI Tommaso Treu, proposal GO 15652.](plot/comparison_with_legacy_pipeline.jpg)
-
 
 
 # Functionality
