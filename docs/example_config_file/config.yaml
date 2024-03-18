@@ -6,6 +6,9 @@
 # Expect it to work best when you have an "intermediate" number density of stars in the field.
 # Too few and we cannot calibrate the frames properly. Too many and finding isolated stars becomes difficult.
 # Anyway, below you will find parameters used by the package in order of the execution of tasks.
+#
+# The parameters herein work with te dataset provided in the tutorial: 
+# https://duxfrederic.github.io/lightcurver/tutorial/
 ########################################################################################################################
 
 
@@ -45,11 +48,11 @@ ROI_size: 3.5  # in arcseconds, will not consider reference stars this close
 # telescope information.
 # will be used to calculate airmass, distance to moon, this type of stuff.
 telescope:
-  name: NOT
+  name: VST
   latitude: -24.6
   longitude: -70.4
   elevation: 2635.0
-  imager_name: StanCAM
+  imager_name: OmegaCAM
 
 
 
@@ -246,4 +249,4 @@ further_optimize_background: true
 # and these should mostly work as is, how many iterations of the optimizer do we do?
 roi_deconv_translations_iters: 300
 roi_deconv_all_iters: 2000
-# keep in mind that this is going to be relatively slow on a CPU. (a few minutes at least). Count 30min for the whole pipeline.
+# keep in mind that this is going to be relatively slow on a CPU. Count 30min at least for the whole pipeline.
