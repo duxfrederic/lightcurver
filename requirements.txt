@@ -26,3 +26,4 @@ emcee
 h5py
 widefield_plate_solver
 photutils
+astroalign
