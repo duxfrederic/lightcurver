@@ -6,7 +6,7 @@ import numpy as np
 from ..utilities.footprint import load_combined_footprint_from_db, get_frames_hash
 from ..structure.user_config import get_user_config
 from ..processes.frame_star_assignment import populate_stars_in_frames
-from ..utilities.gaia import find_gaia_stars_in_circle, find_gaia_stars_in_polygon
+from ..utilities.gaia import find_gaia_stars
 from ..utilities.star_naming import generate_star_names
 from ..structure.database import get_pandas, execute_sqlite_query
 from ..plotting.sources_plotting import plot_footprints_with_stars
@@ -43,33 +43,34 @@ def query_gaia_stars():
 
     if user_config['star_selection_strategy'] == 'common_footprint_stars':
         _, common_footprint = load_combined_footprint_from_db(frames_hash)
+        region_type = 'polygon'
         query_footprint = common_footprint['coordinates'][0]
-        query_function = find_gaia_stars_in_polygon
         # then we want to make sure we use stars that are available in all frames.
         # this likely achieves the best precision, but is only possible typically in dedicated
         # monitoring programs with stable pointings.
     elif user_config['star_selection_strategy'] == 'stars_per_frame':
         largest_footprint, _ = load_combined_footprint_from_db(frames_hash)
+        region_type = 'polygon'
         query_footprint = largest_footprint['coordinates'][0]
-        query_function = find_gaia_stars_in_polygon
         # then, we must fall back to using stars selected in each individual frame.
         # here, we will query a larger footprint so that we have options in each
         # individual frame.
     elif user_config['star_selection_strategy'] == 'ROI_disk':
         center = user_config['ROI_ra_deg'], user_config['ROI_dec_deg']
-        radius = user_config['ROI_disk_radius_arcseconds'] / 3600.
+        radius = user_config['ROI_disk_radius_arcseconds'] / 3600.0
+        region_type = 'circle'
         query_footprint = {'center': center, 'radius': radius}
-        query_function = find_gaia_stars_in_circle
     else:
         raise RuntimeError("Not an agreed upon strategy for star selection:", user_config['star_selection_strategy'])
 
-    stars_table = query_function(
-                        query_footprint,
-                        release='dr3',
-                        astrometric_excess_noise_max=user_config["star_max_astrometric_excess_noise"],
-                        gmag_range=(user_config["star_min_gmag"], user_config["star_max_gmag"]),
-                        max_phot_g_mean_flux_error=user_config["star_max_phot_g_mean_flux_error"]
-    )
+    kwargs_query = {
+        'release': 'dr3',
+        'astrometric_excess_noise_max': user_config['star_max_astrometric_excess_noise'],
+        'gmag_range': (user_config['star_min_gmag'], user_config['star_max_gmag']),
+        'max_phot_g_mean_flux_error': user_config['star_max_phot_g_mean_flux_error']
+    }
+
+    stars_table = find_gaia_stars(region_type, query_footprint, **kwargs_query)
 
     message = f"Too few stars compared to the config criterion! Only {len(stars_table)} stars available."
     assert len(stars_table) >= user_config['min_number_stars'], message

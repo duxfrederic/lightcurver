@@ -19,20 +19,27 @@ def construct_where_conditions(release, astrometric_excess_noise_max=None, gmag_
     return where_conditions, query_table
 
 
-def query_gaia_stars(region_type, *args, **kwargs):
+def find_gaia_stars(region_type, *args, **kwargs):
     """
     Main function to query Gaia stars based on region type (Circle or Polygon).
 
-    :param region_type: str, 'Circle' or 'Polygon' to define the type of region for the query.
+    :param region_type: str, 'circle' or 'polygon' to define the type of region for the query.
     :param args: Arguments passed to the specific region query function.
     :param kwargs: Keyword arguments for filtering options, passed to the specific region query function.
     """
     if region_type.lower() == 'circle':
-        return find_gaia_stars_in_circle(*args, **kwargs)
+        stars_table = find_gaia_stars_in_circle(*args, **kwargs)
     elif region_type.lower() == 'polygon':
-        return find_gaia_stars_in_polygon(*args, **kwargs)
+        stars_table = find_gaia_stars_in_polygon(*args, **kwargs)
     else:
         raise ValueError("region_type must be either 'Circle' or 'Polygon'")
+
+    # it seems that there is some variation when querying gaia? sometimes columns are capitalized, others not.
+    # so, force lower:
+    for name in stars_table.colnames:
+        new_name = name.lower()
+        stars_table.rename_column(name, new_name)
+    return stars_table
 
 
 def find_gaia_stars_in_circle(center_radius, release='dr3', astrometric_excess_noise_max=None, gmag_range=None,
