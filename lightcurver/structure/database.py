@@ -145,9 +145,9 @@ def select_stars_for_a_frame(frame_id, combined_footprint_hash, stars_to_use=Non
         # Query for top closest stars
         query = base_query + """
         ORDER BY s.distance_to_roi_arcsec ASC
-        LIMIT 10
+        LIMIT ?
         """
-        params = (frame_id, combined_footprint_hash)
+        params = (frame_id, combined_footprint_hash, stars_to_use)
     elif type(stars_to_use) is list:
         # Query for stars in the user-defined list
         placeholders = ','.join(['?'] * len(stars_to_use))
