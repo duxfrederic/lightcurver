@@ -79,6 +79,3 @@ def test_run_workflow():
     db_path = os.path.join(temp_dir, 'database.sqlite3')
     database_checks(db_path)
 
-
-if __name__ == "__main__":
-    modify_and_run_workflow()
