@@ -170,7 +170,7 @@ def extract_all_stamps():
 
                     # again, clean the cosmics.
                     if user_config['clean_cosmics']:
-                        mask, cleaned = detect_cosmics(cutout, invar=noisemap ** 2)
+                        mask, cleaned = detect_cosmics(cutout, invar=noisemap**2)
                     else:
                         mask = np.zeros_like(cutout, dtype=bool)
                         cleaned = cutout
