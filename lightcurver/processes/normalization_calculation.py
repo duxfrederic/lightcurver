@@ -182,7 +182,9 @@ def calculate_coefficient():
     filtered_fluxes = adjusted_normalized_fluxes.copy()
     filtered_uncertainties = adjusted_normalized_d_fluxes.copy()
 
-    filtered_weights = 1. / filtered_uncertainties
+    # since we filtered out outliers, let us assume that the remaining uncertainties are Gaussian.
+    # then, the weights that maximize the SNR in the combined quantity is the variance.
+    filtered_weights = 1. / filtered_uncertainties**2
     norm_err = filtered_fluxes.columns.map(
         lambda frame_id: weighted_std(filtered_fluxes[frame_id], filtered_weights[frame_id])
     )
