@@ -37,11 +37,11 @@ def extract_stamp(data, header, exptime, sky_coord, cutout_size, background_rms_
     # now just take the numpy array
     data_cutout_electrons = exptime * data_cutout.data
 
-    noisemap = exptime * background_rms_electron_per_second + np.sqrt(np.abs(data_cutout_electrons))
+    noisemap_electrons = ((exptime * background_rms_electron_per_second)**2 + np.abs(data_cutout_electrons))**0.5
     # remove zeros if there are any ...
-    noisemap[noisemap < 1e-7] = 1e-7
+    noisemap_electrons[noisemap_electrons < 1e-7] = 1e-7
 
-    return data_cutout_electrons / exptime, noisemap / exptime, wcs_header_string
+    return data_cutout.data, noisemap_electrons / exptime, wcs_header_string
 
 
 def extract_all_stamps():
