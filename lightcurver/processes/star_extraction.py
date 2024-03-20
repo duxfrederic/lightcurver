@@ -5,15 +5,15 @@ from astropy.io import fits
 from ..plotting.sources_plotting import plot_sources
 
 
-def extract_stars(image_background_subtracted, background_rms, detection_threshold=3, min_area=10,
+def extract_stars(image_background_subtracted, variance_map, detection_threshold=3, min_area=10,
                   debug_plot_path=None):
     """
     Extract star positions from an image using SEP (Source Extractor as a Python library).
 
     Parameters:
     image_background_subtracted: image contained in numpy 2d array, with background subtracted!
-    background_rms: float, rms of signal in the background -- noise estimate for significance calculation.
-    detection_threshold: float, in units of sigma, default 4
+    variance_map: image, map of variance.
+    detection_threshold: float, in units of sigma, default 3
     min_area: int, min number of pixels in detection for it to be considered, default 10
 
     Returns:
@@ -22,7 +22,7 @@ def extract_stars(image_background_subtracted, background_rms, detection_thresho
 
     objects = sep.extract(data=image_background_subtracted,
                           thresh=detection_threshold,
-                          err=background_rms,
+                          var=variance_map,
                           minarea=min_area)
 
     sources = Table()

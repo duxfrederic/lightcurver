@@ -56,6 +56,19 @@ telescope:
 
 
 
+
+############################################# Background estimation ####################################################
+
+# We need to very precisley subtract the background. The quality of the photometry depends immensely on this.
+# `sep` does a great job at this, but we offer the possibility to first mask the sources before estimating the
+# background (in case of crowded fields)
+mask_sources_before_background: false
+# also, if you have strong gradients, you might want to allow your image to be subdivided in more boxes.
+background_estimation_n_boxes: 10
+# (this is how many boxes we divide the side of the image in, so in total there'll be the square of this number boxes)
+
+
+
 ################################################# Plate Solving ########################################################
 
 # Mainly for the purpose of plate solving, we try and find stars.

@@ -67,7 +67,9 @@ def process_new_frame(fits_file, user_config, logger):
     # unit: electron per second
 
     # ok, now subtract sky!
-    cutout_data_sub, bkg = subtract_background(cutout_data)
+    cutout_data_sub, bkg = subtract_background(cutout_data,
+                                               mask_sources_first=user_config['mask_sources_before_background'],
+                                               n_boxes=user_config['background_estimation_n_boxes'])
     sky_level_electron_per_second = float(bkg.globalback)
     background_rms_electron_per_second = float(bkg.globalrms)
     logger.info(f'  file {fits_file}: background estimated.')
@@ -91,8 +93,13 @@ def process_new_frame(fits_file, user_config, logger):
     # (do plots if toggle set)
     do_plot = user_config.get('source_extraction_do_plots', False)
     plot_path = user_config['plots_dir'] / 'source_extraction' / f'{fits_file.stem}.jpg' if do_plot else None
+    # we need a proper noise map here to correctly detect our sources.
+    exptime = mjd_gain_filter_exptime_dict['exptime']
+    cutout_data_sub_el = cutout_data_sub * exptime
+    background_rms = bkg.globalrms * exptime
+    variance_map = background_rms**2 + np.abs(cutout_data_sub_el)
     sources_table = extract_stars(image_background_subtracted=cutout_data_sub,
-                                  background_rms=bkg.globalrms,
+                                  variance_map=variance_map / exptime**2,  # scale back to (e-/s)^2
                                   detection_threshold=user_config.get('source_extraction_threshold', 3),
                                   min_area=user_config.get('source_extraction_min_area', 10),
                                   debug_plot_path=plot_path)
