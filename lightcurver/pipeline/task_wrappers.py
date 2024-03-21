@@ -99,8 +99,18 @@ def plate_solve_all_frames():
     user_config = get_user_config()
     workdir = Path(user_config['workdir'])
 
+    # so, we select our frames to plate solve depending on the user config.
+    if user_config['plate_solve_frames'] == 'all_not_eliminated':
+        conditions = ['eliminated = 0']
+    elif user_config['plate_solve_frames'] == 'all_never_attempted':
+        conditions = ['eliminated = 0', 'attempted_plate_solve = 0']
+    elif user_config['plate_solve_frames'] == 'all_not_plate_solved':
+        conditions = ['eliminated = 0', 'plate_solved = 0']
+    else:
+        raise ValueError(f"Not an expected selection strategy for frames to solve: {user_config['plate_solve_frames']}")
+
     frames_to_process = get_pandas(columns=['id', 'image_relpath', 'sources_relpath'],
-                                   conditions=['plate_solved = 0', 'eliminated = 0'])
+                                   conditions=conditions)
     logger.info(f"Ready to plate solve {len(frames_to_process)} frames.")
 
     with Pool(processes=user_config['multiprocessing_cpu_count'],

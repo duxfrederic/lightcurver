@@ -80,7 +80,14 @@ source_extraction_do_plots: 1
 
 
 
-# Ok, everyhing plate solving now.
+# Ok, everything plate solving now.
+# Which frames should we process here?
+plate_solve_frames: 'all_never_attempted'
+# possibilities: all_not_eliminated, all_never_attempted, all_not_plate_solved
+# all_not_eliminated means basically all the frames, not recommended as we redo everything every time.
+# all_never_attempted: recommended
+# all_not_plate_solved: retry all the frames that do not have an astrometric solution.
+
 # Are your images already plate solved? if yes, we will skip the plate solving step
 already_plate_solved: 1
 # plate solving strategy: plate solve with astrometry.net (`plate_solve`) or try and match the image detections
