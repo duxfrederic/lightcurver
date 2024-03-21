@@ -4,7 +4,7 @@ import shutil
 import yaml
 import sqlite3
 from lightcurver.pipeline.workflow_manager import WorkflowManager
-
+from lightcurver.pipeline.task_wrappers import source_extract_all_images
 
 def database_checks(db_path):
     """
@@ -78,4 +78,9 @@ def test_run_workflow():
     # do we have 2 normalization coefficients?
     db_path = os.path.join(temp_dir, 'database.sqlite3')
     database_checks(db_path)
+
+    # now, the user might want to redo the source extraction should the initial one not have
+    # given the expected result. Test that it works without error here:
+    source_extract_all_images()
+
 

@@ -7,7 +7,7 @@ weight: 7
 `LightCurver` will absolutely fail you a lot. Sorry, astronomical data is just too messy and such is life.
 Here I will add example situations and how to fix them.
 
-## Some of my images were imported, but cannot be plate solved due to low quality
+### Some of my images were imported, but cannot be plate solved due to low quality
 High airmass observations, clouds, tracking problems ...
 If you have such images and are confident that you will not be able to extract value from them, 
 you can remove them from consideration by flagging them in the database:
@@ -15,7 +15,7 @@ you can remove them from consideration by flagging them in the database:
 'UPDATE frames SET comment='cannot be plate solved', eliminated = 1 WHERE plate_solved=0;'
 ````
 
-## I manually plate solved my images after importation, how can I make my pipeline aware of this?
+### I manually plate solved my images after importation, how can I make my pipeline aware of this?
 If my plate solving step failed you, and if you managed to add a WCS yourself to the fits files in your `frames` directory,
 then you will need to manually run the process storing the footprints in the database and checking that your region of interest
 is in the frame.
@@ -59,4 +59,19 @@ for s in solved:
     
 # now that we know what our footprints are, populate the table telling us which frame has which star.
 populate_stars_in_frames()
+```
+
+### The sources were not correctly found by `sep`, how to re-run that part only after changing the config?
+```python
+import os
+os.environ['LIGHTCURVER_CONFIG'] = "/path/to/config.yaml"
+
+from lightcurver.pipeline.task_wrappers import source_extract_all_images
+
+source_extract_all_images()
+```
+You can also pass a list of strings to `source_extract_all_images`, filtering on the `frames` table of the database, 
+for instance:
+```python
+source_extract_all_images(['plate_solved = 0'])
 ```

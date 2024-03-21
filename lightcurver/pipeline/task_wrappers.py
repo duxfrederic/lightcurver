@@ -163,11 +163,15 @@ def extract_sources_from_sky_sub_image_wrapper(*args):
     extract_sources_from_sky_sub_image(*args)
 
 
-def source_extract_all_images():
+def source_extract_all_images(conditions=None):
     """
     This is not called directly in the pipeline, but can be useful if you want to re-extract all the sources
     with different parameters.
-    Returns: None
+    So, unlike a routine called by the pipeline, this one takes an argument.
+
+    :param conditions: list of strings, e.g. ['eliminated = 0', 'plate_solved = 0']. Default: None.
+                       To filter what frames will be source-extracted again.
+    :returns: Nothing
 
     """
     log_queue = Manager().Queue()
@@ -179,9 +183,9 @@ def source_extract_all_images():
     logger = logging.getLogger("PlateSolveLogger")
     user_config = get_user_config()
     workdir = Path(user_config['workdir'])
-
-    frames_to_process = get_pandas(columns=['id', 'image_relpath', 'sources_relpath'],
-                                   conditions=['plate_solved = 0', 'eliminated = 0'])
+    frames_to_process = get_pandas(columns=['id', 'image_relpath', 'sources_relpath',
+                                            'exptime', 'background_rms_electron_per_second'],
+                                   conditions=conditions)
     logger.info(f"Ready to extract sources: {len(frames_to_process)} frames.")
 
     with Pool(processes=user_config['multiprocessing_cpu_count'],
@@ -191,8 +195,10 @@ def source_extract_all_images():
              workdir / row['sources_relpath'],
              user_config['source_extraction_threshold'],
              user_config['source_extraction_min_area'],
+             row['exptime'],
+             row['background_rms_electron_per_second'],
              user_config['plots_dir'] / 'source_extraction' / f"{Path(row['image_relpath']).stem}.jpg",
-             row['id'])  # duplicating row['id'] for logger naming
+             row['id'])  # for logger naming
             for index, row in frames_to_process.iterrows()
         ])
 
