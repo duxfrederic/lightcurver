@@ -75,7 +75,7 @@ Firstly, the frames undergo background subtraction, and the sources are extracte
 The positions of the extracted sources are then used to plate-solve each frame, primarily with `Astrometry.net` [@astrometry]. 
 This allows for an automatic selection of calibration stars around the region of interest (ROI) by querying Gaia [@gaia] 
 with `astroquery` [@astroquery] for suitable stars. 
-The pointings and field rotations need not be stable across epochs, as each frame is assigned its own calibration stars.
+The pointings and field rotations need not be stable across epochs, as each frame is assigned its own calibration stars with the help of `shapely` [@shapely].
 
 Subsequently, cutouts of the ROI and stars are extracted using `astropy` [@astropy], masked, 
 cleaned from cosmic rays with the help of `astroscrappy` [@astroscrappy; @lacosmic], 
