@@ -73,8 +73,8 @@ background_estimation_n_boxes: 10
 
 # Mainly for the purpose of plate solving, we try and find stars.
 # we will use `sep` for this purpose, here you can define the two main parameters of sep.
-source_extraction_threshold: 3.0
-source_extraction_min_area: 10
+source_extraction_threshold: 2.0
+source_extraction_min_area: 20
 # do you want to do plots of the extracted sources?
 source_extraction_do_plots: 1
 
