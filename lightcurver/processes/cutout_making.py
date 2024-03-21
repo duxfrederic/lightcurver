@@ -163,10 +163,10 @@ def extract_all_stamps():
                     obs_epoch = Time(frame['mjd'], format='mjd')
                     corrected_coord = star_coord.apply_space_motion(new_obstime=obs_epoch)
                     cutout, noisemap, wcs_str = extract_stamp(data=data, header=header,
-                                                             exptime=frame['exptime'],
-                                                             sky_coord=corrected_coord,
-                                                             cutout_size=user_config['stamp_size_stars'],
-                                                             background_rms_electron_per_second=global_rms)
+                                                              exptime=frame['exptime'],
+                                                              sky_coord=corrected_coord,
+                                                              cutout_size=user_config['stamp_size_stars'],
+                                                              background_rms_electron_per_second=global_rms)
 
                     # again, clean the cosmics.
                     if user_config['clean_cosmics']:

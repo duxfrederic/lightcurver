@@ -33,7 +33,6 @@ def extract_stars(image_background_subtracted, variance_map, detection_threshold
     sources['xcentroid'] = sources['x']
     sources['ycentroid'] = sources['y']
 
-
     # remove the weirdly elongated ones -- probably most stars, and we care about stars the most
     elongation = sources['a'] / sources['b']
     med_el = np.median(elongation)
@@ -56,7 +55,8 @@ def extract_stars(image_background_subtracted, variance_map, detection_threshold
     return sources
 
 
-def extract_sources_from_sky_sub_image(image_path, sources_path, detection_threshold, min_area, debug_plot_path):
+def extract_sources_from_sky_sub_image(image_path, sources_path, detection_threshold, min_area,
+                                       exptime, background_rms_electron_per_second, debug_plot_path):
     """
       Not used in the main pipeline but can be useful. Given an image, extracts
       sources, and save them in sources_path
@@ -65,17 +65,22 @@ def extract_sources_from_sky_sub_image(image_path, sources_path, detection_thres
         sources_path:  path, str: where the sources are saved
         detection_threshold: float, significance for acceptance
         min_area: int, minimum number of pixels above threshold
+        exptime: float, exposure time of the frame (used to calculate a variance map,
+                 because the pipeline stores the frames in e- / second)
+        background_rms_electron_per_second: float, scatter in the background in e- / second.
+                                            Used to calculate the variance map as well.
         debug_plot_path: where we (potentially) save a plot of our sources.
     Returns:
         Nothing
     """
-    image = fits.getdata(image_path).astype(float)
+    image_electrons = exptime * fits.getdata(image_path).astype(float)
+    background_rms_electrons = exptime * background_rms_electron_per_second
 
-    bkg = sep.Background(image)
+    variance_map = background_rms_electrons**2 + np.abs(image_electrons)
 
-    sources = extract_stars(image_background_subtracted=image - bkg.back(),
+    sources = extract_stars(image_background_subtracted=image_electrons,
                             detection_threshold=detection_threshold,
-                            background_rms=bkg.globalrms,
+                            variance_map=variance_map,
                             min_area=min_area,
                             debug_plot_path=debug_plot_path)
 
