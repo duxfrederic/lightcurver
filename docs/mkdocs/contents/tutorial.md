@@ -2,9 +2,9 @@
 title: Tutorial
 weight_index: 8
 ---
-<div class="annotate" markdown>
-# LightCurver tutorial
 
+# LightCurver tutorial
+<div class="annotate" markdown>
 ## Introduction
 By default, `lightcurver` is a pipeline which executes all its steps sequentially, 
 through the `lightcurver.pipeline.workflow_manager.WorkflowManager` class.
@@ -141,12 +141,12 @@ Let us go ahead and run the task:
 ```python
 # Assuming the path to the config file is still in the environment.
 from lightcurver.pipeline.task_wrappers import plate_solve_all_frames, calc_common_and_total_footprint_and_save
-plate_solve_all_frames() # (1)
+plate_solve_all_frames() # (7)
 calc_common_and_total_footprint_and_save()
 ```
 
 
-This will have populated the `footprints`, `combined_footprint`.
+This will have populated the `footprints` and `combined_footprint` tables of the database.
 
 !!! warning "Footprint shenanigans"
 
@@ -241,7 +241,7 @@ from lightcurver.processes.psf_modelling import model_all_psfs
 model_all_psfs()
 ```
 
-This will populate the `PSFs` table in the database, saving the subsampling factor, the reduced $\chi^2$ of the fit,
+This will populate the `PSFs` table in the database, saving the subsampling factor, the reduced chi-squared of the fit,
 and some text reminding which stars were used to compute the model.
 You can check the plots at `$workdir/plots/PSFs/`, here is an example:
 
@@ -262,7 +262,7 @@ Then you'd have to re-run the PSF process with `redo_psf: true`.
 ## PSF photometry of the reference stars
 This step will, for each star
 - select which frames contain this star
-- eliminate frames with a poorly fit PSF (looking at the $\chi^2$ values, check the config file for how this is done)
+- eliminate frames with a poorly fit PSF (looking at the reduced chi-squared values, check the config file for how this is done)
 - jointly fit the PSF to the star in question in all the selected frames.
 
 ```python
@@ -270,14 +270,14 @@ This step will, for each star
 from lightcurver.processes.star_photometry import do_star_photometry
 do_star_photometry()
 ```
-The fitted fluxes will be saved in the `star_flux_in_frame` table, together with, again, a $\chi^2$ value that
+The fitted fluxes will be saved in the `star_flux_in_frame` table, together with, again, a reduced chi-squared value that
 will be used downwstream to eliminate the badly fitted frames.
 Again it is a good idea to check the diagnostic plot, one of which is generated per star.
 ![starphotom_plot_example.jpg](starphotom_plot_example.jpg)
 
 From left to right, we have the mean (stack) of all the cutouts of that stared that went into the PSF photometry,
 the stacked residuals after subtraction from the fitted model, once in data and once in noise units, the loss curve, and the distribution
-of $\chi^2$ values of the fit on individual frames.
+of reduced chi-squared values of the fit on individual frames.
 
 ## Calculating a normalization coefficient
 This step leverages all the extracted star fluxes, and scales them as to minimize the scatter of the fluxes of
@@ -351,14 +351,14 @@ roi_deconv_all_iters: 2000
 And now, in the `prepared_roi_cutouts` directory you should have 
 
 - a `csv` file containing the fluxes and uncertainties of each point source at each epoch,
-as well as additional information (MJD, seeing, $\chi^2$, zeropoint so you can convert the fluxes to magnitudes, database ID
+as well as additional information (MJD, seeing, reduced chi-squared, zeropoint so you can convert the fluxes to magnitudes, database ID
 of the frame),
 - a `json` file containing the astrometry of the point sources,
 - two fits files containing the deconvolution product, once with point sources and once with the background only.
 
 </div>
-1. Think twice about this value: it has to contain enough stars, but not too many either. Aim for ~20 stars, look at your
-image and do a rough inventory of what is available within a certain distance from your region of interest.
+1. Think twice about this value: it has to contain enough stars, but not too many either. Aim for ~20 stars, look at one 
+of your images and do a rough inventory of what is available within a certain distance from your region of interest.
 2. You can set this to false if you are going to do the reduction yourself, or if you do not want the pipeline to waste time
 redoing this everytime. (This is not an incremental step, all the frames are jointly modelled.)
 3. Here, you can give `STARRED` the positions of your point sources. Since your images are plate solved, just open
@@ -370,3 +370,4 @@ regularly, I would set `false` for this one provided that you did provide a good
 I would set `true` with manual supervision, if the aim is set more on the deconvolved product than auto-updating light curves.
 6. These values should mostly work. Take a look at the loss curve in the plots after running the pipeline to make sure
 the optimization converged.
+7. Since our images are already plate solved, this will only execute the post plate solving steps.

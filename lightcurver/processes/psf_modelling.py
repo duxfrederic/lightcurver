@@ -27,7 +27,7 @@ def mask_surrounding_stars(data, noisemap):
     Returns:
         mask (2d array, one if good pixel, zero if masked)
     """
-    objects, seg_map = sep.extract(data, thresh=4., err=noisemap, minarea=5, segmentation_map=True,
+    objects, seg_map = sep.extract(data, thresh=3., err=noisemap, minarea=15, segmentation_map=True,
                                    deblend_cont=0.001)
 
     mask = np.ones_like(seg_map, dtype=bool)
