@@ -30,7 +30,7 @@ def solve_one_image(image_path, sources_path, user_config, logger):
                       scale_min=plate_scale_min, scale_max=plate_scale_max,
                       logger=logger,
                       do_debug_plot=False,
-                      odds_to_solve=100000.0)
+                      odds_to_solve=1e8)
 
     return WCS(wcs)
 
@@ -54,9 +54,17 @@ def post_plate_solve_steps(frame_path, user_config, frame_id):
     # of wide field images.
     anisotropy = abs(psx - psy) / (psx + psy)
     message = "Your pixels seem to be a bit rectangular! I did not implement support for this. "
-    message += f"Anisotropy: {anisotropy:.01%}%"
-    message += "Uncomment this assert line if you think you will be fine."
-    assert abs(psx - psy) / (psx + psy) < 1e-2, message
+    message += f"Anisotropy: {anisotropy:.01%}, path: {frame_path}, db id: {frame_id})."
+    suspicious_astrometry = abs(psx - psy) / (psx + psy) > user_config['max_pixel_anisotropy']
+    if suspicious_astrometry:
+        execute_sqlite_query(query="""UPDATE 
+                                          frames 
+                                      SET 
+                                          eliminated = 1,
+                                          comment='suspicious_plate_solved'
+                                      WHERE 
+                                          id = ?""",
+                             params=(frame_id,), is_select=False)
     angle_to_north = get_angle_wcs(wcs)
     pixel_scale = 0.5 * (psx + psy) * 3600  # to arcsecond / pixel
     # first, set the pixel scale

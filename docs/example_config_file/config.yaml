@@ -105,6 +105,10 @@ alternate_plate_solve_gaia_radius: 180
 # else we'll use the API.
 astrometry_net_api_key: null
 
+# after plate solving, we can check the anisotropy of the pixels (a bad astrometric solution can have
+# unexpectedly anisotropic pixels)
+max_pixel_anisotropy: 2e-2
+# images beyond this threshold will be eliminated (with comment 'suspicious_plate_solved')
 # by the way, inevitably some images are not solvable. Please define the loss fraction you deem acceptable here.
 plate_solving_min_success_fraction: 0.85
 # if you notice your images are really low in quality (terrible seeing, high sky, bad pointings ...")
