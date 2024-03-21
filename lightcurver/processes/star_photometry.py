@@ -33,10 +33,11 @@ def do_one_deconvolution(data, noisemap, psf, subsampling_factor, n_iter=2000):
 
     """
     # so, rescale
-    sigma_2 = noisemap**2
+
     scale = np.nanmax(data)
     data /= scale
-    sigma_2 /= scale**2
+    noisemap /= scale
+    sigma_2 = noisemap**2
     # image positions: just a point source in the center.
     xs = np.array([0.])
     ys = np.array([0.])
