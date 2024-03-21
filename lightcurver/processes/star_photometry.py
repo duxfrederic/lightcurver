@@ -33,10 +33,11 @@ def do_one_deconvolution(data, noisemap, psf, subsampling_factor, n_iter=2000):
 
     """
     # so, rescale
-    sigma_2 = noisemap**2
+
     scale = np.nanmax(data)
     data /= scale
-    sigma_2 /= scale**2
+    noisemap /= scale
+    sigma_2 = noisemap**2
     # image positions: just a point source in the center.
     xs = np.array([0.])
     ys = np.array([0.])
@@ -54,12 +55,18 @@ def do_one_deconvolution(data, noisemap, psf, subsampling_factor, n_iter=2000):
                                                                            xs, ys,
                                                                            subsampling_factor,
                                                                            a_est)
-    kwargs_init['kwargs_background']['mean'] = background_values
 
-    # fix the background. (except the mean component)
-    kwargs_fixed['kwargs_background']['h'] = kwargs_init['kwargs_background']['h']
-    # rotation pointless for single source.
-    kwargs_fixed['kwargs_analytic']['alpha'] = kwargs_init['kwargs_analytic']['alpha']
+    # just so we're independent of any variation in the starred building of the fixed values, let us
+    # explicitly set the fixed parameters (easier to fix a missing keyword, with definite error, than a sneaky
+    # change in the behaviour)
+    kwargs_fixed = {
+        'kwargs_analytic': {'alpha': kwargs_init['kwargs_analytic']['alpha']},
+        'kwargs_background': {
+            'h': kwargs_init['kwargs_background']['h'],  # very little chance that starred changes the initial h = 0.
+            'mean': np.ravel([0. for _ in range(len(data))])  # we trust our background subtraction. mean = 0.
+        },
+        'kwargs_sersic': {},
+    }
 
     parameters = ParametersDeconv(kwargs_init=kwargs_init,
                                   kwargs_fixed=kwargs_fixed,

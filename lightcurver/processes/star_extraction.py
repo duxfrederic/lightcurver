@@ -5,15 +5,15 @@ from astropy.io import fits
 from ..plotting.sources_plotting import plot_sources
 
 
-def extract_stars(image_background_subtracted, background_rms, detection_threshold=3, min_area=10,
+def extract_stars(image_background_subtracted, variance_map, detection_threshold=3, min_area=10,
                   debug_plot_path=None):
     """
     Extract star positions from an image using SEP (Source Extractor as a Python library).
 
     Parameters:
     image_background_subtracted: image contained in numpy 2d array, with background subtracted!
-    background_rms: float, rms of signal in the background -- noise estimate for significance calculation.
-    detection_threshold: float, in units of sigma, default 4
+    variance_map: image, map of variance.
+    detection_threshold: float, in units of sigma, default 3
     min_area: int, min number of pixels in detection for it to be considered, default 10
 
     Returns:
@@ -22,7 +22,7 @@ def extract_stars(image_background_subtracted, background_rms, detection_thresho
 
     objects = sep.extract(data=image_background_subtracted,
                           thresh=detection_threshold,
-                          err=background_rms,
+                          var=variance_map,
                           minarea=min_area)
 
     sources = Table()
@@ -33,24 +33,18 @@ def extract_stars(image_background_subtracted, background_rms, detection_thresho
     sources['xcentroid'] = sources['x']
     sources['ycentroid'] = sources['y']
 
-    # remove flagged
-    sources = sources[sources['flag'] == 0]
 
-    # remove the weirdly elongated ones
+    # remove the weirdly elongated ones -- probably most stars, and we care about stars the most
     elongation = sources['a'] / sources['b']
     med_el = np.median(elongation)
     std_el = np.std(elongation)
     sources['elongation'] = elongation
-    sources = sources[sources['elongation'] < med_el + std_el]
+    sources = sources[sources['elongation'] < med_el + 3*std_el]
 
     # define some FWHM quantity
     sources['FWHM'] = 2 * (np.log(2) * (sources['a']**2 + sources['b']**2))**0.5
     # and ellipticity
     sources['ellipticity'] = 1 - sources['b'] / sources['a']
-
-    # remove those occupying a weirdly small amount of space (likely hot pixels or cosmics)
-    med_pix = np.median(sources['npix'])
-    sources = sources[(sources['npix'] > 0.5 * med_pix)]
 
     # brightest first
     sources.sort('flux', reverse=True)
