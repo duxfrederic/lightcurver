@@ -5,12 +5,14 @@ from astropy.wcs import WCS
 from astropy.wcs.utils import proj_plane_pixel_scales
 from widefield_plate_solver import plate_solve
 from widefield_plate_solver.exceptions import CouldNotSolveError
+import logging
 
 from ..structure.database import execute_sqlite_query
 from ..utilities.footprint import database_insert_single_footprint, get_angle_wcs
 
 
-def solve_one_image(image_path, sources_path, user_config, logger):
+def solve_one_image(image_path, sources_path, user_config):
+
     sources = Table(fits.getdata(sources_path))
 
     if user_config['astrometry_net_api_key'] is None:
@@ -28,7 +30,6 @@ def solve_one_image(image_path, sources_path, user_config, logger):
                       redo_if_done=True,  # we check for this upstream in this package
                       ra_approx=ra, dec_approx=dec,
                       scale_min=plate_scale_min, scale_max=plate_scale_max,
-                      logger=logger,
                       do_debug_plot=False,
                       odds_to_solve=1e8)
 
@@ -36,6 +37,8 @@ def solve_one_image(image_path, sources_path, user_config, logger):
 
 
 def post_plate_solve_steps(frame_path, user_config, frame_id):
+    logger = logging.getLogger("lightcurver.plate_solving")
+    logger.info(f'Post plate solve steps for frame {frame_id} (path {frame_path})')
     # our object might be out of the footprint of the image!
     final_header = fits.getheader(frame_path)
     # replace the wcs above with the WCS we saved in the header of the image (contains naxis)
@@ -53,10 +56,11 @@ def post_plate_solve_steps(frame_path, user_config, frame_id):
     # but it does not. Anyway, let us assume deg/pixel -- never seen anything else when working with wcs
     # of wide field images.
     anisotropy = float(abs(psx - psy) / (psx + psy))
-    message = "Your pixels seem to be a bit rectangular! I did not implement support for this. "
-    message += f"Anisotropy: {anisotropy:.01%}, path: {frame_path}, db id: {frame_id})."
     suspicious_astrometry = abs(psx - psy) / (psx + psy) > float(user_config['max_pixel_anisotropy'])
     if suspicious_astrometry:
+        message = "Your pixels are more rectangular than your config tolerance! Flagging (eliminating) this frame."
+        message += f"Anisotropy: {anisotropy:.01%}, path: {frame_path}, db id: {frame_id})."
+        logger.info(message)
         execute_sqlite_query(query="""UPDATE 
                                           frames 
                                       SET 
@@ -79,9 +83,10 @@ def post_plate_solve_steps(frame_path, user_config, frame_id):
                                   WHERE 
                                       id = ?""",
                          params=(angle_to_north, frame_id), is_select=False)
+    logger.info(f'Updated pixel scale: {pixel_scale:.03f}"/pixel for frame {frame_id} (path {frame_path}).')
 
 
-def solve_one_image_and_update_database(image_path, sources_path, user_config, frame_id, logger):
+def solve_one_image_and_update_database(image_path, sources_path, user_config, frame_id):
     """
     solves image using the sources in sources_path, then adds useful things to the database.
     If already solved according to user_config, just does the database part.
@@ -90,17 +95,19 @@ def solve_one_image_and_update_database(image_path, sources_path, user_config, f
         sources_path: path to fits file containing the sources extracted from the image
         user_config: dictionary read by the pipeline
         frame_id: the database frame id
-        logger: an instance of a logger for logging.
     Returns:
         nothing
     """
+    logger = logging.getLogger("lightcurver.plate_solving")
     if not user_config['already_plate_solved']:
+        logger.info(f'Attempting astrometric solution for frame {frame_id} (path: {image_path}).')
         try:
-            wcs = solve_one_image(image_path, sources_path, user_config, logger)
+            wcs = solve_one_image(image_path, sources_path, user_config)
             success = wcs.is_celestial
         except CouldNotSolveError:
             success = False
     else:
+        logger.info(f'Frame {frame_id} (path: {image_path}) is already solved according to user config.')
         success = True
 
     if success:

@@ -3,6 +3,7 @@ import sqlite3
 import numpy as np
 from scipy.optimize import minimize
 import pandas as pd
+import logging
 
 from ..structure.database import execute_sqlite_query, get_pandas
 from ..structure.user_config import get_user_config
@@ -138,6 +139,7 @@ def calculate_coefficient():
         nothing
 
     """
+    logger = logging.getLogger('lightcurver.normalization_coefficient')
     user_config = get_user_config()
 
     # query initial frames, so we can calculate the footprint at hand
@@ -152,6 +154,7 @@ def calculate_coefficient():
     df = get_fluxes(combined_footprint_hash=combined_footprint_hash,
                     photometry_chi2_min=fluxes_fit_chi2_min,
                     photometry_chi2_max=fluxes_fit_chi2_max)
+    logger.info(f"Calculating a normalization coefficient using {len(df)} flux measurements.")
     # 1. normalize by median in each star -- get a 'norm' of each frame for each individual star.
     median_flux_per_star = df.groupby('star_gaia_id')['flux'].median().rename('median_flux')
     df2 = df.merge(median_flux_per_star, on='star_gaia_id')
@@ -177,6 +180,7 @@ def calculate_coefficient():
     # ok, scale each star light-curve by its optimized scaling
     adjusted_normalized_fluxes = normalized_flux_pivot.mul(optimized_star_scaling_factors_with_reference, axis=0)
     adjusted_normalized_d_fluxes = normalized_d_flux_pivot.mul(optimized_star_scaling_factors_with_reference, axis=0)
+    logger.info(f"Fine-scaled the star light curves with coefficients:  {[round(e, 2) for e in result.x]}.")
 
     # now, let's eliminate the obvious outliers
     filtered_fluxes = adjusted_normalized_fluxes.copy()
@@ -209,4 +213,6 @@ def calculate_coefficient():
 
     plot_file = plot_norm_dir / "normalization_fluxes_plot.pdf"
     plot_normalized_star_curves(combined_footprint_hash=combined_footprint_hash, save_path=plot_file)
+    logger.info(f"Wrote a diagnostic plot at  {plot_file}.")
+
 

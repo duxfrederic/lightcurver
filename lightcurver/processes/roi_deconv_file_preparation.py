@@ -1,5 +1,6 @@
 import h5py
 import numpy as np
+import logging
 
 from ..structure.database import get_pandas, execute_sqlite_query
 from ..utilities.footprint import get_combined_footprint_hash
@@ -91,6 +92,7 @@ def fetch_and_adjust_zeropoints(combined_footprint_hash):
 
 
 def prepare_roi_deconv_file():
+    logger = logging.getLogger('lightcurver.roi_deconv_file_preparation')
     user_config = get_user_config()
 
     frames_ini = get_pandas(columns=['id'],
@@ -105,7 +107,7 @@ def prepare_roi_deconv_file():
                                 psf_fit_chi2_max=psf_fit_chi2_max,
                                 **roi_constraints)
     # ok, this frames database has everything: the PSF to use, the norm coeff, etc.
-
+    logger.info(f'Preparing calibrated cutouts of the ROI from {len(frames)} frames.')
     # so, just like when we did photometry of stars, build the data for deconvolution
     with h5py.File(user_config['regions_path'], 'r') as h5f:
         data = []
@@ -173,4 +175,6 @@ def prepare_roi_deconv_file():
         f['pixel_scale'] = np.array(pixel_scale)
         f['subsampling_factor'] = np.array(subsampling_factors)
         f['angle_to_north'] = np.array(angles_to_north)
+
+    logger.info(f'Wrote the h5 file containing the calibrated cutouts at {save_path}.')
 

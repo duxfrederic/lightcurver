@@ -11,6 +11,7 @@ from astropy.wcs import WCS
 from astropy.coordinates import SkyCoord
 from astropy import units as u
 from photutils.aperture import CircularAperture, aperture_photometry
+import logging
 
 from starred.deconvolution.deconvolution import setup_model
 from starred.deconvolution.loss import Loss
@@ -52,6 +53,7 @@ def align_data_interpolation(array, starred_kwargs):
 
 
 def do_deconvolution_of_roi():
+    logger = logging.getLogger('lightcurver.roi_modelling')
     user_config = get_user_config()
     if not user_config['do_ROI_model']:
         # we do nothing, this is an optional step.
@@ -84,7 +86,10 @@ def do_deconvolution_of_roi():
         angles_to_north = np.array(f['angle_to_north'])
         wcs = np.array(f['wcs'])
 
-    message = "The PSF models seem to have different subsampling factors! incompatible with a STARRED deconvolution."
+    message = "The PSF models seem to have different subsampling factors! Incompatible with a STARRED deconvolution."
+    unique_subsampling = (np.unique(subsampling_factor).size == 1)
+    if not unique_subsampling:
+        logger.error(message + ' Stopping the pipeline.')
     assert np.unique(subsampling_factor).size == 1, message
     subsampling_factor = int(subsampling_factor[0])
     im_size = data.shape[1]
@@ -93,6 +98,8 @@ def do_deconvolution_of_roi():
 
     ps_coords = user_config['point_sources']
     ordered_ps = sorted(ps_coords.keys())
+    logger.info(f'Jointly deconvolving {epochs} cutouts from your ROI, including {len(ordered_ps)} point sources.')
+
     # we use the first WCS as reference.
     # so the starred rotation angles will be w.r.t. to this one as well
     angles_to_north -= angles_to_north[0]
@@ -158,6 +165,7 @@ def do_deconvolution_of_roi():
 
     best_fit, logL_best_fit, extra_fields, runtime = optim.minimize(maxiter=user_config['roi_deconv_translations_iters'])
     kwargs_partial1 = deepcopy(parameters.best_fit_values(as_kwargs=True))
+    logger.info('Finished first optimization, only varying the fluxes of the point sources and the translations.')
 
     # next, include the background.
     kwargs_fixed = deepcopy(kwargs_partial1)
@@ -272,5 +280,6 @@ def do_deconvolution_of_roi():
                                  residuals=residuals,
                                  chi2_per_frame=chi2_per_frame, loss_curve=loss_history,
                                  save_path=plot_file)
-
+    logger.info(f'Finished modelling the ROI. Diagnostic plot at {plot_file}. '
+                f"The global reduced chi2 was {np.mean(chi2_per_frame):.02f}. ")
 

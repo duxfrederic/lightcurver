@@ -2,6 +2,8 @@ import numpy as np
 from pathlib import Path
 import h5py
 import sep
+import logging
+from time import time
 from starred.procedures.psf_routines import build_psf
 
 from ..structure.database import select_stars_for_a_frame, execute_sqlite_query, get_pandas
@@ -47,6 +49,7 @@ def mask_surrounding_stars(data, noisemap):
 
 
 def model_all_psfs():
+    logger = logging.getLogger('lightcurver.psf_modelling')
     user_config = get_user_config()
     stars_to_use = user_config['stars_to_use_psf']
 
@@ -57,8 +60,9 @@ def model_all_psfs():
     frames = get_pandas(columns=['id', 'image_relpath', 'exptime', 'mjd', 'seeing_pixels', 'pixel_scale'],
                         conditions=['plate_solved = 1', 'eliminated = 0', 'roi_in_footprint = 1'])
     combined_footprint_hash = get_combined_footprint_hash(user_config, frames['id'].to_list())
-    # for each frame, check if the PSF was already built -- else, go for it.
-    from time import time
+
+    logger.info(f'Will build the PSFs of (potentially) {len(frames)} frames, storing result in file {regions_file}.')
+    # for each frame, will check if the PSF was already built.
 
     for i, frame in frames.iterrows():
         t0 = time()
@@ -68,11 +72,15 @@ def model_all_psfs():
         stars.sort_values(by=['name'])
         if len(stars) == 0:
             # we simply do not build a PSF. the frame will not be considered in the joint queries later.
+            logger.warning(f"The frame with id {frame['id']} does not have available reference stars. Skipping.")
             continue
         psf_ref = 'psf_' + ''.join(sorted(stars['name']))
 
         # check so we don't redo for nothing
         if check_psf_exists(frame['id'], psf_ref, combined_footprint_hash) and not user_config['redo_psf']:
+            logger.info(
+                f"The frame with id {frame['id']} already has a PSF (ref {psf_ref}), redo flag not set. Skipping."
+            )
             continue
 
         # get the cutouts
@@ -98,6 +106,7 @@ def model_all_psfs():
         datas[isnan] = 0.
         noisemaps[isnan] = 1.0
         masks[isnan] = False
+        n_stars_before = len(datas)
         # now eliminate slices, which changes the shapes.
         # we'll delete the slices with too many masked pixels (we mask anything with more than 40% masked)
         mask_threshold_fraction = 0.4
@@ -109,8 +118,13 @@ def model_all_psfs():
         noisemaps = noisemaps[slices_to_keep]
         masks = masks[slices_to_keep]
         names = list(stars['name'][slices_to_keep])
-        if len(datas) == 0:
+        n_stars_after = len(datas)
+        if n_stars_after == 0:
             # no psf model for this one.
+            logger.warning(
+                f"The frame with id {frame['id']} had {n_stars_before} reference stars, "
+                "but none could be used due to too many masked pixels. Skipping."
+            )
             continue
 
         # we set the initial guess for the position of the star to the center (guess_method thing)
@@ -156,5 +170,12 @@ def model_all_psfs():
 
         execute_sqlite_query(insert_query, insert_params, is_select=False)
 
+        time_taken = time() - t0
+        logger.info(
+            f"PSF built for frame with id {frame['id']}. "
+            f"The reference is {psf_ref}, that is {n_stars_before} stars available, and {n_stars_after} actually used "
+            "after filtering of masked pixels. "
+            f"The reduced chi2 is {result['chi2']:.02f}, and it took us {time_taken:.01f} seconds to complete everything. "
+        )
 
 

@@ -7,6 +7,7 @@ import astropy.units as u
 from astropy.coordinates import SkyCoord
 from astroscrappy import detect_cosmics
 from astropy.time import Time
+import logging
 # to suppress the warnings telling us we don't have the parallax:
 # we do not care about the radial component of proper motion, we just want
 # roughly centered stars.
@@ -53,6 +54,7 @@ def extract_all_stamps():
     Returns:
         Nothing
     """
+    logger = logging.getLogger('lightcurver.cutout_making')
     user_config = get_user_config()
 
     # where we'll save our stamps
@@ -65,7 +67,10 @@ def extract_all_stamps():
 
     # we'll need to know what combined_footprint we're working with.
     combined_footprint_hash = get_combined_footprint_hash(user_config, frames_to_process['id'].to_list())
-
+    logger.info(
+        f'Will extract cutouts from (potentially) {len(frames_to_process)} frames, in file {regions_file}. '
+        f'The combined footprint hash is {combined_footprint_hash}.'
+    )
     # suppress the no parallax warning in proper motion corrections:
     warnings.filterwarnings('ignore', category=erfa.ErfaWarning)
 
@@ -92,6 +97,7 @@ def extract_all_stamps():
                         all_there = False
                     if all_there:
                         # all good, skip to next frame.
+                        logger.info(f"Frame with id {frame['id']} likely already extracted, skipping.")
                         continue
             image_file = user_config['workdir'] / frame['image_relpath']
             data, header = fits.getdata(image_file), fits.getheader(image_file)
@@ -148,6 +154,11 @@ def extract_all_stamps():
             if len(stars) > 0:  # if 0 stars, then frame will not be queried downstream.
                 stars.loc[np.isnan(stars['pmra']), 'pmra'] = 0.0
                 stars.loc[np.isnan(stars['pmdec']), 'pmdec'] = 0.0
+            elif len(stars) == 0:
+                logger.warning(
+                    f"Frame with id {frame['id']} has no star available for extraction. "
+                    "This is fine, it will simply not be used in the downstream steps."
+                )
             # extract the stars
             for j, star in stars.iterrows():
                 star_name = str(star['gaia_id'])
@@ -186,3 +197,5 @@ def extract_all_stamps():
                     if star_name in cosmic_mask:
                         del cosmic_mask[star_name]
                     cosmic_mask[star_name] = mask
+
+            logger.info(f"Frame with id {frame['id']}: completed making of cutouts.")

@@ -4,6 +4,7 @@ from pathlib import Path
 from astropy.io import fits
 from astropy.wcs import WCS
 from time import sleep
+import logging
 
 from .background_estimation import subtract_background
 from .star_extraction import extract_stars
@@ -11,7 +12,7 @@ from .frame_characterization import ephemeris, estimate_seeing
 from ..structure.user_header_parser import load_custom_header_parser
 
 
-def process_new_frame(fits_file, user_config, logger):
+def process_new_frame(fits_file, user_config):
     """
         crops, transforms to e- and writes the result to our workdir.
 
@@ -24,6 +25,7 @@ def process_new_frame(fits_file, user_config, logger):
     trim_vertical = user_config.get('trim_vertical', 0)
     trim_horizontal = user_config.get('trim_horizontal', 0)
     copied_image_relpath = Path('frames') / f"{fits_file.stem}.fits"
+    logger = logging.getLogger("lightcurver.importation")
 
     try:
         with fits.open(str(fits_file), mode='readonly', ignore_missing_end=False, memmap=True) as hdu:
@@ -35,6 +37,7 @@ def process_new_frame(fits_file, user_config, logger):
                           trim_horizontal:data_shape[1] - trim_horizontal
                           ]
             header = hdu[hdu_index].header
+            logger.info(f"Read fits file at {fits_file}")
     except ValueError:
         # then we have some memmap problems, if  bzero, bscale, or blank are in header.
         with fits.open(str(fits_file), mode='readonly') as hdu:
@@ -46,7 +49,7 @@ def process_new_frame(fits_file, user_config, logger):
                           trim_horizontal:data_shape[1] - trim_horizontal
                           ]
             header = hdu[hdu_index].header
-    logger.info(f'  Finished reading {fits_file}.')
+            logger.warning(f"Read fits file at {fits_file}, could not use memmap!!")
     cutout_data = cutout_data.astype(float)
     wcs = WCS(header)
     # so we cropped our data, thus we need to change the CRPIX of our WCS
@@ -103,7 +106,6 @@ def process_new_frame(fits_file, user_config, logger):
                                   detection_threshold=user_config.get('source_extraction_threshold', 3),
                                   min_area=user_config.get('source_extraction_min_area', 10),
                                   debug_plot_path=plot_path)
-
     # saving the sources in the same dir as the frame itself
     sources_file_filename = f"{copied_image_relpath.stem}_sources{copied_image_relpath.suffix}"
     sources_file_relpath = copied_image_relpath.parent / sources_file_filename
@@ -111,6 +113,12 @@ def process_new_frame(fits_file, user_config, logger):
 
     seeing_pixels = estimate_seeing(sources_table)
     ellipticity = np.nanmedian(sources_table['ellipticity'])
+    logger.info(
+        f"Extracted {len(sources_table)} sources from {fits_file}. "
+        f"Seeing pixels: {seeing_pixels:.02f}. "
+        f"Ellipticity: {ellipticity:.02f}."
+    )
+
     if 'telescope' in user_config:
         eph_dict = ephemeris(mjd=mjd_gain_filter_exptime_dict['mjd'],
                              ra_object=user_config['ROI_ra_deg'],
@@ -119,7 +127,17 @@ def process_new_frame(fits_file, user_config, logger):
                              telescope_latitude=user_config['telescope']['latitude'],
                              telescope_elevation=user_config['telescope']['elevation'])
         telescope_information = {k: v for k, v in user_config['telescope'].items()}
+        if eph_dict['weird_astro_conditions']:
+            logger.warning(
+                f'Ephemeris: weird for this frame ({fits_file}), please inspect and make sure your '
+                'config (such as telescope location and ROI coordinates) and fits MJD are all correct. '
+                f'Ephemeris dictionary for reference: {eph_dict}'
+            )
     else:
+        logger.warning(
+            'Telescope information not provided in user config. No Ephemeris calculated. '
+            'Consider adding them as this can help catch mistakes.'
+        )
         telescope_information = None
         eph_dict = None
 
@@ -223,6 +241,11 @@ def add_frame_to_database(original_image_path, copied_image_relpath, sources_rel
     try:
         inserted = False
         while not inserted:
+            # We are being very careful, sqlite3 databases are not made for parallel writing.
+            # Works well so long as the storage (on which the database is) is fairly responsive.
+            # Local hard drives and SSDs all work, virtual storage volumes as well.
+            # Only case of failure: an SSD I have that clearly has problems (response time 5-15 seconds for
+            # touching a file)
             try:
                 conn = sqlite3.connect(user_config['database_path'], timeout=2.5)
                 cursor = conn.cursor()
@@ -241,11 +264,15 @@ def add_frame_to_database(original_image_path, copied_image_relpath, sources_rel
                 except:
                     pass
     except sqlite3.IntegrityError as IntE:
-        print("Error: most likely, we are inserting an already existing image again in the database.")
-        print("You most likely overwrote an existing file already, leaving us in an inconsistent state.")
-        print("This should not have happened and will take manual fixing. Here was the original error: {IntE}")
-        print("We will raise it again so you can check the traceback.")
-        print("If you see a UNIQUE violation on the image_relpath column, then the above is indeed what happened.")
+        logger = logging.getLogger("lightcurver.importation")
+        logger.error(
+            "Error: we might be inserting an already existing image again in the database. "
+            "You most likely overwrote an existing file already, leaving us in an inconsistent state. "
+            f"This should not have happened and will take manual fixing. Here was the original error: {IntE} "
+            "We will raise the error again so you can check the traceback. "
+            "If you see a UNIQUE violation on the image_relpath column, then the above is indeed what happened."
+            "Force stopping pipeline."
+        )
         raise IntE
     return frame_info
 

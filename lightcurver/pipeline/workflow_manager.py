@@ -2,12 +2,11 @@ import yaml
 from importlib import resources
 from collections import deque
 import logging
+from datetime import datetime
+
 
 from ..structure.user_config import get_user_config
 from ..structure.database import initialize_database
-from .task_wrappers import (read_convert_skysub_character_catalog,
-                            plate_solve_all_frames, calc_common_and_total_footprint_and_save)
-from .state_checkers import check_plate_solving
 from ..processes.cutout_making import extract_all_stamps
 from ..processes.star_querying import query_gaia_stars
 from ..processes.psf_modelling import model_all_psfs
@@ -18,6 +17,25 @@ from ..processes.roi_modelling import do_deconvolution_of_roi
 from ..processes.alternate_plate_solving_with_gaia import alternate_plate_solve
 from ..utilities.zeropoint_from_gaia import calculate_zeropoints
 from ..structure.exceptions import TaskWasNotSuccessful
+from .task_wrappers import (read_convert_skysub_character_catalog,
+                            plate_solve_all_frames, calc_common_and_total_footprint_and_save)
+from .state_checkers import check_plate_solving
+
+
+def setup_base_logger():
+    time_now = datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
+    user_config = get_user_config()
+    log_dir = user_config['workdir'] / 'logs'
+    log_file_path = str(log_dir / f"{time_now}.log")
+
+    logging.basicConfig(level=logging.INFO,
+                        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+    base_logger = logging.getLogger("lightcurver")
+    file_handler = logging.FileHandler(log_file_path)
+    file_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+    base_logger.addHandler(file_handler)
+    base_logger.setLevel(logging.INFO)
 
 
 class WorkflowManager:
@@ -56,13 +74,7 @@ class WorkflowManager:
 
         if logger is None:
             logger = logging.getLogger(__name__)
-            if not logger.hasHandlers():
-                # Configure logging to print to the standard output
-                handler = logging.StreamHandler()
-                formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-                handler.setFormatter(formatter)
-                logger.addHandler(handler)
-                logger.setLevel(logging.INFO)
+            setup_base_logger()
         self.logger = logger
 
     def build_dependency_graph(self):
@@ -76,7 +88,12 @@ class WorkflowManager:
                     self.task_graph[dep] = {'dependencies': set(), 'next': [task_name]}
 
     def topological_sort(self):
-        # getting the tasks in the right order, just in case we have multiple dependencies in the future.
+        """
+            Getting the tasks in the right order, just in case we have multiple dependencies in the future.
+
+            Returns: list of tasks in the right order.
+        """
+        #
         in_degree = {task: 0 for task in self.task_graph}
         for task in self.task_graph:
             for next_task in self.task_graph[task]['next']:
@@ -99,6 +116,7 @@ class WorkflowManager:
         return sorted_tasks
 
     def run(self):
+        self.logger.info(f"Workflow manager: will run all tasks. Working directory:  {self.user_config['workdir']}")
         sorted_tasks = self.topological_sort()
         for task_name in sorted_tasks:
             task = next((item for item in self.pipe_config['tasks'] if item['name'] == task_name), None)
@@ -108,12 +126,19 @@ class WorkflowManager:
             if post_check:
                 success, message = post_check()
                 if not success:
+                    self.logger.error(
+                        f'Post-check failed for {task_name}. Stopping pipeline with message: {message}'
+                    )
                     raise TaskWasNotSuccessful(message)
+                else:
+                    self.logger.info(f'Post-check successful for task {task_name}, with message: {message}')
 
     def execute_task(self, task):
         # Assume task_func is a callable for simplicity
         task_func = self.task_attribution.get(task['name'])
-        print(f"Executing task: {task['name']}")
+        self.logger.info(
+            f"Running task {task['name']}. Working directory:  {self.user_config['workdir']}"
+        )
         task_func()
 
     def get_tasks(self):
