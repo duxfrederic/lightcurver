@@ -48,6 +48,8 @@ def do_one_deconvolution(data, noisemap, psf, subsampling_factor, n_iter=2000):
             np.nanmedian(data[:, -1:, :], axis=(1, 2)),
             np.nanmedian(data[:, :, -1:], axis=(1, 2))
     ])
+    # just in case all nans (even though we filter them) in the borders:
+    background_values = np.nan_to_num(background_values, nan=0)
     a_est = np.nansum(data, axis=(1, 2)) - data[0].size * background_values
     a_est = list(a_est)
 

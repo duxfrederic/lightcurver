@@ -6,6 +6,7 @@ import sqlite3
 from lightcurver.pipeline.workflow_manager import WorkflowManager
 from lightcurver.pipeline.task_wrappers import source_extract_all_images
 
+
 def database_checks(db_path):
     """
     Performs various checks on the database, including chi2 values and data integrity.
