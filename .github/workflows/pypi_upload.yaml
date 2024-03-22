@@ -19,9 +19,9 @@ jobs:
 
       - name: Verify Version Match
         run: |
-          VERSION=$(cat VERSION)
+          VERSION=$(grep -Po "version=\K[^,]+" setup.py | tr -d "\"\'")
           TAG_NAME=${GITHUB_REF#refs/tags/}
-          echo "VERSION file contains: $VERSION"
+          echo "extracted version from setup.py: $VERSION"
           echo "Git tag is: $TAG_NAME"
           if [ "v$VERSION" != "$TAG_NAME" ]; then
             echo "Error: VERSION file does not match the git tag."
