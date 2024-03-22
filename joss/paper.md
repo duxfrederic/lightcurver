@@ -57,9 +57,8 @@ which it simultaneously optimizes together with the fluxes of the variables.
 Achieving such precise relative zero-point calibration (typically a milimag), especially in an automated manner, comes with challenges.
 
 `lightcurver` addresses this challenge by automatically selecting calibration stars, modelling them, 
-and robustly combining their fluxes to calibrate the zeropoints.
-To make it suitable as a daily running pipeline on a large number of ROIs, 
-`lightcurver` was designed to be fast, incremental, and capable of automatically reducing new images.
+and robustly combining their fluxes to calibrate the zeropoints, 
+making it suitable as a daily running pipeline on a large number of ROIs..
 
 
 ![Light curve of a lensed image of a quasar (J0030-1525), extracted once with the existing code base (`COSMOULINE`), 
@@ -92,7 +91,7 @@ The software is divided into three main subpackages: `processes`, containing ind
 and `structure`, which contains the database schema and handles user configuration.
 Users can customize the processing of datasets through a YAML configuration file, 
 allowing flexibility in handling various data characteristics. 
-Typically, the YAML configuration file needs to be configured by the user once when executing 
+Typically, the YAML configuration file needs to be configured once when executing 
 the pipeline on the first few frames, but the subsequent addition of new frames as 
 they are observed requires no further manual intervention.
 
