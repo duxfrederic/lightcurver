@@ -15,9 +15,12 @@ class PyTest(test_command):
         sys.exit(err_no)
 
 
+with open('VERSION', 'r') as version_file:
+    version = version_file.read().strip()
+
 setup(
     name="lightcurver",
-    version="0.1.0",
+    version=version,
     author="Frédéric Dux",
     author_email="duxfrederic@gmail.com",
     description="A thorough structure for precise photometry and deconvolution of time series of wide field images.",
