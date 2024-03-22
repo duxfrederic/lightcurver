@@ -1,0 +1,37 @@
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.x'
+
+    - name: Verify Version Match
+      run: |
+        VERSION=$(cat VERSION)
+        TAG_NAME=${GITHUB_REF#refs/tags/}
+        echo "VERSION file contains: $VERSION"
+        echo "Git tag is: $TAG_NAME"
+        if [ "v$VERSION" != "$TAG_NAME" ]; then
+          echo "Error: VERSION file does not match the git tag."
+          exit 1
+        fi
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install build twine
+
+    - name: Build package
+      run: python -m build
+
+    - name: Publish package
+      if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
+      env:
+        TWINE_USERNAME: __token__
+        TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+      run: twine upload dist/*
+
