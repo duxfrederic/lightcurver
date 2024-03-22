@@ -73,7 +73,7 @@ HST image: PI Tommaso Treu, proposal GO 15652.](plot/comparison_with_legacy_pipe
 identifying the processing required at each step. 
 Firstly, the frames undergo background subtraction, and the sources are extracted using `sep` [@Barbary2016; @sextractor]. 
 The positions of the extracted sources are then used to plate-solve each frame, primarily with `Astrometry.net` [@astrometry]. 
-This allows for an automatic selection of calibration stars around the region of interest (ROI) by querying Gaia [@gaia] 
+This permits sanity checks with `pyephem` [@pyephem], but also allows for an automatic selection of calibration stars around the region of interest (ROI) by querying Gaia [@gaia] 
 with `astroquery` [@astroquery] for suitable stars. 
 The pointings and field rotations need not be stable across epochs, as each frame is assigned its own calibration stars with the help of `shapely` [@shapely].
 
