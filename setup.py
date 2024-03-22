@@ -22,6 +22,7 @@ setup(
     author_email="duxfrederic@gmail.com",
     description="A thorough structure for precise photometry and deconvolution of time series of wide field images.",
     long_description=open('README.md').read(),
+    long_description_content_type='text/markdown',
     packages=find_packages(),
     package_data={"lightcurver": ["pipeline/*.yaml"]},
     cmdclass={'test': PyTest}
