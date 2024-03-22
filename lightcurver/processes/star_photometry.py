@@ -2,6 +2,8 @@ import h5py
 import numpy as np
 import sqlite3
 from datetime import datetime
+import logging
+from time import time
 from starred.deconvolution.deconvolution import setup_model
 from starred.deconvolution.loss import Loss
 from starred.deconvolution.parameters import ParametersDeconv
@@ -48,6 +50,8 @@ def do_one_deconvolution(data, noisemap, psf, subsampling_factor, n_iter=2000):
             np.nanmedian(data[:, -1:, :], axis=(1, 2)),
             np.nanmedian(data[:, :, -1:], axis=(1, 2))
     ])
+    # just in case all nans (even though we filter them) in the borders:
+    background_values = np.nan_to_num(background_values, nan=0)
     a_est = np.nansum(data, axis=(1, 2)) - data[0].size * background_values
     a_est = list(a_est)
 
@@ -189,6 +193,7 @@ def do_star_photometry():
     Returns:
 
     """
+    logger = logging.getLogger('lightcurver.star_photometry')
     user_config = get_user_config()
     # so, we need the footprint we are working with.
     # below we will query only the frames we need for each frame, but first we need to
@@ -199,20 +204,25 @@ def do_star_photometry():
     combined_footprint_hash = get_combined_footprint_hash(user_config, frames_ini['id'].to_list())
     # now we can select the stars we need to do photometry of, within this footprint.
     stars = select_stars(stars_to_use=user_config['stars_to_use_norm'], combined_footprint_hash=combined_footprint_hash)
+    logger.info(f"Will do PSF photometry for {len(stars)} stars.")
     # if not re-do ...select only the new frames that do not have a flux measurement yet.
     only_fluxless_frames = not user_config['redo_star_photometry']
 
     time_now = datetime.now().strftime("%Y-%m-%dT%H-%M-%S")  # for plots
     for i, star in stars.iterrows():
+        t0 = time()
         psf_fit_chi2_min, psf_fit_chi2_max = get_chi2_bounds(psf_or_fluxes='psf')
         frames = get_frames_for_star(gaia_id=star['gaia_id'],
                                      psf_fit_chi2_min=psf_fit_chi2_min,
                                      psf_fit_chi2_max=psf_fit_chi2_max,
                                      only_fluxless_frames=only_fluxless_frames,
                                      combined_footprint_hash=combined_footprint_hash)
+
         if len(frames) == 0:
             # we up to date, nothing to do
+            logger.info(f"Star {star['name']}: no new frames to process for this one. Skipping")
             continue
+        logger.info(f"Star {star['name']}: has {len(frames)} frames that need a measurement.")
         # build the data for deconvolution
         with h5py.File(user_config['regions_path'], 'r') as h5f:
             data = []
@@ -278,4 +288,10 @@ def do_star_photometry():
         # big insert while updating if value already in DB...
         update_star_fluxes(flux_data)
         # done!
+        time_taken = time() - t0
+        logger.info(
+            f"Measured star {star['name']} in {len(frames)} frames. "
+            f"The global reduced chi2 is {result['chi2']:.02f}. "
+            f"It took us {time_taken:.01f} seconds to prepare and model the pixels."
+        )
 

@@ -28,6 +28,7 @@ def worker_init(log_queue):
     logger.setLevel(logging.INFO)
     q_handler = logging.handlers.QueueHandler(log_queue)
     logger.addHandler(q_handler)
+    logger.propagate = False
 
 
 def log_process(func):
@@ -46,11 +47,12 @@ def process_new_frame_wrapper(*args):
 
 
 def read_convert_skysub_character_catalog():
+    # boiler plate logger setup
     log_queue = Manager().Queue()
-    listener = logging.handlers.QueueListener(log_queue, *logging.getLogger().handlers)
+    base_logger = logging.getLogger("lightcurver")
+    listener = logging.handlers.QueueListener(log_queue, *base_logger.handlers)
     listener.start()
-    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-    logger = logging.getLogger("PlateSolveLogger")
+    logger = logging.getLogger("lightcurver.importation")
 
     # find the new frames, we compare on file name!
     user_config = get_user_config()
@@ -64,7 +66,7 @@ def read_convert_skysub_character_catalog():
         already_imported['name'] = pd.Series(dtype='str')
     new_frames_df = df_available_frames[~df_available_frames['frame_name'].isin(already_imported['name'])]
     new_frames = [frame for frame in available_frames if frame.name in new_frames_df['frame_name'].tolist()]
-    logger.info(f"Importing {len(new_frames)} new frames.")
+    logger.info(f"Importing {len(new_frames)} new frames from directories {user_config['raw_dirs']}.")
     logger.info(f"Will write them to {user_config['workdir'] / 'frames'}")
     logger.info(f"Database will be at {user_config['workdir'] / 'database.sqlite3'}")
 
@@ -73,7 +75,6 @@ def read_convert_skysub_character_catalog():
         pool.map(process_new_frame_wrapper, [
             (new_frame,
              user_config,
-             logger,
              new_frame)  # duplicating so to have an identifier for logger.
             for new_frame in new_frames
         ])
@@ -87,20 +88,31 @@ def solve_one_image_and_update_database_wrapper(*args):
 
 
 def plate_solve_all_frames():
-    # boilerplate logging queue and listener
-    # TODO can we reduce the boiler plate?
+    # boiler plate logger setup
     log_queue = Manager().Queue()
-    listener = logging.handlers.QueueListener(log_queue, *logging.getLogger().handlers)
+    base_logger = logging.getLogger("lightcurver")
+    listener = logging.handlers.QueueListener(log_queue, *base_logger.handlers)
     listener.start()
+    logger = logging.getLogger("lightcurver.plate_solving")
 
-    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-
-    logger = logging.getLogger("PlateSolveLogger")
     user_config = get_user_config()
     workdir = Path(user_config['workdir'])
 
+    # so, we select our frames to plate solve depending on the user config.
+    if user_config['plate_solve_frames'] == 'all_not_eliminated':
+        conditions = ['eliminated = 0']
+        logger.info(f"Processing all the frames (even the ones already solved) that are not flagged as eliminated.")
+    elif user_config['plate_solve_frames'] == 'all_never_attempted':
+        conditions = ['eliminated = 0', 'attempted_plate_solve = 0']
+        logger.info(f"Processing all the frames that do not have a solve attempt yet.")
+    elif user_config['plate_solve_frames'] == 'all_not_plate_solved':
+        conditions = ['eliminated = 0', 'plate_solved = 0']
+        logger.info(f"Processing all the frames that are not plate solved, even those that were already attempted.")
+    else:
+        raise ValueError(f"Not an expected selection strategy for frames to solve: {user_config['plate_solve_frames']}")
+
     frames_to_process = get_pandas(columns=['id', 'image_relpath', 'sources_relpath'],
-                                   conditions=['plate_solved = 0', 'eliminated = 0'])
+                                   conditions=conditions)
     logger.info(f"Ready to plate solve {len(frames_to_process)} frames.")
 
     with Pool(processes=user_config['multiprocessing_cpu_count'],
@@ -110,7 +122,6 @@ def plate_solve_all_frames():
              workdir / row['sources_relpath'],
              user_config,
              row['id'],
-             logger,
              row['id'])  # duplicating row['id'] for logger naming
             for index, row in frames_to_process.iterrows()
         ])
@@ -126,10 +137,10 @@ def calc_common_and_total_footprint_and_save():
     Returns: None
 
     """
+    logger = logging.getLogger("lightcurver.combined_footprint_calculation")
     # so, before we do anything, let us eliminate the really obvious bad pointings.
     identify_and_eliminate_bad_pointings()
     # ok, keep going.
-    logger = logging.getLogger("calc_footprints")
     query = """
     SELECT frames.id, footprints.polygon
     FROM footprints 
@@ -145,6 +156,7 @@ def calc_common_and_total_footprint_and_save():
     if count > 0:
         logger.info(f'This combined footprint (hash {frames_hash}) was already calculated.')
         return
+    logger.info(f'Calculating combined footprint (hash {frames_hash}) (loaded polygons from database, now combining).')
     polygon_list = [np.array(json.loads(result[1])) for result in results]
     common_footprint, largest_footprint = calc_common_and_total_footprint(polygon_list)
 
@@ -152,10 +164,11 @@ def calc_common_and_total_footprint_and_save():
     plots_dir = user_config['plots_dir']
     footprints_plot_path = plots_dir / 'footprints.jpg'
     plot_footprints(polygon_list, common_footprint, largest_footprint, save_path=footprints_plot_path)
+    logger.info(f'Combined footprint plot (hash {frames_hash}) saved at {footprints_plot_path}.')
 
     # ok, save it
     save_combined_footprints_to_db(frames_hash, common_footprint, largest_footprint)
-    logger.info(f'Footprint with (hash {frames_hash} saved to db')
+    logger.info(f'Combined footprint with (hash {frames_hash} saved to db')
 
 
 @log_process
@@ -175,18 +188,17 @@ def source_extract_all_images(conditions=None):
 
     """
     log_queue = Manager().Queue()
-    listener = logging.handlers.QueueListener(log_queue, *logging.getLogger().handlers)
+    base_logger = logging.getLogger("lightcurver")
+    listener = logging.handlers.QueueListener(log_queue, *base_logger.handlers)
     listener.start()
+    logger = logging.getLogger("lightcurver.source_extraction")
 
-    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-
-    logger = logging.getLogger("PlateSolveLogger")
     user_config = get_user_config()
     workdir = Path(user_config['workdir'])
     frames_to_process = get_pandas(columns=['id', 'image_relpath', 'sources_relpath',
                                             'exptime', 'background_rms_electron_per_second'],
                                    conditions=conditions)
-    logger.info(f"Ready to extract sources: {len(frames_to_process)} frames.")
+    logger.info(f"Extracting sources from {len(frames_to_process)} frames.")
 
     with Pool(processes=user_config['multiprocessing_cpu_count'],
               initializer=worker_init, initargs=(log_queue,)) as pool:

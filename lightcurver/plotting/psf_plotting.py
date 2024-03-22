@@ -65,7 +65,7 @@ def plot_psf_diagnostic(datas, noisemaps, residuals, full_psf,
                 res = np.array(residuals[i])  # explicit casting, jax stuff
                 if masks is not None:
                     mask = np.array(masks[i]).astype(bool)
-                    res[np.where(~mask)[0]] = np.nan
+                    res[np.where(~mask)] = np.nan
                 ax[j, i].imshow(res, cmap=cmap_residuals)
                 ax[j, i].text(0.5, 0.02, 'residuals',
                               horizontalalignment='center',

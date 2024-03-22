@@ -224,6 +224,7 @@ def initialize_database(db_path=None):
         "telescope_name TEXT",
         "telescope_imager_name TEXT",
         "plate_solved INTEGER DEFAULT 0",
+        "attempted_plate_solve INTEGER DEFAULT 0",  # will be set to 1 if we ever attempt a plate solve.
         "pixel_scale REAL DEFAULT NULL",
         "eliminated INTEGER DEFAULT 0",
         "airmass REAL DEFAULT NULL",

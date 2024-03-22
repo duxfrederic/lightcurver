@@ -80,7 +80,14 @@ source_extraction_do_plots: 1
 
 
 
-# Ok, everyhing plate solving now.
+# Ok, everything plate solving now.
+# Which frames should we process here?
+plate_solve_frames: 'all_never_attempted'
+# possibilities: all_not_eliminated, all_never_attempted, all_not_plate_solved
+# all_not_eliminated means basically all the frames, not recommended as we redo everything every time.
+# all_never_attempted: recommended
+# all_not_plate_solved: retry all the frames that do not have an astrometric solution.
+
 # Are your images already plate solved? if yes, we will skip the plate solving step
 already_plate_solved: 1
 # plate solving strategy: plate solve with astrometry.net (`plate_solve`) or try and match the image detections
@@ -105,6 +112,10 @@ alternate_plate_solve_gaia_radius: 180
 # else we'll use the API.
 astrometry_net_api_key: null
 
+# after plate solving, we can check the anisotropy of the pixels (a bad astrometric solution can have
+# unexpectedly anisotropic pixels)
+max_pixel_anisotropy: 2e-2
+# images beyond this threshold will be eliminated (with comment 'suspicious_plate_solved')
 # by the way, inevitably some images are not solvable. Please define the loss fraction you deem acceptable here.
 plate_solving_min_success_fraction: 0.85
 # if you notice your images are really low in quality (terrible seeing, high sky, bad pointings ...")
