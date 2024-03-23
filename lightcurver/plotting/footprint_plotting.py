@@ -3,6 +3,10 @@ from shapely.geometry import Polygon
 
 
 def plot_footprints(footprint_arrays, common_footprint=None, largest_footprint=None, save_path=None):
+    """
+    shows the polygons representing the footprints of frames on a plot.
+
+    """
     fig = plt.figure(figsize=(10, 8))
     if (largest_footprint is not None) and (not largest_footprint.is_empty):
         plt.fill(*largest_footprint.exterior.xy, alpha=0.2, color='purple', label='Largest Footprint')

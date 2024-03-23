@@ -166,6 +166,17 @@ def get_frames_for_star(combined_footprint_hash, gaia_id,
 
 
 def update_star_fluxes(flux_data):
+    """
+      just inserts (or updates) the fluxes in the database.
+    Args:
+        flux_data: list of tuples, like this:
+                              (combined_footprint_hash, frame_id, gaia_id, flux, flux_uncertainty,
+                              chi2, relative_loss_differential)
+                              (but check the query below to make sure)
+
+    Returns:
+        Nothing
+    """
     db_path = get_user_config()['database_path']
     with sqlite3.connect(db_path, timeout=15.0) as conn:
         cursor = conn.cursor()

@@ -33,6 +33,21 @@ def get_pandas(conditions=None, columns=None, table='frames'):
 
 
 def execute_sqlite_query(query, params=(), is_select=True, timeout=15.0, use_pandas=False):
+    """
+    The most used interface to our database, very simple:
+    connects to the database, and depending of whether we are selecting or inserting returns data or a row count.
+    Also, if selecting, option to get back a pandas dataframe by reading the query with pandas.
+    Args:
+        query: string, the query
+        params: tuple, the parameters corresponding to the '?' of the query.
+        is_select: bool, are we selecting or inserting?
+        timeout: in seconds, keep it large in case of slow storage
+        use_pandas: bool, if select, get a pandas table of the data? (else list of tuples)
+
+    Returns:
+        either int if is_select=False, or a pandas dataframe if is_select=True and use_pandas=True, or some list of
+        tuples.
+    """
     db_path = get_user_config()['database_path']
     with sqlite3.connect(db_path, timeout=timeout) as conn:
         cursor = conn.cursor()
