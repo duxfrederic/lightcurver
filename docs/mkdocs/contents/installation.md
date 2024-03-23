@@ -13,16 +13,16 @@ might be some more setup to do. See the [installation instructions](https://cosm
 Alternatively, you can get an API key from their [nova](https://nova.astrometry.net/) service. I would recommend against using it in production, as to not overload their servers.
 
 
-So, I would suggest creating an Anaconda environment `lightcurver_env` and install `STARRED` in it.
-Next, install `astrometry.net` on your system. (Do not forget to download index files, their combined 4200 and 5100 series should work for most use cases).
-Finally, install the present package:
+So, I would suggest creating a python (3.9+, ideally 3.11) environment, say `lightcurver_env`,
+and install the present package in it:
 
 ```bash
-    conda activate lightcurver_env
+    conda activate lightcurver_env # if using conda
+    source lightcurver_env/bin/activate # if using python's venv
     pip install lightcurver
 ```
 
-Or for the latest version:
+Or for the `git` version (includes some minimal test data):
 ```bash
     git clone git@github.com:duxfrederic/lightcurver.git
     cd lightcurver
@@ -32,8 +32,10 @@ Or for the latest version:
 
 You can test your installation by following the [tutorial](tutorial.md).
 The automated tests also include the processing of a subset of the dataset given in the tutorial, you can thus run them
-instead to check functionality. 
+instead to check functionality (should take 1-2 minutes). 
 ```bash
 cd /your/clone/of/lightcurver
 pytest .
 ```
+
+If you are going to use a local installation of `Astrometry.net`, do not forget to download their index files as well! The combination of 4100 and 5200 should do the trick.
