@@ -19,7 +19,7 @@ jobs:
 
       - name: Verify Version Match
         run: |
-          VERSION=$(grep -Po "version=\K[^,]+" setup.py | tr -d "\"\'")
+          VERSION=$(python -c "import toml; print(toml.load('pyproject.toml')['project']['version'])")
           TAG_NAME=${GITHUB_REF#refs/tags/}
           echo "extracted version from setup.py: $VERSION"
           echo "Git tag is: $TAG_NAME"
