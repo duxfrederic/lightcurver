@@ -108,3 +108,7 @@ By leveraging the power of STARRED for state-of-the-art PSF modeling and deconvo
 and employing an automated flux calibration process, `lightcurver` achieves equal or better photometric precision 
 compared to existing pipelines, while requiring significantly less manual intervention.
 
+# Acknowledgments
+Special thanks to Martin Millon, Malte Tewes, Vivien Bonvin and Frederic Courbin for conceptualizing and creating the `COSMOULINE` pipeline. 
+While this code base it not a re-write of `COSMOULINE`, it certainly shares the philosophy of some of the processing steps.
+
