@@ -16,11 +16,9 @@ jobs:
         uses: actions/setup-python@v2
         with:
           python-version: '3.x'
-      - name: Install tomli for python before 3.11
-        run: python -m pip install tomli
       - name: Verify Version Match
         run: |
-          VERSION=$(python -c "import tomli; print(tomli.load('pyproject.toml')['project']['version'])")
+          VERSION=$(grep "^version" pyproject.toml | awk -F '"' '{print $2}')
           TAG_NAME=${GITHUB_REF#refs/tags/}
           echo "extracted version from setup.py: $VERSION"
           echo "Git tag is: $TAG_NAME"
