@@ -8,6 +8,13 @@ from .exceptions import NoConfigFilePathInEnvironment
 
 
 def get_user_config():
+    """
+    This reads the yaml file containing the user config.
+    Then processes some of its parameters and builds others.
+
+    Returns:
+        dictionary of parameters.
+    """
     if 'LIGHTCURVER_CONFIG' not in os.environ:
         raise NoConfigFilePathInEnvironment
     config_path = os.environ['LIGHTCURVER_CONFIG']

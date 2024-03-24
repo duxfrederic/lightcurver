@@ -92,6 +92,15 @@ def fetch_and_adjust_zeropoints(combined_footprint_hash):
 
 
 def prepare_roi_deconv_file():
+    """
+    This is called by the workflow manager.
+    Given the previous steps, selects the frames that have the necessary quantities calculated
+    (PSF, normalization coefficient).
+    Then makes a new hdf5 file with the cutouts of the ROI (both data and noisemaps,
+    divided by normalization coefficients), and the PSFs.
+    Returns:
+        Nothing
+    """
     logger = logging.getLogger('lightcurver.roi_deconv_file_preparation')
     user_config = get_user_config()
 
@@ -177,4 +186,3 @@ def prepare_roi_deconv_file():
         f['angle_to_north'] = np.array(angles_to_north)
 
     logger.info(f'Wrote the h5 file containing the calibrated cutouts at {save_path}.')
-

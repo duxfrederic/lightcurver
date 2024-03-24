@@ -53,6 +53,15 @@ def align_data_interpolation(array, starred_kwargs):
 
 
 def do_deconvolution_of_roi():
+    """
+    Optionally called by the workflow manager.
+    This is probably a bit too rigid given how complicated the joint modelling of 1000+ epochs of a blended ROI
+    can be. But it can be used as a template for your own.
+    This simply jointly models your ROI cutouts with the point sources given in the config file.
+    Should work for most cases still!
+    Returns:
+        Nothing
+    """
     logger = logging.getLogger('lightcurver.roi_modelling')
     user_config = get_user_config()
     if not user_config['do_ROI_model']:

@@ -66,9 +66,6 @@ Now you can run `lightcurver`:
 ## The implemented processing steps
 ![flowdiagram](docs/flow_diagram/workflow_diagram.svg)
 
-## Roadmap 
-- Finish the logging system: we should be left with one unified logging interface.
-- refactor some of the tasks, ideally all functions that do database queries should go in `processes`.
 
 ## Contributing
 

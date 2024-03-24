@@ -17,6 +17,20 @@ from ..structure.user_config import get_user_config
 
 
 def create_initial_wcs(pixel_scale, image_shape, center_ra, center_dec, rotation_angle_deg):
+    """
+    This makes an astropy wcs object with cd matrix, starting from a pixel scale, image shape, rotation and
+    coordinates.
+
+    Args:
+        pixel_scale: float, arcsecond / pixel
+        image_shape: tuple
+        center_ra: float
+        center_dec: float
+        rotation_angle_deg: float
+
+    Returns:
+        astropy.wcs.WCS object
+    """
     w = WCS(naxis=2)
     w.wcs.crpix = [(image_shape[1] - 1) / 2, (image_shape[0] - 1) / 2]  # center of the image
     w.wcs.crval = [center_ra, center_dec]  # ra, dec at the center
@@ -65,6 +79,14 @@ def refine_wcs_with_astroalign(sources, gaia_star_coords, wcs):
 
 
 def alternate_plate_solve():
+    """
+      This cross-matches Gaia detections with the sources in our images, given a good estimation of the pixel scale,
+      rotation of the field and center of the field.
+      Then, it creates a WCS that best matches the Gaia sources to our pixels.
+    Returns:
+        Nothing, but loops over the frames and updates database and fits headers.
+
+    """
     user_config = get_user_config()
     ra, dec = user_config['ROI_ra_deg'], user_config['ROI_dec_deg']
     center_radius = {'center': (ra, dec), 'radius':  user_config['alternate_plate_solve_gaia_radius']/3600.}

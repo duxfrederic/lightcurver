@@ -7,138 +7,137 @@
 <svg width="719pt" height="895pt"
  viewBox="0.00 0.00 719.25 895.00" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
 <g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(4 891)">
-<polygon fill="white" stroke="none" points="-4,4 -4,-891 715.25,-891 715.25,4 -4,4"/>
 <!-- B -->
 <g id="node1" class="node">
 <title>B</title>
-<polygon fill="none" stroke="black" points="587.12,-887 124.12,-887 124.12,-810 587.12,-810 587.12,-887"/>
-<text text-anchor="middle" x="355.62" y="-869.7" font-family="Times,serif" font-size="14.00">Read/Convert/SkySub/Character Catalog</text>
-<text text-anchor="middle" x="355.62" y="-852.45" font-family="Times,serif" font-size="14.00">reads the images from a directory, converts them to electrons,</text>
-<text text-anchor="middle" x="355.62" y="-835.2" font-family="Times,serif" font-size="14.00">subtracts the sky, finds sources, measures noise, seeing,</text>
-<text text-anchor="middle" x="355.62" y="-817.95" font-family="Times,serif" font-size="14.00">calculates ephemeris, records all to database</text>
+<polygon fill="none" stroke="white" points="587.12,-887 124.12,-887 124.12,-810 587.12,-810 587.12,-887"/>
+<text text-anchor="middle" x="355.62" y="-869.7" font-family="Times,serif" font-size="14.00" fill="white">Read/Convert/SkySub/Character Catalog</text>
+<text text-anchor="middle" x="355.62" y="-852.45" font-family="Times,serif" font-size="14.00" fill="white">reads the images from a directory, converts them to electrons,</text>
+<text text-anchor="middle" x="355.62" y="-835.2" font-family="Times,serif" font-size="14.00" fill="white">subtracts the sky, finds sources, measures noise, seeing,</text>
+<text text-anchor="middle" x="355.62" y="-817.95" font-family="Times,serif" font-size="14.00" fill="white">calculates ephemeris, records all to database</text>
 </g>
 <!-- C -->
 <g id="node2" class="node">
 <title>C</title>
-<polygon fill="none" stroke="black" points="595.75,-774 115.5,-774 115.5,-697 595.75,-697 595.75,-774"/>
-<text text-anchor="middle" x="355.62" y="-756.7" font-family="Times,serif" font-size="14.00">Plate Solving</text>
-<text text-anchor="middle" x="355.62" y="-739.45" font-family="Times,serif" font-size="14.00">Uses astrometry.net&#39;s solve&#45;field and initial guess of plate scale</text>
-<text text-anchor="middle" x="355.62" y="-722.2" font-family="Times,serif" font-size="14.00">provided in user config to add a reliable WCS to each image fast.</text>
-<text text-anchor="middle" x="355.62" y="-704.95" font-family="Times,serif" font-size="14.00">If user config states that images are already plate solved, skip.</text>
+<polygon fill="none" stroke="white" points="595.75,-774 115.5,-774 115.5,-697 595.75,-697 595.75,-774"/>
+<text text-anchor="middle" x="355.62" y="-756.7" font-family="Times,serif" font-size="14.00" fill="white">Plate Solving</text>
+<text text-anchor="middle" x="355.62" y="-739.45" font-family="Times,serif" font-size="14.00" fill="white">Uses astrometry.net&#39;s solve&#45;field and initial guess of plate scale</text>
+<text text-anchor="middle" x="355.62" y="-722.2" font-family="Times,serif" font-size="14.00" fill="white">provided in user config to add a reliable WCS to each image fast.</text>
+<text text-anchor="middle" x="355.62" y="-704.95" font-family="Times,serif" font-size="14.00" fill="white">If user config states that images are already plate solved, skip.</text>
 </g>
 <!-- B&#45;&gt;C -->
 <g id="edge1" class="edge">
 <title>B&#45;&gt;C</title>
-<path fill="none" stroke="black" d="M355.62,-809.61C355.62,-801.84 355.62,-793.56 355.62,-785.46"/>
-<polygon fill="black" stroke="black" points="359.13,-785.73 355.63,-775.73 352.13,-785.73 359.13,-785.73"/>
+<path fill="none" stroke="white" d="M355.62,-809.61C355.62,-801.84 355.62,-793.56 355.62,-785.46"/>
+<polygon fill="white" stroke="white" points="359.13,-785.73 355.63,-775.73 352.13,-785.73 359.13,-785.73"/>
 </g>
 <!-- D -->
 <g id="node3" class="node">
 <title>D</title>
-<polygon fill="none" stroke="black" points="624.62,-661 86.62,-661 86.62,-618.5 624.62,-618.5 624.62,-661"/>
-<text text-anchor="middle" x="355.62" y="-643.7" font-family="Times,serif" font-size="14.00">Calculate Common and Total Footprint</text>
-<text text-anchor="middle" x="355.62" y="-626.45" font-family="Times,serif" font-size="14.00">Checks the footprint of the images, see how big the common footprint is.</text>
+<polygon fill="none" stroke="white" points="624.62,-661 86.62,-661 86.62,-618.5 624.62,-618.5 624.62,-661"/>
+<text text-anchor="middle" x="355.62" y="-643.7" font-family="Times,serif" font-size="14.00" fill="white">Calculate Common and Total Footprint</text>
+<text text-anchor="middle" x="355.62" y="-626.45" font-family="Times,serif" font-size="14.00" fill="white">Checks the footprint of the images, see how big the common footprint is.</text>
 </g>
 <!-- C&#45;&gt;D -->
 <g id="edge2" class="edge">
 <title>C&#45;&gt;D</title>
-<path fill="none" stroke="black" d="M355.62,-696.64C355.62,-688.7 355.62,-680.41 355.62,-672.71"/>
-<polygon fill="black" stroke="black" points="359.13,-672.76 355.63,-662.76 352.13,-672.76 359.13,-672.76"/>
+<path fill="none" stroke="white" d="M355.62,-696.64C355.62,-688.7 355.62,-680.41 355.62,-672.71"/>
+<polygon fill="white" stroke="white" points="359.13,-672.76 355.63,-662.76 352.13,-672.76 359.13,-672.76"/>
 </g>
 <!-- E -->
 <g id="node4" class="node">
 <title>E</title>
-<polygon fill="none" stroke="black" points="662.88,-582.5 48.38,-582.5 48.38,-540 662.88,-540 662.88,-582.5"/>
-<text text-anchor="middle" x="355.62" y="-565.2" font-family="Times,serif" font-size="14.00">Query Gaia for Stars</text>
-<text text-anchor="middle" x="355.62" y="-547.95" font-family="Times,serif" font-size="14.00">Given the footprints above, finds stars in gaia for PSF modelling and normalization.</text>
+<polygon fill="none" stroke="white" points="662.88,-582.5 48.38,-582.5 48.38,-540 662.88,-540 662.88,-582.5"/>
+<text text-anchor="middle" x="355.62" y="-565.2" font-family="Times,serif" font-size="14.00" fill="white">Query Gaia for Stars</text>
+<text text-anchor="middle" x="355.62" y="-547.95" font-family="Times,serif" font-size="14.00" fill="white">Given the footprints above, finds stars in gaia for PSF modelling and normalization.</text>
 </g>
 <!-- D&#45;&gt;E -->
 <g id="edge3" class="edge">
 <title>D&#45;&gt;E</title>
-<path fill="none" stroke="black" d="M355.62,-618.25C355.62,-610.87 355.62,-602.37 355.62,-594.25"/>
-<polygon fill="black" stroke="black" points="359.13,-594.32 355.63,-584.32 352.13,-594.32 359.13,-594.32"/>
+<path fill="none" stroke="white" d="M355.62,-618.25C355.62,-610.87 355.62,-602.37 355.62,-594.25"/>
+<polygon fill="white" stroke="white" points="359.13,-594.32 355.63,-584.32 352.13,-594.32 359.13,-594.32"/>
 </g>
 <!-- F -->
 <g id="node5" class="node">
 <title>F</title>
-<polygon fill="none" stroke="black" points="545.12,-504 166.12,-504 166.12,-409.75 545.12,-409.75 545.12,-504"/>
-<text text-anchor="middle" x="355.62" y="-486.7" font-family="Times,serif" font-size="14.00">Stamp Extraction</text>
-<text text-anchor="middle" x="355.62" y="-469.45" font-family="Times,serif" font-size="14.00">Extracts stamps of all good stars and all epochs.</text>
-<text text-anchor="middle" x="355.62" y="-452.2" font-family="Times,serif" font-size="14.00">Also extract stamps of the region of interest (ROI).</text>
-<text text-anchor="middle" x="355.62" y="-434.95" font-family="Times,serif" font-size="14.00">Saves the stamps to an HDF5 file</text>
-<text text-anchor="middle" x="355.62" y="-417.7" font-family="Times,serif" font-size="14.00"> Also cleans the cosmics.</text>
+<polygon fill="none" stroke="white" points="545.12,-504 166.12,-504 166.12,-409.75 545.12,-409.75 545.12,-504"/>
+<text text-anchor="middle" x="355.62" y="-486.7" font-family="Times,serif" font-size="14.00" fill="white">Stamp Extraction</text>
+<text text-anchor="middle" x="355.62" y="-469.45" font-family="Times,serif" font-size="14.00" fill="white">Extracts stamps of all good stars and all epochs.</text>
+<text text-anchor="middle" x="355.62" y="-452.2" font-family="Times,serif" font-size="14.00" fill="white">Also extract stamps of the region of interest (ROI).</text>
+<text text-anchor="middle" x="355.62" y="-434.95" font-family="Times,serif" font-size="14.00" fill="white">Saves the stamps to an HDF5 file</text>
+<text text-anchor="middle" x="355.62" y="-417.7" font-family="Times,serif" font-size="14.00" fill="white"> Also cleans the cosmics.</text>
 </g>
 <!-- E&#45;&gt;F -->
 <g id="edge4" class="edge">
 <title>E&#45;&gt;F</title>
-<path fill="none" stroke="black" d="M355.62,-539.53C355.62,-532.46 355.62,-524.18 355.62,-515.64"/>
-<polygon fill="black" stroke="black" points="359.13,-515.87 355.63,-505.87 352.13,-515.87 359.13,-515.87"/>
+<path fill="none" stroke="white" d="M355.62,-539.53C355.62,-532.46 355.62,-524.18 355.62,-515.64"/>
+<polygon fill="white" stroke="white" points="359.13,-515.87 355.63,-505.87 352.13,-515.87 359.13,-515.87"/>
 </g>
 <!-- G -->
 <g id="node6" class="node">
 <title>G</title>
-<polygon fill="none" stroke="black" points="493,-373.75 218.25,-373.75 218.25,-331.25 493,-331.25 493,-373.75"/>
-<text text-anchor="middle" x="355.62" y="-356.45" font-family="Times,serif" font-size="14.00">PSF Modeling</text>
-<text text-anchor="middle" x="355.62" y="-339.2" font-family="Times,serif" font-size="14.00">Creates a PSF model for each frame</text>
+<polygon fill="none" stroke="white" points="493,-373.75 218.25,-373.75 218.25,-331.25 493,-331.25 493,-373.75"/>
+<text text-anchor="middle" x="355.62" y="-356.45" font-family="Times,serif" font-size="14.00" fill="white">PSF Modeling</text>
+<text text-anchor="middle" x="355.62" y="-339.2" font-family="Times,serif" font-size="14.00" fill="white">Creates a PSF model for each frame</text>
 </g>
 <!-- F&#45;&gt;G -->
 <g id="edge5" class="edge">
 <title>F&#45;&gt;G</title>
-<path fill="none" stroke="black" d="M355.62,-409.48C355.62,-401.36 355.62,-393.07 355.62,-385.45"/>
-<polygon fill="black" stroke="black" points="359.13,-385.65 355.63,-375.65 352.13,-385.65 359.13,-385.65"/>
+<path fill="none" stroke="white" d="M355.62,-409.48C355.62,-401.36 355.62,-393.07 355.62,-385.45"/>
+<polygon fill="white" stroke="white" points="359.13,-385.65 355.63,-375.65 352.13,-385.65 359.13,-385.65"/>
 </g>
 <!-- H -->
 <g id="node7" class="node">
 <title>H</title>
-<polygon fill="none" stroke="black" points="622,-295.25 89.25,-295.25 89.25,-235.5 622,-235.5 622,-295.25"/>
-<text text-anchor="middle" x="355.62" y="-277.95" font-family="Times,serif" font-size="14.00">Star Photometry</text>
-<text text-anchor="middle" x="355.62" y="-260.7" font-family="Times,serif" font-size="14.00">Uses the PSF model to do PSF photometry of each star, using STARRED</text>
-<text text-anchor="middle" x="355.62" y="-243.45" font-family="Times,serif" font-size="14.00">(joint deconvolution). The fluxes (per frame and per star) are saved</text>
+<polygon fill="none" stroke="white" points="622,-295.25 89.25,-295.25 89.25,-235.5 622,-235.5 622,-295.25"/>
+<text text-anchor="middle" x="355.62" y="-277.95" font-family="Times,serif" font-size="14.00" fill="white">Star Photometry</text>
+<text text-anchor="middle" x="355.62" y="-260.7" font-family="Times,serif" font-size="14.00" fill="white">Uses the PSF model to do PSF photometry of each star, using STARRED</text>
+<text text-anchor="middle" x="355.62" y="-243.45" font-family="Times,serif" font-size="14.00" fill="white">(joint deconvolution). The fluxes (per frame and per star) are saved</text>
 </g>
 <!-- G&#45;&gt;H -->
 <g id="edge6" class="edge">
 <title>G&#45;&gt;H</title>
-<path fill="none" stroke="black" d="M355.62,-330.89C355.62,-323.59 355.62,-315.09 355.62,-306.71"/>
-<polygon fill="black" stroke="black" points="359.13,-306.99 355.63,-296.99 352.13,-306.99 359.13,-306.99"/>
+<path fill="none" stroke="white" d="M355.62,-330.89C355.62,-323.59 355.62,-315.09 355.62,-306.71"/>
+<polygon fill="white" stroke="white" points="359.13,-306.99 355.63,-296.99 352.13,-306.99 359.13,-306.99"/>
 </g>
 <!-- I -->
 <g id="node8" class="node">
 <title>I</title>
-<polygon fill="none" stroke="black" points="661,-199.5 50.25,-199.5 50.25,-157 661,-157 661,-199.5"/>
-<text text-anchor="middle" x="355.62" y="-182.2" font-family="Times,serif" font-size="14.00">Calculate Normalization Coefficient</text>
-<text text-anchor="middle" x="355.62" y="-164.95" font-family="Times,serif" font-size="14.00">Given the star photometry, calculates a representative relative flux for each image.</text>
+<polygon fill="none" stroke="white" points="661,-199.5 50.25,-199.5 50.25,-157 661,-157 661,-199.5"/>
+<text text-anchor="middle" x="355.62" y="-182.2" font-family="Times,serif" font-size="14.00" fill="white">Calculate Normalization Coefficient</text>
+<text text-anchor="middle" x="355.62" y="-164.95" font-family="Times,serif" font-size="14.00" fill="white">Given the star photometry, calculates a representative relative flux for each image.</text>
 </g>
 <!-- H&#45;&gt;I -->
 <g id="edge7" class="edge">
 <title>H&#45;&gt;I</title>
-<path fill="none" stroke="black" d="M355.62,-235.08C355.62,-227.35 355.62,-218.97 355.62,-211.12"/>
-<polygon fill="black" stroke="black" points="359.13,-211.26 355.63,-201.26 352.13,-211.26 359.13,-211.26"/>
+<path fill="none" stroke="white" d="M355.62,-235.08C355.62,-227.35 355.62,-218.97 355.62,-211.12"/>
+<polygon fill="white" stroke="white" points="359.13,-211.26 355.63,-201.26 352.13,-211.26 359.13,-211.26"/>
 </g>
 <!-- J -->
 <g id="node9" class="node">
 <title>J</title>
-<polygon fill="none" stroke="black" points="711.25,-121 0,-121 0,-78.5 711.25,-78.5 711.25,-121"/>
-<text text-anchor="middle" x="355.62" y="-103.7" font-family="Times,serif" font-size="14.00">Prepare Calibrated Cutouts</text>
-<text text-anchor="middle" x="355.62" y="-86.45" font-family="Times,serif" font-size="14.00">Prepares cutouts for each ROI and each frame, calibrated in flux by the normalization coefficient.</text>
+<polygon fill="none" stroke="white" points="711.25,-121 0,-121 0,-78.5 711.25,-78.5 711.25,-121"/>
+<text text-anchor="middle" x="355.62" y="-103.7" font-family="Times,serif" font-size="14.00" fill="white">Prepare Calibrated Cutouts</text>
+<text text-anchor="middle" x="355.62" y="-86.45" font-family="Times,serif" font-size="14.00" fill="white">Prepares cutouts for each ROI and each frame, calibrated in flux by the normalization coefficient.</text>
 </g>
 <!-- I&#45;&gt;J -->
 <g id="edge8" class="edge">
 <title>I&#45;&gt;J</title>
-<path fill="none" stroke="black" d="M355.62,-156.75C355.62,-149.37 355.62,-140.87 355.62,-132.75"/>
-<polygon fill="black" stroke="black" points="359.13,-132.82 355.63,-122.82 352.13,-132.82 359.13,-132.82"/>
+<path fill="none" stroke="white" d="M355.62,-156.75C355.62,-149.37 355.62,-140.87 355.62,-132.75"/>
+<polygon fill="white" stroke="white" points="359.13,-132.82 355.63,-122.82 352.13,-132.82 359.13,-132.82"/>
 </g>
 <!-- K -->
 <g id="node10" class="node">
 <title>K</title>
-<polygon fill="none" stroke="black" points="569.12,-42.5 142.12,-42.5 142.12,0 569.12,0 569.12,-42.5"/>
-<text text-anchor="middle" x="355.62" y="-25.2" font-family="Times,serif" font-size="14.00">Deconvolution</text>
-<text text-anchor="middle" x="355.62" y="-7.95" font-family="Times,serif" font-size="14.00">The user can now run STARRED on the prepared cutouts.</text>
+<polygon fill="none" stroke="white" points="529.75,-42.5 181.5,-42.5 181.5,0 529.75,0 529.75,-42.5"/>
+<text text-anchor="middle" x="355.62" y="-25.2" font-family="Times,serif" font-size="14.00" fill="white">Deconvolution</text>
+<text text-anchor="middle" x="355.62" y="-7.95" font-family="Times,serif" font-size="14.00" fill="white">STARRED can be run on the prepared cutouts.</text>
 </g>
 <!-- J&#45;&gt;K -->
 <g id="edge9" class="edge">
 <title>J&#45;&gt;K</title>
-<path fill="none" stroke="black" d="M355.62,-78.25C355.62,-70.87 355.62,-62.37 355.62,-54.25"/>
-<polygon fill="black" stroke="black" points="359.13,-54.32 355.63,-44.32 352.13,-54.32 359.13,-54.32"/>
+<path fill="none" stroke="white" d="M355.62,-78.25C355.62,-70.87 355.62,-62.37 355.62,-54.25"/>
+<polygon fill="white" stroke="white" points="359.13,-54.32 355.63,-44.32 352.13,-54.32 359.13,-54.32"/>
 </g>
 </g>
 </svg>

@@ -6,8 +6,8 @@ from .user_config import get_user_config
 
 def load_custom_header_parser():
     """
-    Dynamically load the 'parse_header' function from the user-defined file
-    located at '$workspace/header_parser/header_parser.py'.
+    dynamically load the 'parse_header' function from the user-defined file
+    located at '$workdir/header_parser/header_parser.py'.
     """
     workspace_dir = get_user_config()['workdir']
 
