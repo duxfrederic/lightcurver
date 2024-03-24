@@ -1,0 +1,221 @@
+########################################################################################################################
+# Thanks for using lightcurver!
+# A word of warning, please do not expect this package to work on your data from the first go.
+# It is very difficult to build a pipeline agnostic of the underlying data, especially in astronomy.
+# this pipeline works well with repeated, seeing limited, wide-field astronomical images.
+# Expect it to work best when you have an "intermediate" number density of stars in the field.
+# Too few and we cannot calibrate the frames properly. Too many and finding isolated stars becomes difficult.
+# Anyway, below you will find parameters used by the package in order of the execution of tasks.
+########################################################################################################################
+
+
+
+
+#################################################### Import ############################################################
+# First, define the working directory where the files will be copied (after cropping, conversion, sky subtraction ...)
+workdir: /storage/COSMOGRAIL/NOT_PSJ1721+8842
+# Then, list directories in which we are to look for your images. (no securities in place for filtering
+# files that are not images)
+raw_dirs:
+  - /mnt/lestafs/PRERED/NOT/PSJ1721+8842_R
+
+# we can trim the images upon importation, in pixels. Useful if your images are big and the ROI is
+# near the center always. Default 0 pixel trimmed.
+trim_vertical: 0
+trim_horizontal: 0
+
+# some processes can be parallelized, especially in the initial steps that do not use the GPU
+# limit how many subprocesses we can run in parallel here.
+multiprocessing_cpu_count: 8
+
+
+
+
+##################################### Region of Interest and Telescope #################################################
+# now we define our Region of Interest (ROI)
+# the ROI will be extracted, and have flux calibrated cutouts prepared.
+# please keep the formatting the same.
+ROI:
+  PSJ1721+8842: 
+    coordinates: [260.43437, 88.70599]  # [ra, dec] in degrees
+ROI_size: 3.5  # in arcseconds, will not consider reference stars this close
+# the ROI also will be used as a position starting point for the plate solving.
+# frames that do not contain it (determined after plate solving) will not undergo further processing.
+
+# telescope information.
+# will be used to calculate airmass, distance to moon, this type of stuff.
+telescope:
+  name: NOT
+  longitude: +28.75
+  latitude: -17.89
+  elevation: 2382.0
+  imager_name: StanCAM
+
+
+
+################################################# Plate Solving ########################################################
+
+# Mainly for the purpose of plate solving, we try and find stars.
+# we will use `sep` for this purpose, here you can define the two main parameters of sep.
+source_extraction_threshold: 3.0
+source_extraction_min_area: 10
+# do you want to do plots of the extracted sources?
+source_extraction_do_plots: 1
+
+
+
+# Ok, everyhing plate solving now.
+# Are your images already plate solved? if yes, we will skip the plate solving step
+already_plate_solved: 0
+# plate solving strategy: plate solve with astrometry.net (`plate_solve`) or try and match the image detections
+# with gaia stars (`alternate_gaia_solve`)
+# I recommend the first one for most cases.
+plate_solving_strategy: 'plate_solve'
+
+# this is a plate scale interval to speed up the plate solving, 
+# you can make it more precise if you know the plate scale of your instrument. 
+# In arcseconds per pixel.
+plate_scale_interval: [0.15, 0.2]
+
+# if the plate solving is to be made with gaia, you need the following argument as well:
+# this is the radius in which to query (all) gaia stars around the ROI, in arcseconds.
+alternate_plate_solve_gaia_radius: 180
+
+# still for the plate solving, we are going to use my wrapper around Astrometry.net:
+# widefield_plate_solver
+# It can either use a local installation (solve-field command in path)
+# or the astrometry.net api. We will try to use the local installation
+# if the astrometry api key below is null.
+# else we'll use the API.
+astrometry_net_api_key: null
+
+# by the way, inevitably some images are not solvable. Please define the loss fraction you deem acceptable here.
+plate_solving_min_success_fraction: 0.85
+# if you notice your images are really low in quality (terrible seeing, high sky, bad pointings ...")
+# and identify this as the reason of the plate solving failing, you can execute this database query:
+# 'update frames set comment='cannot be plate solved', eliminated = 1 where plate_solved=0;'
+# (after sqlite3 $workdir/database.sqlite3)
+# we will not try to plate solve those anymore.
+
+
+
+########################################## Selection of reference stars ################################################
+
+# Now, the selection of calibration stars.
+# We can either focus on the footprint common to all images, the idea being stability across
+# epochs in both the PSF model and normalization coefficient.
+# Only works with stable pointings obviously, and recommended only if you plan on reducing the dataset once
+# (because each new frame will change the footprint, and trigger the computation of all the downstream steps again)
+# param name: 'common_footprint_stars'
+# The other possibility is looking for stars close to the ROI: ROI_disk. This offers a stable footprint,
+# so you can add more frames and only the downstream steps on the new frames will execute.
+# in summary: 'common_footprint_stars', or 'ROI_disk'
+# I recommend the latter, seems to work well.
+star_selection_strategy: 'ROI_disk'
+# So, if the above is 'ROI_disk', provide here the radius in arcseconds:
+ROI_disk_radius_arcseconds: 211
+# if your field is absolutely crowded with stars, use a much smaller radius.
+# Try and aim for a radius that will yield about 20-30 stars.
+
+# Of course, depending on your setup you will need to probe a different range
+# of magnitudes to both provide high S/N constraints to your normalization and PSF models,
+# while avoiding saturation  -- set to null for no contraints
+star_min_gmag: 14.0
+star_max_gmag: 20.5
+
+# we also do not consider stars that were not well-fitted by a point source solution in gaia
+# (could be galaxies, or very crowded fields, or doubles ...which we need to avoid)
+# set to null for no constraints
+star_max_astrometric_excess_noise: 9.0
+
+# finally, we can also request a small photometric error,
+# as the photometric error will go up with variability. this way we can select
+# more stable stars.
+star_max_phot_g_mean_flux_error: 9.0
+
+# Some absolute minimum number of stars criterion -- will crash if under this.
+min_number_stars: 6
+
+# and whether we query again ...can be necessary sometimes.
+gaia_query_redo: false
+
+# each good star is then named with a single letter, by ascending distance from the ROI.
+# if more than 26, names will include 'aa', 'ab', etc. --> then switch to a list instead of a string.
+# these stars will be used for the PSF model and normalization.
+# if null: uses the top 10 closest stars to the ROI.
+# if an integer N: select the top N closest stars to the ROI.
+stars_to_use_psf: null
+stars_to_use_norm: 20
+
+
+
+############################################## Extraction of cutouts ###################################################
+
+# We are now ready to extract cutouts, of all the stars and of our ROI. -- squares of size defined below in pixels.
+stamp_size_stars: 32
+stamp_size_ROI: 48 
+redo_stamp_extraction: false
+
+
+
+################################################ PSF models ############################################################
+# Now we have nice stars, hopefully the type that will yield a nice PSF model. We also know
+# which frame has which star in its footprint, so we are ready to build a PSF model.
+# STARRED will do it, here are some parameters you can tweak but that hopefully constitute reasonable defaults.
+redo_psf: false
+subsampling_factor: 2
+psf_n_iter_analytic: 200 # number of iterations (l-bfgs-b) spent fitting a moffat
+psf_n_iter_pixels: 4000 # number of iterations (adabelief) spent fitting the pixel grid.
+
+
+
+############################################### Star photometry ########################################################
+# Now we do photometry of stars using our PSF models.
+# At this point we also have saved a chi2 value for each PSF fit.
+# Thus, we can filter the bad fits by comparing the chi2 values.
+# Either we do not reject anything: psf_fit_exclude_strategy set to null.
+# Or, we can sigma clip the chi2 values and exclude the tails.
+# This is the one I recommend, it takes a parameter as follows:
+psf_fit_exclude_strategy:
+    sigma_clip: 4 # from how many sigma from the median do we exclude?
+# last possibility, just bounds you choose on the chi2.
+# (uncomment both lines below, and comment the two lines just above if this is the one you want to use)
+#psf_fit_exclude_strategy:
+#    threshold: [0, 1.5] # range of values of chi2 that we keep.
+
+# after selection of the PSFs we want to move forward with, some parameters of the star photometry:
+redo_star_photometry: false
+star_deconv_n_iter: 3000
+
+
+
+########################################### Normalization Coefficient ##################################################
+# Ready to calculate a normalization coefficient!
+# We exclude the measured star fluxes we do not trust. same as for the PSF above.
+fluxes_fit_exclude_strategy:
+  sigma_clip: 3.0
+
+
+
+
+########################################## Calibrated cutouts of ROI ###################################################
+
+# and finally! the preparation of the ROI. This will prepare an hdf5 file with flux calibrated cutouts and noisemaps,
+# as well as PSFs. (all as large numpy arrays, ready for use with starred).
+# the hdf5 will also contain some identifiers (database frame id, mjd, seeing, etc.)
+
+# Before proceeding, we provide another chance of eliminating more frames.
+# You can filter on any column of the 'frames' table of the sqlite3 database.
+# This is the structure you should use:
+constraints_on_frame_columns_for_roi:
+  seeing_arcseconds: [0.0, 3.0]
+#  sky_level_electron_per_second: [0., 1000.]
+#  ellipticity: [0.0, 0.5]
+
+
+# where do you want your prepared cutouts? (a single hdf5 file)
+# by default, null --> "$workdir/prepared_roi_cutouts"
+prepared_roi_cutouts_path: null
+# now you can load up the cutouts and do a starred deconvolution.
+# TODO prepare example notebooks and scripts
+# in the meantime see starred repo for examples.
