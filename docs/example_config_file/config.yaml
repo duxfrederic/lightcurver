@@ -69,6 +69,7 @@ background_estimation_n_boxes: 10
 
 
 
+
 ################################################# Plate Solving ########################################################
 
 # Mainly for the purpose of plate solving, we try and find stars.
@@ -77,8 +78,6 @@ source_extraction_threshold: 2.0
 source_extraction_min_area: 20
 # do you want to do plots of the extracted sources?
 source_extraction_do_plots: 1
-
-
 
 # Ok, everything plate solving now.
 # Which frames should we process here?
@@ -123,6 +122,7 @@ plate_solving_min_success_fraction: 0.85
 # 'update frames set comment='cannot be plate solved', eliminated = 1 where plate_solved=0;'
 # (after sqlite3 $workdir/database.sqlite3)
 # we will not try to plate solve those anymore.
+
 
 
 
@@ -176,6 +176,7 @@ stars_to_use_norm: null
 
 
 
+
 ############################################## Extraction of cutouts ###################################################
 
 # We are now ready to extract cutouts, of all the stars and of our ROI. -- squares of size defined below in pixels.
@@ -183,6 +184,7 @@ stamp_size_stars: 24
 stamp_size_ROI: 32
 redo_stamp_extraction: false
 clean_cosmics: true
+
 
 
 
@@ -194,6 +196,7 @@ redo_psf: false
 subsampling_factor: 2
 psf_n_iter_analytic: 100 # number of iterations (l-bfgs-b) spent fitting a moffat
 psf_n_iter_pixels: 3000 # number of iterations (adabelief) spent fitting the pixel grid.
+
 
 
 
@@ -214,6 +217,17 @@ psf_fit_exclude_strategy:
 # after selection of the PSFs we want to move forward with, some parameters of the star photometry:
 redo_star_photometry: false
 star_deconv_n_iter: 2000
+
+# but we have some flexibility as to parameters we can change.
+# first, can we add a constant background term to our model, one per epoch.
+# I would recommend to trust the background subtraction for most cases (unless your cutouts
+# are much bigger than the star in all seeings, offering a large area to constrain the background term.)
+star_photometry_uniform_background_per_epoch: false
+# we can also add some starlet-regularized background to absorb the flux of any contaminant in the FoV of your
+# cutouts. I would set this to `false` for most cases, the exception being if your images are all
+# close in zeropoint, and if you have some major contaminants in your field.
+star_photometry_starlet_global_background: false
+
 
 
 
@@ -247,6 +261,7 @@ prepared_roi_cutouts_path: null
 # now you can load up the cutouts and do a starred deconvolution.
 # TODO prepare example notebooks and scripts
 # in the meantime see starred repo for examples.
+
 
 
 
