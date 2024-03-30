@@ -36,6 +36,7 @@ def calculate_zeropoints():
     for a given the current combined_footprint_hash, queries all the available star fluxes.
     compares them with gaia magnitudes to calculate a magnitude in your band
     (ONLY IMPLEMENTED FOR R-BAND SO FAR)
+    TODO
     Then calculates a zeropoint for each frame, and updates the database.
     Args:
 

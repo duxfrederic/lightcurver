@@ -39,6 +39,15 @@ def setup_base_logger():
 
 
 class WorkflowManager:
+    """
+    A small class that will run our tasks. It serves the purpose of running the tasks
+    in the right order given the dependencies in the pipeline_dependency_graph.yaml file.
+    We can also use it to assign different versions of the tasks based on the user config.
+
+    todo: implement post checks for each tasks
+    todo: implement pre checks so we can skip tasks from the workflow manager? for now pre-checks are done within each
+          task.
+    """
     def __init__(self, logger=None):
         self.user_config = get_user_config()
         with resources.open_text('lightcurver.pipeline', 'pipeline_dependency_graph.yaml') as file:

@@ -13,6 +13,15 @@ from ..plotting.sources_plotting import plot_footprints_with_stars
 
 
 def query_gaia_stars():
+    """
+    this is called by the workflow manager.
+    Queries the frames to be used, and checks the star selection strategy from the user config.
+    Then queries the stars with the additional criteria from the config (mag range, astrometric noise, photometric
+    noise ...) and inserts them in the database for easy access.
+    Also, runs the function that assigns stars to each frame depending on the respective footprint of the frame.
+    Returns:
+
+    """
     logger = logging.getLogger("lightcurver.querying_ref_stars_from_gaia")
     user_config = get_user_config()
     frames_info = get_pandas(columns=['id', 'pixel_scale'], conditions=['frames.eliminated != 1'])

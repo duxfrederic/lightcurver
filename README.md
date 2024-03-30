@@ -1,5 +1,7 @@
 <img src="docs/mkdocs/contents/lightcurver_logo.svg" alt="logo" style="width:30em;"/>
 
+[![python](https://img.shields.io/badge/Python-3.11-3776AB.svg?style=flat&logo=python&logoColor=white)](https://www.python.org)
+[![pypi](https://img.shields.io/pypi/v/lightcurver)](https://pypi.org/project/lightcurver/)
 ![tests](https://github.com/duxfrederic/lightcurver/actions/workflows/python-app.yml/badge.svg)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![Docs](https://img.shields.io/badge/Docs-Available-green)](https://duxfrederic.github.io/lightcurver/)
@@ -32,41 +34,18 @@ the model/deconvolution, and the Hubble Space Telescope image of the same region
 
 ## Getting Started
 
-0. **Requirements**: on top of the python libraries listed in `requirements.txt`, we need either
-    - a working installation of `astrometry.net`, which provides the `solve-field` function.
-    - alternatively, an `astrometry.net` API key.
-
-1. **Installation**: Clone the repository and install via `pip`:
+1. **Installation**: the short version, install via `pip`:
 
     ```
-    git clone git@github.com:duxfrederic/lightcurver.git
-    cd lightcurver
-    pip install -e lightcurver
+    pip install lightcurver
     ```
+[The slightly longer version](https://duxfrederic.github.io/lightcurver/installation/), in case you plan on using a GPU or the plate solving.
 
-2. **Usage**:
-There are several preparation steps to complete before you can start analyzing your wide field images.
-- Define a working directory, we will call it `workdir`. 
-- Create a subdirectory, `header_parser`, in `workdir`, and create a python file: `$workdir/header_parser/parse_header.py`.  This file should contain a function, `parse_header`, which should extract the exposure time, the gain, and the MJD or some other time information. See the [example header parser](docs/example_header_parser_functions/) directory for an example.
-- Copy the [example config file](docs/example_config_file/config.yaml), and update it with your information.
-Now you can run `lightcurver`:
-    ```python
-    # important before importing: tell the code where your config file is
-    import os
-    os.environ['LIGHTCURVER_CONFIG'] = "/path/to/your_config.yaml"
-
-    from lightcurver.pipeline.workflow_manager import WorkflowManager
-    wf_manager = WorkflowManager()
-    wf_manager.run()
-    ```
-`lightcurver` will run several steps of analysis on your wide-field images, like a pipeline.
+2. **Tutorial** follow the [tutorial](https://duxfrederic.github.io/lightcurver/tutorial/) of the documentation, which provides a dataset you can experiment with.
 
 ## The implemented processing steps
 ![flowdiagram](docs/flow_diagram/workflow_diagram.svg)
 
-## Roadmap 
-- Finish the logging system: we should be left with one unified logging interface.
-- refactor some of the tasks, ideally all functions that do database queries should go in `processes`.
 
 ## Contributing
 

@@ -37,6 +37,24 @@ def solve_one_image(image_path, sources_path, user_config):
 
 
 def post_plate_solve_steps(frame_path, user_config, frame_id):
+    """
+    This is called after an astrometric solution has been found for an image (it is also called if the image
+    is already plate solved, runs then on the existing solution)
+
+    it
+    - calculates a footprint for the image (represented by a polygon, inserted as json in the database)
+    - checks if the ROI is contained by the image (if no, eliminates it)
+    - has a bit of a check on the anisotropy of the pixels (bad solutions are not likely to have square pixels)
+    - updates database with rotation of the field, pixel scale ...
+
+    Args:
+        frame_path: path to the fits file with WCS
+        user_config: dictionary containing the user config
+        frame_id: integer, database, frames column id.
+
+    Returns:
+
+    """
     logger = logging.getLogger("lightcurver.plate_solving")
     logger.info(f'Post plate solve steps for frame {frame_id} (path {frame_path})')
     # our object might be out of the footprint of the image!

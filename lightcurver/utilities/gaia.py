@@ -3,6 +3,19 @@ from astroquery.gaia import Gaia
 
 def construct_where_conditions(release, astrometric_excess_noise_max=None, gmag_range=None,
                                max_phot_g_mean_flux_error=None):
+    """
+    utility function for the find functions below, just checks on the conditions and returns a list of potential
+    statements to us after 'WHERE'. Also takes care of formatting the table from which we will query.
+    Args:
+        release: string, 'dr2' or 'dr3'
+        astrometric_excess_noise_max: float, default None
+        gmag_range: tuple of floats (min, max), default None
+        max_phot_g_mean_flux_error: float, default None
+
+    Returns:
+        list of strings containing the conditions, and string containing the name of the table to query.
+
+    """
     assert release.lower() in ['dr2', 'dr3'], "Release must be either 'dr2' or 'dr3'"
     query_table = f"gaia{release.lower()}.gaia_source"
     where_conditions = []

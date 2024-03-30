@@ -13,6 +13,18 @@ from ..utilities.footprint import get_combined_footprint_hash
 
 
 def check_psf_exists(frame_id, psf_ref, combined_footprint_hash):
+    """
+    just checks if the PSF in question has already been modelled. (for same frame ID, of the specific combined footprint
+    and same name constructed from the stars used in the model).
+    Args:
+        frame_id: integer, database id of the frame
+        psf_ref: string, e.g. 'psf_abcd' for a psf model using stars labelled a,b,c,d.
+        combined_footprint_hash: integer, the hash of the combined footprint at hand.
+
+    Returns:
+        bool: whether such a psf row is in the PSFs table or not.
+
+    """
     query = "SELECT 1 FROM PSFs WHERE frame_id = ? AND psf_ref = ? and combined_footprint_hash = ?"
     params = (frame_id, psf_ref, combined_footprint_hash)
     result = execute_sqlite_query(query, params)
@@ -49,6 +61,17 @@ def mask_surrounding_stars(data, noisemap):
 
 
 def model_all_psfs():
+    """
+    This is called by the workflow manager.
+    It
+    - queries all the frames that should have a PSF model built for
+    - given the combined footprint at hand, selects the available stars for each frame
+    - does additional checks on the cutouts of the stars (such as removing stars with too many masked pixels)
+    - builds the psf with starred
+    - logs results into the hdf5 file and updates the database.
+    Returns:
+        Nothing
+    """
     logger = logging.getLogger('lightcurver.psf_modelling')
     user_config = get_user_config()
     stars_to_use = user_config['stars_to_use_psf']
