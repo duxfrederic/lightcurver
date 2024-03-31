@@ -1,6 +1,8 @@
 import numpy as np
 import pandas as pd
 from scipy.stats import sigmaclip
+from copy import deepcopy
+import warnings
 
 
 def group_observations(df, threshold=0.8):
@@ -58,3 +60,35 @@ def group_observations(df, threshold=0.8):
             grouped_results.append(this_epoch_group)
 
     return pd.DataFrame(grouped_results)
+
+
+def convert_flux_to_magnitude(df):
+    """
+    Converts fluxes and flux errors in a DataFrame to magnitudes and magnitude errors/scatters.
+
+    Parameters:
+    - df: pandas DataFrame containing fluxes and flux errors.
+          The DataFrame is expected to have columns named "{ps}_flux" and "{ps}_d_flux"
+          for each point source, and optionally a "zeropoint" column.
+
+    Returns:
+    - A new pandas DataFrame with magnitudes and magnitude errors/scatters.
+    """
+    df = deepcopy(df)
+    if 'zeropoint' not in df.columns:
+        warnings.warn('Zeropoint column missing. Using a zeropoint of 0.', RuntimeWarning)
+        df['zeropoint'] = 0
+    aux_columns = [c for c in df.columns if '_scatter' in c or '_d_flux' in c or '_count' in c]
+    flux_columns = [c for c in df.columns if '_flux' in c and c not in aux_columns]
+    flux_error_columns = [col for col in df.columns if '_d_flux' in col]
+    scatter_error_columns = [col for col in df.columns if '_scatter' in col]
+
+    for flux_col, error_col, scatter_col in zip(flux_columns, flux_error_columns, scatter_error_columns):
+        ps = flux_col.split('_')[0]
+
+        df[f'{ps}_mag'] = -2.5 * np.log10(df[flux_col]) + df['zeropoint']
+
+        df[f'{ps}_d_mag'] = 2.5 / np.log(10) * (df[error_col] / df[flux_col]).abs()
+        df[f'{ps}_mag_scatter'] = 2.5 / np.log(10) * (df[scatter_col] / df[flux_col]).abs()
+
+    return df
