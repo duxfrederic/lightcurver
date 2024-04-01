@@ -25,7 +25,8 @@ def group_observations(df, threshold=0.8):
     df_sorted = df.sort_values(by='mjd')
     start_idx = 0
 
-    point_sources = {col.split('_')[1] for col in df.columns if col.startswith('fluxes_')}
+    point_sources = {col.split('_')[0] for col in df.columns if col.endswith('_flux') and not col.endswith('_d_flux')}
+
 
     for i in range(1, len(df_sorted)):
         if df_sorted.iloc[i]['mjd'] - df_sorted.iloc[i - 1]['mjd'] > threshold or i == len(df_sorted) - 1:
@@ -34,11 +35,15 @@ def group_observations(df, threshold=0.8):
             avg_mjd = df_group['mjd'].mean()
             scatter_mjd = df_group['mjd'].std()
 
-            this_epoch_group = {"average_mjd": avg_mjd, "scatter_mjd": scatter_mjd}
+            this_epoch_group = {"mjd": avg_mjd, "scatter_mjd": scatter_mjd}
+            flux_columns = [f'{ps}_flux' for ps in point_sources] + [f'{ps}_d_flux' for ps in point_sources]
 
-            for ps in point_sources:
-                col = f'fluxes_{ps}'
-                d_col = f'd_fluxes_{ps}'
+            optional_averages = {col: df_group[col].mean() for col in df_group.columns if col not in (['mjd'] + flux_columns )}
+            this_epoch_group.update(optional_averages)
+
+            for ps in sorted(point_sources):
+                col = f'{ps}_flux'
+                d_col = f'{ps}_d_flux'
                 curve_data = df_group[col].to_numpy()
                 curve_variances = df_group[d_col].to_numpy() ** 2
 
@@ -51,10 +56,10 @@ def group_observations(df, threshold=0.8):
                 weighted_variance = np.average((filtered_data - weighted_mean) ** 2, weights=weights)
                 weighted_std_deviation = np.sqrt(weighted_variance)
 
-                this_epoch_group[f'flux_{ps}'] = weighted_mean
-                this_epoch_group[f'd_flux_{ps}'] = np.sqrt(1./np.sum(weights))
-                this_epoch_group[f'scatter_flux_{ps}'] = weighted_std_deviation
-                this_epoch_group[f'count_flux_{ps}'] = len(weights)
+                this_epoch_group[f'{ps}_flux'] = weighted_mean
+                this_epoch_group[f'{ps}_d_flux'] = np.sqrt(1./np.sum(weights))
+                this_epoch_group[f'{ps}_scatter_flux'] = weighted_std_deviation
+                this_epoch_group[f'{ps}_count_flux'] = len(weights)
 
             start_idx = end_idx
             grouped_results.append(this_epoch_group)
