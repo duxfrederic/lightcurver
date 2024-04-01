@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-def plot_joint_deconv_diagnostic(datas, noisemaps, residuals, loss_curve, chi2_per_frame,
+def plot_joint_deconv_diagnostic(datas, noisemaps, residuals, loss_curve, chi2_per_frame, starlet_background=None,
                                  save_path=None):
     """
     a diagnostic of how well a joint deconv went. We will plot a stack of the data, and a stack of
@@ -15,6 +15,7 @@ def plot_joint_deconv_diagnostic(datas, noisemaps, residuals, loss_curve, chi2_p
         residuals: same as above but for the residuals
         loss_curve: 1D array containing the evolution of the loss during optimization
         chi2_per_frame: 1D array, the chi2 value of the fit, one per slice.
+        starlet_background: 2D array, in case we included a regularized pixelated background in the model. default None.
         save_path: optional, string or path, where to save the plot.
 
     Returns: None
@@ -31,7 +32,9 @@ def plot_joint_deconv_diagnostic(datas, noisemaps, residuals, loss_curve, chi2_p
     rel_residuals_stack = np.mean(residuals / noisemaps, axis=0)
 
     sub_size = 3
-    fig, ax = plt.subplots(1, 5, figsize=(4.6 * sub_size, sub_size))
+    ncols = 5 if starlet_background is None else 6
+    fig_size_mult = 4.6 if starlet_background is None else 5.6
+    fig, ax = plt.subplots(1, ncols, figsize=(fig_size_mult * sub_size, sub_size))
     ax = ax.flatten()
     # data stack
     ax[0].imshow(data_stack, cmap=cmap, aspect='auto')
@@ -80,6 +83,16 @@ def plot_joint_deconv_diagnostic(datas, noisemaps, residuals, loss_curve, chi2_p
                transform=ax[4].transAxes,
                color='white', fontsize=text_size,
                weight='bold')
+    # and view of the background common to all epochs if we included one, just to make sure it isn't nonsense.
+    if starlet_background is not None:
+        ax[5].imshow(starlet_background)
+        ax[5].axis('off')
+        ax[5].text(0.5, 0.99, 'regularized background',
+                   horizontalalignment='center',
+                   verticalalignment='top',
+                   transform=ax[5].transAxes,
+                   color='white', fontsize=text_size,
+                   weight='bold')
     plt.tight_layout()
 
     if save_path is not None:

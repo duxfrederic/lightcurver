@@ -8,6 +8,7 @@ from starred.deconvolution.deconvolution import setup_model
 from starred.deconvolution.loss import Loss
 from starred.deconvolution.parameters import ParametersDeconv
 from starred.optim.optimization import Optimizer
+from starred.utils.noise_utils import propagate_noise
 
 from ..structure.database import execute_sqlite_query, select_stars, select_stars_for_a_frame, get_pandas
 from ..structure.user_config import get_user_config
@@ -17,7 +18,8 @@ from ..utilities.starred_utilities import get_flux_uncertainties
 from ..plotting.star_photometry_plotting import plot_joint_deconv_diagnostic
 
 
-def do_one_deconvolution(data, noisemap, psf, subsampling_factor, n_iter=2000):
+def do_one_deconvolution(data, noisemap, psf, subsampling_factor,
+                         n_iter=2000, uniform_background_per_epoch=False, starlet_global_background=True):
     """
     Joint 'deconvolution' of N stamps of a star (in data), with noisemap, and associated PSF at each slice.
     the subsampling factor is that used for building the psf model.
@@ -28,6 +30,9 @@ def do_one_deconvolution(data, noisemap, psf, subsampling_factor, n_iter=2000):
         psf: numpy array (N, nxx, nyy) PSF model, one per slice
         subsampling_factor: int, subsampling_factor of the psf model.
         n_iter: int, number of adabelief iterations to do. default 2000
+        uniform_background_per_epoch: bool, whether we allow a constant value added to each epoch (default False, all 0)
+        starlet_global_background: bool, whether we optimize a starlet background common to all epochs (defualt True)
+
 
     Returns: dictionary, containing the fluxes (ready to be used) as a 1D array, the final kwargs of the optimization,
              the chi2, and by how much we rescaled the data before optimizing. (the fluxes are already scaled back
@@ -72,21 +77,40 @@ def do_one_deconvolution(data, noisemap, psf, subsampling_factor, n_iter=2000):
         'kwargs_sersic': {},
     }
 
+    # ...and unfix if we want the background free.
+    if uniform_background_per_epoch:
+        del kwargs_fixed['kwargs_background']['mean']
+    if starlet_global_background:
+        del kwargs_fixed['kwargs_background']['h']
+
     parameters = ParametersDeconv(kwargs_init=kwargs_init,
                                   kwargs_fixed=kwargs_fixed,
                                   kwargs_up=kwargs_up,
                                   kwargs_down=kwargs_down)
 
-    loss = Loss(data=data, deconv_class=model, param_class=parameters, sigma_2=sigma_2,
-                regularization_terms='l1_starlet',
-                regularization_strength_scales=1,  # not needed since no free background...
-                regularization_strength_hf=1)      # but the starred interface wants us to provide them anyway
+    # ok, let us prepare the parameters passed to loss which differ depending on our choices
+    kwargs_loss = {
+        'data': data,
+        'deconv_class': model,
+        'param_class': parameters,
+        'sigma_2': sigma_2,
+        'regularization_terms': 'l1_starlet',
+        'regularization_strength_scales': 3,
+        'regularization_strength_hf': 3
+    }
+    if starlet_global_background:
+        # passing a ton of arguments, not really necessary, but at least we know what we are doing
+        # in case the API changes. (num_samples are not even used for 'SLIT')
+        kwargs_loss['W'] = propagate_noise(model, noisemap, kwargs_init, wavelet_type_list=['starlet'],
+                                           method='SLIT', num_samples=200, seed=1, likelihood_type='chi2',
+                                           verbose=False, upsampling_factor=subsampling_factor)[0]
+    loss = Loss(**kwargs_loss)
 
     optim = Optimizer(loss, parameters, method='adabelief')
 
     optimiser_optax_option = {
                 'max_iterations': n_iter, 'min_iterations': None,
-                'init_learning_rate': 2e-3, 'schedule_learning_rate': True,
+                'init_learning_rate': 1e-3, 'schedule_learning_rate': True,
                 'restart_from_init': True, 'stop_at_loss_increase': False,
                 'progress_bar': True, 'return_param_history': True
     }
@@ -105,6 +129,9 @@ def do_one_deconvolution(data, noisemap, psf, subsampling_factor, n_iter=2000):
                                                 data=data, noisemap=noisemap, model=model)
     fluxes_uncertainties = scale * flux_uncertainties
 
+    # and in case we included a background, return it:
+    deconv, h = model.getDeconvolved(kwargs_final, 0)
+
     result = {
         'scale': scale,
         'kwargs_final': kwargs_final,
@@ -113,7 +140,9 @@ def do_one_deconvolution(data, noisemap, psf, subsampling_factor, n_iter=2000):
         'chi2': float(chi2),
         'chi2_per_frame': np.array(chi2_per_frame),
         'loss_curve': optim.loss_history,
-        'residuals': scale * residuals
+        'residuals': scale * residuals,
+        'deconvolved_image': deconv,
+        'starlet_background': h
     }
     return result
 
@@ -265,19 +294,33 @@ def do_star_photometry():
             # ok now that everything is ready let's get out of the context manager, also to close the file.
 
         # ready to "deconvolve" using starred!
-        result = do_one_deconvolution(data=data, noisemap=noisemap, psf=psf,
-                                      subsampling_factor=user_config['subsampling_factor'],
-                                      n_iter=user_config['star_deconv_n_iter'])
+        result = do_one_deconvolution(
+            data=data, noisemap=noisemap, psf=psf,
+            subsampling_factor=user_config['subsampling_factor'],
+            n_iter=user_config['star_deconv_n_iter'],
+            uniform_background_per_epoch=user_config['star_photometry_uniform_background_per_epoch'],
+            starlet_global_background=user_config['star_photometry_starlet_global_background']
+        )
         # ok, plot the diagnostic
         plot_deconv_dir = user_config['plots_dir'] / 'deconvolutions' / str(combined_footprint_hash)
         plot_deconv_dir.mkdir(exist_ok=True, parents=True)
         loss_history = result['loss_curve']
 
         plot_file = plot_deconv_dir / f"{time_now}_joint_deconv_star_{star['name']}.jpg"
-        plot_joint_deconv_diagnostic(datas=data, noisemaps=noisemap,
-                                     residuals=result['residuals'],
-                                     chi2_per_frame=result['chi2_per_frame'], loss_curve=loss_history,
-                                     save_path=plot_file)
+
+        kwargs_plot = {
+            'datas': data,
+            'noisemaps': noisemap,
+            'residuals': result['residuals'],
+            'chi2_per_frame': result['chi2_per_frame'],
+            'loss_curve': loss_history,
+            'save_path': plot_file
+        }
+
+        if user_config['star_photometry_starlet_global_background']:
+            logger.info(f"This PSF photometry (star {star['name']}) included a pixelated background.")
+            kwargs_plot['starlet_background'] = np.array(result['starlet_background'])
+        plot_joint_deconv_diagnostic(**kwargs_plot)
 
         # now we can insert our results in our dedicated database table.
         loss_index = int(0.9 * np.array(loss_history).size)
