@@ -64,12 +64,14 @@ def group_observations(df, threshold=0.8):
 
 def convert_flux_to_magnitude(df):
     """
-    Converts fluxes and flux errors in a DataFrame to magnitudes and magnitude errors/scatters.
+    Converts fluxes and flux errors/scatters (see params for pattern) in a DataFrame to magnitudes,
+    assuming a 'zeropoint' column (zero if absent).
+    This is very tailored to the output of the `group_observations` function.
 
     Parameters:
     - df: pandas DataFrame containing fluxes and flux errors.
-          The DataFrame is expected to have columns named "{ps}_flux" and "{ps}_d_flux"
-          for each point source, and optionally a "zeropoint" column.
+          The DataFrame should contain columns named "{ps}_flux", "{ps}_d_flux", and "{ps}_flux_scatter"
+          for each source {ps}, and optionally a "zeropoint" column.
 
     Returns:
     - A new pandas DataFrame with magnitudes and magnitude errors/scatters.
@@ -80,15 +82,18 @@ def convert_flux_to_magnitude(df):
         df['zeropoint'] = 0
     aux_columns = [c for c in df.columns if '_scatter' in c or '_d_flux' in c or '_count' in c]
     flux_columns = [c for c in df.columns if '_flux' in c and c not in aux_columns]
-    flux_error_columns = [col for col in df.columns if '_d_flux' in col]
-    scatter_error_columns = [col for col in df.columns if '_scatter' in col]
+    scatter_error_columns = [col for col in df.columns if '_scatter' in col]  # can be absent
 
-    for flux_col, error_col, scatter_col in zip(flux_columns, flux_error_columns, scatter_error_columns):
+    for flux_col in flux_columns:
         ps = flux_col.split('_')[0]
+        error_col = f'{ps}_d_flux'
 
         df[f'{ps}_mag'] = -2.5 * np.log10(df[flux_col]) + df['zeropoint']
 
         df[f'{ps}_d_mag'] = 2.5 / np.log(10) * (df[error_col] / df[flux_col]).abs()
-        df[f'{ps}_mag_scatter'] = 2.5 / np.log(10) * (df[scatter_col] / df[flux_col]).abs()
+
+        scatter_col = f'{ps}_flux_scatter'
+        if scatter_col in scatter_error_columns:
+            df[f'{ps}_mag_scatter'] = 2.5 / np.log(10) * (df[scatter_col] / df[flux_col]).abs()
 
     return df
