@@ -85,9 +85,9 @@ def convert_flux_to_magnitude(df):
     if 'zeropoint' not in df.columns:
         warnings.warn('Zeropoint column missing. Using a zeropoint of 0.', RuntimeWarning)
         df['zeropoint'] = 0
-    aux_columns = [c for c in df.columns if '_scatter' in c or '_d_flux' in c or '_count' in c]
+    aux_columns = [c for c in df.columns if '_scatter_flux' in c or '_d_flux' in c or '_count' in c]
     flux_columns = [c for c in df.columns if '_flux' in c and c not in aux_columns]
-    scatter_error_columns = [col for col in df.columns if '_scatter' in col]  # can be absent
+    scatter_error_columns = [col for col in df.columns if '_scatter_flux' in col]  # can be absent
 
     for flux_col in flux_columns:
         ps = flux_col.split('_')[0]
@@ -97,8 +97,8 @@ def convert_flux_to_magnitude(df):
 
         df[f'{ps}_d_mag'] = 2.5 / np.log(10) * (df[error_col] / df[flux_col]).abs()
 
-        scatter_col = f'{ps}_flux_scatter'
+        scatter_col = f'{ps}_scatter_flux'
         if scatter_col in scatter_error_columns:
-            df[f'{ps}_mag_scatter'] = 2.5 / np.log(10) * (df[scatter_col] / df[flux_col]).abs()
+            df[f'{ps}_scatter_mag'] = 2.5 / np.log(10) * (df[scatter_col] / df[flux_col]).abs()
 
     return df
