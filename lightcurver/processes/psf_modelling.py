@@ -156,7 +156,8 @@ def model_all_psfs():
                            n_iter_analytic=user_config['psf_n_iter_analytic'],
                            n_iter_adabelief=user_config['psf_n_iter_pixels'],
                            masks=masks,
-                           guess_method_star_position='center')
+                           guess_method_star_position='center', 
+                           guess_fwhm_pixels=frame['seeing_pixels'])
         psf_plots_dir = user_config['plots_dir'] / 'PSFs' / str(combined_footprint_hash)
         psf_plots_dir.mkdir(exist_ok=True, parents=True)
         frame_name = Path(frame['image_relpath']).stem
