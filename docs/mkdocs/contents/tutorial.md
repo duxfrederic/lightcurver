@@ -323,38 +323,58 @@ You will find your calibrated cutouts in the `prepared_roi_cutouts`, relative to
 The last and most satisfying step!
 As a reminder, `STARRED` jointly deconvolves all your epochs at once. It does so by modelling the data
 as the sum of point sources (whose flux can vary from epoch to epoch) and a pixelated background regularized by wavelets.
-This part is highly non-linear, and you could follow one of the `STARRED` tutorials to deconvolve your cutouts
-yourself.
-Nevertheless, the pipeline does have a deconvolution step, so let us take a look at the available parameters.
-(Check the annotation buttons for comments)
+This part is highly non-linear, and you could follow one of the `STARRED` tutorials to deconvolve your cutouts yourself.
+Nevertheless, the pipeline does have a deconvolution step that works for simple cases, so we can also take a look at the available parameters.
 
 
-```yaml
-do_ROI_model: true (2)
-point_sources: (3)
-   A: [42.202991, 19.225400]
-   B: [42.202944, 19.225186]
-   C: [42.203227, 19.225010]
-   D: [42.203249, 19.225389]
+=== "Simple cases: pipeline script"
+    (Check the annotation buttons for comments)
 
-# so, null or a path for this one (path either relative to workdir, or absolute path starting with /):
-starting_background: null (4)
-# if null above, and false here, then you will not include a background (kinda ruining the point of the entire pipeline, but well...)
-further_optimize_background: true (5)
+    ```yaml
+    do_ROI_model: true (2)
+    point_sources: (3)
+       A: [42.202991, 19.225400]
+       B: [42.202944, 19.225186]
+       C: [42.203227, 19.225010]
+       D: [42.203249, 19.225389]
+    
+    # so, null or a path for this one (path either relative to workdir, or absolute path starting with /):
+    starting_background: null (4)
+    # if null above, and false here, then you will not include a background (kinda ruining the point of the entire pipeline, but well...)
+    further_optimize_background: true (5)
+    
+    # and these should mostly work as is, how many iterations of the optimizer do we do?
+    roi_deconv_translations_iters: 300 (6)
+    roi_deconv_all_iters: 2000
+    # keep in mind that this is going to be relatively slow on a CPU. (a few minutes at least). Count 30min for the whole pipeline.
+    ```
+    When you are satisfied with the settings, run the modelling step:
+    ```python
+      from lightcurver.processes.roi_modelling import do_deconvolution_of_roi
+      do_deconvolution_of_roi()
+    ```
+ 
+    And now, in the `prepared_roi_cutouts` directory you should have 
 
-# and these should mostly work as is, how many iterations of the optimizer do we do?
-roi_deconv_translations_iters: 300 (6)
-roi_deconv_all_iters: 2000
-# keep in mind that this is going to be relatively slow on a CPU. (a few minutes at least). Count 30min for the whole pipeline.
-```
+    - a `csv` file containing the fluxes and uncertainties of each point source at each epoch,
+    as well as additional information (MJD, seeing, reduced chi-squared, zeropoint so you can convert the fluxes to magnitudes, database ID
+    of the frame),
+    - a `json` file containing the astrometry of the point sources,
+    - two fits files containing the deconvolution product, once with point sources and once with the background only.
 
-And now, in the `prepared_roi_cutouts` directory you should have 
 
-- a `csv` file containing the fluxes and uncertainties of each point source at each epoch,
-as well as additional information (MJD, seeing, reduced chi-squared, zeropoint so you can convert the fluxes to magnitudes, database ID
-of the frame),
-- a `json` file containing the astrometry of the point sources,
-- two fits files containing the deconvolution product, once with point sources and once with the background only.
+=== "Manual modelling"
+
+    We will simple create a `jupyter` notebook in the `prepared_roi_cutouts` directory.
+
+=== "Combining the two"
+
+    The idea is to setup the right modelling steps once, for example in a `jupyter` notebook, then save
+    the steps and call them from the pipeline.
+    (Upcoming)
+
+
+
 
 </div>
 1. Think twice about this value: it has to contain enough stars, but not too many either. Aim for ~20 stars, look at one 
@@ -371,3 +391,6 @@ I would set `true` with manual supervision, if the aim is set more on the deconv
 6. These values should mostly work. Take a look at the loss curve in the plots after running the pipeline to make sure
 the optimization converged.
 7. Since our images are already plate solved, this will only execute the post plate solving steps.
+
+
+
