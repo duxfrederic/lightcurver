@@ -254,6 +254,9 @@ constraints_on_frame_columns_for_roi:
 #  sky_level_electron_per_second: [0., 1000.]
 #  ellipticity: [0.0, 0.5]
 
+# same for the normalization, sometimes frames that barely have flux can cause more damage than good.
+constraints_on_normalization_coeff:
+  coefficient: [0.1, 10.]
 
 # where do you want your prepared cutouts? (a single hdf5 file)
 # by default, null --> "$workdir/prepared_roi_cutouts"
