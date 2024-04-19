@@ -54,4 +54,10 @@ def get_user_config():
     if type(config['stars_to_use_norm']) is str:
         config['stars_to_use_norm'] = [c for c in config['stars_to_use_norm']]
 
+    # constraints on ROI cutout prep:
+    if 'constraints_on_frame_columns_for_roi' not in config:
+        config['constraints_on_frame_columns_for_roi'] = {}
+    if 'constraints_on_normalization_coeff' not in config:
+        config['constraints_on_normalization_coeff'] = {}
+
     return config
