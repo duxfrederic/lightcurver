@@ -149,7 +149,7 @@ def do_deconvolution_of_roi():
     if user_config['starting_background'] is not None:
         bck_path = Path(user_config['starting_background'])
         if not bck_path.is_absolute():
-            bck_path = user_config['work_dir'] / bck_path
+            bck_path = user_config['workdir'] / bck_path
         if bck_path.name.endswith('fits'):
             bck = fits.getdata(bck_path)
         else:
@@ -200,6 +200,7 @@ def do_deconvolution_of_roi():
                 regularization_strength_scales=1,
                 regularization_strength_hf=1.,
                 regularization_strength_positivity=100.,
+                regularization_strength_pts_source=0.01,
                 W=W)
 
     optim = Optimizer(loss, parameters, method='adabelief')

@@ -158,13 +158,16 @@ star_max_astrometric_excess_noise: 3.0
 # finally, we can also request a small photometric error,
 # as the photometric error will go up with variability. this way we can select
 # more stable stars.
-star_max_phot_g_mean_flux_error: 3.0
+min_phot_g_mean_flux_over_error: 100.0
 
 # Some absolute minimum number of stars criterion -- will crash if under this.
 min_number_stars: 6
 
 # and whether we query again ...can be necessary sometimes.
 gaia_query_redo: false
+
+# and finally, not important unless one of the two is down ...we can either query from the gaia archive
+gaia_provider: 'vizier'  # 'gaia' or 'vizier'. ('gaia' queries the gaia archive)
 
 # each good star is then named with a single letter, by ascending distance from the ROI.
 # if more than 26, names will include 'aa', 'ab', etc. --> then switch to a list instead of a string.
@@ -254,6 +257,9 @@ constraints_on_frame_columns_for_roi:
 #  sky_level_electron_per_second: [0., 1000.]
 #  ellipticity: [0.0, 0.5]
 
+# same for the normalization, sometimes frames that barely have flux can cause more damage than good.
+constraints_on_normalization_coeff:
+  coefficient: [0.1, 10.]
 
 # where do you want your prepared cutouts? (a single hdf5 file)
 # by default, null --> "$workdir/prepared_roi_cutouts"

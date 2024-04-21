@@ -76,10 +76,10 @@ def query_gaia_stars():
         raise RuntimeError("Not an agreed upon strategy for star selection:", user_config['star_selection_strategy'])
 
     kwargs_query = {
-        'release': 'dr3',
         'astrometric_excess_noise_max': user_config['star_max_astrometric_excess_noise'],
         'gmag_range': (user_config['star_min_gmag'], user_config['star_max_gmag']),
-        'max_phot_g_mean_flux_error': user_config['star_max_phot_g_mean_flux_error']
+        'min_phot_g_mean_flux_over_error': user_config['min_phot_g_mean_flux_over_error'],
+        'gaia_provider': user_config['gaia_provider']
     }
     logging.info(f'Querying stars with the following parameters: {kwargs_query}')
 

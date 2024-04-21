@@ -154,6 +154,11 @@ def calculate_coefficient():
     df = get_fluxes(combined_footprint_hash=combined_footprint_hash,
                     photometry_chi2_min=fluxes_fit_chi2_min,
                     photometry_chi2_max=fluxes_fit_chi2_max)
+    stars_to_use = user_config['stars_to_use_norm']
+
+    if type(stars_to_use) is list:
+        df = df[df['name'].isin(stars_to_use)]
+
     logger.info(f"Calculating a normalization coefficient using {len(df)} flux measurements.")
     # 1. normalize by median in each star -- get a 'norm' of each frame for each individual star.
     median_flux_per_star = df.groupby('star_gaia_id')['flux'].median().rename('median_flux')

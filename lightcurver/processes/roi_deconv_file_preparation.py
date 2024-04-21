@@ -8,7 +8,8 @@ from ..utilities.chi2_selector import get_chi2_bounds
 from ..structure.user_config import get_user_config
 
 
-def get_frames_for_roi(combined_footprint_hash, psf_fit_chi2_min, psf_fit_chi2_max, **constraints_on_frame_columns_dict):
+def get_frames_for_roi(combined_footprint_hash, psf_fit_chi2_min, psf_fit_chi2_max,
+                       constraints_on_frame_columns_dict, constraints_on_normalization_coeff_dict):
     """
     Retrieves frames and associated PSFs (built with stars of the given footprint)
     provided that those frames have a PSF with a chi2 between psf_fit_chi2_min and psf_fit_chi2_max.
@@ -19,6 +20,9 @@ def get_frames_for_roi(combined_footprint_hash, psf_fit_chi2_min, psf_fit_chi2_m
     :param psf_fit_chi2_max: The maximum acceptable chi2 value for the PSF fit.
     :param constraints_on_frame_columns_dict: a dictionary, with keys identical to that of the frames table and values
                                               intervals of allowed values. E.g., {'seeing_arcseconds': (0, 1.1), ...}
+    :param constraints_on_normalization_coeff_dict: a dictionary, with keys identical to the columns of the
+                                                    normalization_coefficients table columns, and values same as
+                                                    argument constraints_on_frame_columns_dict.
     :return: A pandas dataframe of frames and associated PSFs that meet the criteria.
     """
     query = """
@@ -37,6 +41,14 @@ def get_frames_for_roi(combined_footprint_hash, psf_fit_chi2_min, psf_fit_chi2_m
     for column, (min_val, max_val) in constraints_on_frame_columns_dict.items():
         query += f" AND f.{column} BETWEEN ? AND ?"
         params.extend([min_val, max_val])
+
+    # also append constraints on the normalization coefficient
+    for column, (min_val, max_val) in constraints_on_normalization_coeff_dict.items():
+        query += f" AND nc.{column} BETWEEN ? AND ?"
+        params.extend([min_val, max_val])
+
+    # and order by mjd ...
+    query += " ORDER BY f.mjd"
 
     return execute_sqlite_query(query, tuple(params), is_select=True, use_pandas=True)
 
@@ -111,10 +123,12 @@ def prepare_roi_deconv_file():
     psf_fit_chi2_min, psf_fit_chi2_max = get_chi2_bounds(psf_or_fluxes='psf')
 
     roi_constraints = user_config['constraints_on_frame_columns_for_roi']
+    norm_constraints = user_config['constraints_on_normalization_coeff']
     frames = get_frames_for_roi(combined_footprint_hash=combined_footprint_hash,
                                 psf_fit_chi2_min=psf_fit_chi2_min,
                                 psf_fit_chi2_max=psf_fit_chi2_max,
-                                **roi_constraints)
+                                constraints_on_frame_columns_dict=roi_constraints,
+                                constraints_on_normalization_coeff_dict=norm_constraints)
     # ok, this frames database has everything: the PSF to use, the norm coeff, etc.
     logger.info(f'Preparing calibrated cutouts of the ROI from {len(frames)} frames.')
     # so, just like when we did photometry of stars, build the data for deconvolution
