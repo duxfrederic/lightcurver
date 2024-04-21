@@ -90,7 +90,8 @@ def alternate_plate_solve():
     user_config = get_user_config()
     ra, dec = user_config['ROI_ra_deg'], user_config['ROI_dec_deg']
     center_radius = {'center': (ra, dec), 'radius':  user_config['alternate_plate_solve_gaia_radius']/3600.}
-    gaia_stars = find_gaia_stars('circle', center_radius=center_radius)
+    gaia_stars = find_gaia_stars('circle', center_radius=center_radius,
+                                 gaia_provider=user_config['gaia_provider'])
     gaia_stars['pmra'][np.isnan(gaia_stars['pmra'])] = 0
     gaia_stars['pmdec'][np.isnan(gaia_stars['pmdec'])] = 0
     gaia_coords = SkyCoord(ra=gaia_stars['ra'],
