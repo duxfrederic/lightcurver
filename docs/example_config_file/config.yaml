@@ -264,14 +264,17 @@ constraints_on_normalization_coeff:
 # where do you want your prepared cutouts? (a single hdf5 file)
 # by default, null --> "$workdir/prepared_roi_cutouts"
 prepared_roi_cutouts_path: null
-# now you can load up the cutouts and do a starred deconvolution.
-# TODO prepare example notebooks and scripts
-# in the meantime see starred repo for examples.
+
+# and finally, we'll add some approximate zeropoint information to each cutout.
+# provide the closest match to your actual filter among the following possibilities:
+#   'r_sdss', 'i_sdss', 'g_sdss',
+#   'V', 'R', or 'Ic' for Johnson-Cousins,
+#   'B_T' or 'V_T' for Tycho2
+photometric_band: r_sdss
 
 
 
-
-################################################ Modelling the ROI #######################################################
+################################################ Modelling the ROI #####################################################
 # this is where we model the calibrated cutouts we struggled to prepare until now.
 # for most cases, I would use the h5 file produced and reduce it in a jupyter notebook with starred.
 # (because this is the satisfying part)
@@ -288,7 +291,8 @@ point_sources: #  'label: [ra, dec]'
 
 # so, null or a path for this one (path either relative to workdir, or absolute path starting with /):
 starting_background: null
-# if null above, and false here, then you will not include a background (kinda ruining the point of the entire pipeline, but well...)
+# if null above, and false here, then you will not include a background
+# (kinda ruining the point of the entire pipeline, but well...)
 further_optimize_background: true
 
 # and these should mostly work as is, how many iterations of the optimizer do we do?
