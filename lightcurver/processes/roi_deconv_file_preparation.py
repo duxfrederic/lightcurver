@@ -25,10 +25,17 @@ def get_frames_for_roi(combined_footprint_hash, psf_fit_chi2_min, psf_fit_chi2_m
                                                     argument constraints_on_frame_columns_dict.
     :return: A pandas dataframe of frames and associated PSFs that meet the criteria.
     """
+    # so, select all frames with a normalization coefficient and psf.
+    # if multiple psfs, select the one with the smallest chi2.
+    # (done with the subquery)
     query = """
     SELECT f.*, ps.*, nc.*
     FROM frames f
-    JOIN PSFs ps ON f.id = ps.frame_id 
+    JOIN (
+        SELECT *,
+        ROW_NUMBER() OVER (PARTITION BY frame_id ORDER BY chi2 ASC) as rn
+        FROM PSFs
+    ) ps ON f.id = ps.frame_id AND ps.rn = 1
     JOIN normalization_coefficients nc ON f.id = nc.frame_id AND nc.combined_footprint_hash = ps.combined_footprint_hash
     WHERE nc.combined_footprint_hash = ?
     AND ps.chi2 BETWEEN ? AND ?
@@ -69,19 +76,19 @@ def fetch_and_adjust_zeropoints(combined_footprint_hash):
     """
 
     zeropoint_query = """
-    SELECT 
-        az.frame_id, 
-        az.zeropoint, 
-        az.zeropoint_uncertainty, 
+    SELECT
+        az.frame_id,
+        az.zeropoint,
+        az.zeropoint_uncertainty,
         nc.coefficient
-    FROM 
+    FROM
         approximate_zeropoints az
-    JOIN 
+    JOIN
         normalization_coefficients nc ON az.frame_id = nc.frame_id
     AND
         az.combined_footprint_hash = nc.combined_footprint_hash
-    WHERE 
-        az.combined_footprint_hash = ? 
+    WHERE
+        az.combined_footprint_hash = ?
     """
     zeropoints_data = execute_sqlite_query(zeropoint_query, (combined_footprint_hash,), is_select=True, use_pandas=True)
 
@@ -178,7 +185,7 @@ def prepare_roi_deconv_file():
 
     # where we save the ready to deconvolve cutouts:
     save_path = user_config['prepared_roi_cutouts_path']
-    
+
     if save_path is None:
         roi = user_config['roi_name']
         save_path = user_config['workdir'] / 'prepared_roi_cutouts' / f"cutouts_{combined_footprint_hash}_{roi}.h5"
