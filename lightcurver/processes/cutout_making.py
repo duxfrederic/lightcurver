@@ -26,7 +26,7 @@ def extract_stamp(data, header, exptime, sky_coord, cutout_size, background_rms_
     :param exptime: float, exposure time to convert from e-/s to e- and back.
     :param sky_coord: astropy SkyCoord: center of cutout
     :param cutout_size: int, pixels
-    :return: 2d cutout array, 2d cutout noisemap array, wcs string of cutout
+    :return: 2d cutout array, 2d cutout noisemap array, wcs string of cutout, center of cutout in original image (x,y)
     """
 
     wcs = WCS(header)
@@ -34,6 +34,8 @@ def extract_stamp(data, header, exptime, sky_coord, cutout_size, background_rms_
     # let's also carry the WCS of the cutouts
     wcs_header = data_cutout.wcs.to_header()
     wcs_header_string = wcs_header.tostring()
+    # in case we need to refer back to the original position of the cutout in the fits file:
+    original_center_position = data_cutout.center_original
 
     # now just take the numpy array
     data_cutout_electrons = exptime * data_cutout.data
@@ -42,7 +44,7 @@ def extract_stamp(data, header, exptime, sky_coord, cutout_size, background_rms_
     # remove zeros if there are any ...
     noisemap_electrons[noisemap_electrons < 1e-7] = 1e-7
 
-    return data_cutout.data, noisemap_electrons / exptime, wcs_header_string
+    return data_cutout.data, noisemap_electrons / exptime, wcs_header_string, np.array(original_center_position)
 
 
 def extract_all_stamps():
@@ -119,6 +121,10 @@ def extract_all_stamps():
                 wcs_set = frame_set.create_group('wcs')
             else:
                 wcs_set = frame_set['wcs']
+            if 'image_pixel_coordinates' not in frame_set.keys():
+                pixel_coord_set = frame_set.create_group('image_pixel_coordinates')
+            else:
+                pixel_coord_set = frame_set['image_pixel_coordinates']
             if 'cosmicsmask' not in frame_set.keys():
                 cosmic_mask = frame_set.create_group('cosmicsmask')
             else:
@@ -126,11 +132,11 @@ def extract_all_stamps():
 
             if user_config['redo_stamp_extraction'] or ('ROI' not in cosmic_mask.keys()):
                 # extract the ROI -- assuming no proper motion.
-                cutout, noisemap, wcs_str = extract_stamp(data=data, header=header,
-                                                          exptime=frame['exptime'],
-                                                          sky_coord=user_config['ROI_SkyCoord'],
-                                                          cutout_size=user_config['stamp_size_ROI'],
-                                                          background_rms_electron_per_second=global_rms)
+                cutout, noisemap, wcs_str, cutout_center = extract_stamp(data=data, header=header,
+                                                                         exptime=frame['exptime'],
+                                                                         sky_coord=user_config['ROI_SkyCoord'],
+                                                                         cutout_size=user_config['stamp_size_ROI'],
+                                                                         background_rms_electron_per_second=global_rms)
                 # clean the cosmics
                 if user_config['clean_cosmics']:
                     mask, cleaned = detect_cosmics(cutout, invar=noisemap**2)
@@ -149,6 +155,9 @@ def extract_all_stamps():
                 if 'ROI' in cosmic_mask:
                     del cosmic_mask['ROI']
                 cosmic_mask['ROI'] = mask
+                if 'ROI' in pixel_coord_set:
+                    del pixel_coord_set['ROI']
+                pixel_coord_set['ROI'] = cutout_center
 
             # set proper motion to 0 when not available
             if len(stars) > 0:  # if 0 stars, then frame will not be queried downstream.
@@ -173,11 +182,13 @@ def extract_all_stamps():
                     # then correct the proper motion
                     obs_epoch = Time(frame['mjd'], format='mjd')
                     corrected_coord = star_coord.apply_space_motion(new_obstime=obs_epoch)
-                    cutout, noisemap, wcs_str = extract_stamp(data=data, header=header,
-                                                              exptime=frame['exptime'],
-                                                              sky_coord=corrected_coord,
-                                                              cutout_size=user_config['stamp_size_stars'],
-                                                              background_rms_electron_per_second=global_rms)
+                    cutout, noisemap, wcs_str, cutout_center = extract_stamp(
+                        data=data, header=header,
+                        exptime=frame['exptime'],
+                        sky_coord=corrected_coord,
+                        cutout_size=user_config['stamp_size_stars'],
+                        background_rms_electron_per_second=global_rms
+                    )
 
                     # again, clean the cosmics.
                     if user_config['clean_cosmics']:
@@ -197,5 +208,8 @@ def extract_all_stamps():
                     if star_name in cosmic_mask:
                         del cosmic_mask[star_name]
                     cosmic_mask[star_name] = mask
+                    if star_name in pixel_coord_set:
+                        del pixel_coord_set['ROI']
+                    pixel_coord_set[star_name] = cutout_center
 
             logger.info(f"Frame with id {frame['id']}: completed making of cutouts.")

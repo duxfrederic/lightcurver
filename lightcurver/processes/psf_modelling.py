@@ -111,9 +111,11 @@ def model_all_psfs():
             data_group = f[f"{frame['image_relpath']}/data"]
             noisemap_group = f[f"{frame['image_relpath']}/noisemap"]
             mask_group = f[f"{frame['image_relpath']}/cosmicsmask"]
+            positions_group = f[f"{frame['image_relpath']}/image_pixel_coordinates"]
             datas = np.array([data_group[gaia_id][...] for gaia_id in list(stars['gaia_id'])])
             noisemaps = np.array([noisemap_group[name][...] for name in list(stars['gaia_id'])])
             cosmics_masks = np.array([mask_group[name][...] for name in list(stars['gaia_id'])]).astype(bool)
+            image_positions = np.array([positions_group[gaia_id][...] for gaia_id in list(stars['gaia_id'])])
             # invert because the cosmics are marked as True, but we want the healthy pixels to be marked as True:
             cosmics_masks = ~cosmics_masks
         # now we'll prepare automatic masks (masking other objects in the field)
@@ -152,12 +154,14 @@ def model_all_psfs():
 
         # we set the initial guess for the position of the star to the center (guess_method thing)
         # because we are confident that is where the star will be (plate solving + gaia proper motions)
-        result = build_psf(datas, noisemaps, subsampling_factor=user_config['subsampling_factor'],
+        result = build_psf(image=datas, noisemap=noisemaps, subsampling_factor=user_config['subsampling_factor'],
                            n_iter_analytic=user_config['psf_n_iter_analytic'],
                            n_iter_adabelief=user_config['psf_n_iter_pixels'],
                            masks=masks,
                            guess_method_star_position='center', 
-                           guess_fwhm_pixels=frame['seeing_pixels'])
+                           guess_fwhm_pixels=frame['seeing_pixels'],
+                           field_distortion=user_config['field_distortion'],
+                           stamp_coordinates=image_positions)
         psf_plots_dir = user_config['plots_dir'] / 'PSFs' / str(combined_footprint_hash)
         psf_plots_dir.mkdir(exist_ok=True, parents=True)
         frame_name = Path(frame['image_relpath']).stem
