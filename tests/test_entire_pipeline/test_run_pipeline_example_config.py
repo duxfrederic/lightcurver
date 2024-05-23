@@ -85,3 +85,21 @@ def test_run_workflow():
     source_extract_all_images()
 
 
+    # now, redo everything but with the possibility of distorting the PSF. Namely, we start from the psf state by
+    # removing all psfs from the database.
+    with sqlite3.connect(db_path) as conn:
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM PSFs")
+
+    # set distortion to true:
+    with open(temp_config_path, 'r') as file:
+        config = yaml.safe_load(file)
+    config['field_distortion'] = True
+    with open(temp_config_path, 'w') as file:
+        yaml.safe_dump(config, file)
+
+    # and run again without error!
+    wf_manager.run()
+
+
+
