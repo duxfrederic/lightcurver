@@ -109,6 +109,11 @@ def extract_all_stamps():
                 frame_set = reg_f.create_group(frame['image_relpath'])
             else:
                 frame_set = reg_f[frame['image_relpath']]
+            # keep track of the total shape of the image, so we can rescale image coordinates later,
+            # useful for distortion.
+            if 'frame_shape' not in frame_set:
+                frame_set['frame_shape'] = data.shape
+            # now the "object dependent" parts: needs groups as there will be one entry per extracted object.
             if 'data' not in frame_set.keys():
                 data_set = frame_set.create_group('data')
             else:
