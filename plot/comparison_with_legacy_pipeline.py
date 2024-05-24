@@ -4,13 +4,14 @@ import numpy as np
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 from astropy.visualization import simple_norm
 
-cosmouline_df = pd.read_csv('J0030_VST_AD_cosmouline.csv')
+cosmouline_df = pd.read_csv('J0030_VST_B_cosmouline.csv')
 
-lightcurver_df = pd.read_csv('J0030_VST_AD_lightcurver.csv')
+lightcurver_df = pd.read_csv('J0030_VST_B_lightcurver.csv')
 
 plt.figure(figsize=(6, 4))
 
-plt.errorbar(cosmouline_df['mhjd'], cosmouline_df['mag'], yerr=cosmouline_df['magerr'],
+# -0.68 offset for alignment, magnitude calibration was not done in cosmouline version
+plt.errorbar(cosmouline_df['mhjd'], cosmouline_df['mag']-0.68, yerr=cosmouline_df['magerr'],
              fmt='o', color='orange', alpha=0.5, zorder=1, label='Cosmouline (legacy pipeline)',
              ecolor='gray')
 
@@ -22,7 +23,7 @@ plt.xlabel('Modified Julian Days')
 plt.ylabel('Magnitude')
 plt.legend()
 plt.grid(True, which='both', linestyle='--', linewidth=0.5)
-plt.ylim((19.44, 19.251))
+plt.ylim((20.12, 19.83))
 
 def add_image_in_plot(image, ax, zoom, position, norm, x_offset, text):
     zoom_width = zoom_height = zoom * ax.get_figure().get_figwidth() / 100
@@ -47,7 +48,7 @@ deconv_image = np.load('PSJ0030-1525_deconv_image.npy')
 
 ax = plt.gca()
 
-initial_offset = 0.03
+initial_offset = 0.33
 offset_increment = 0.145
 zoom = 39
 
