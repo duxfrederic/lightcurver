@@ -96,7 +96,7 @@ the pipeline on the first few frames, but the subsequent addition of new frames 
 they are observed requires no further manual intervention.
 
 `lightcurver`, in comparison to `COSMOULINE`, achieves equal or better photometric precision in a much more automated fashion. 
-Figure 1 presents the light curve of the northernmost lensed image of the quasar J0030-1525 [@lemon2018], 
+Figure 1 presents the light curve of the southernmost lensed image of the quasar J0030-1525 [@lemon2018], 
 extracted from the same dataset (ESO program 0106.A-9005(A), PI Courbin) using both `COSMOULINE` and `lightcurver`. 
 The stable zeropoint across frames enables STARRED to reliably fit the constant components, in this case, two galaxies visible in the image. 
 This reliable deblending of the different flux components yields both light curves and a high-resolution image, 
