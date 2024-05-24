@@ -9,8 +9,8 @@ def rescale_image_coordinates(xy_coordinates_array, image_shape):
     Function only factored out to keep things consistent with distortion.
 
     Args:
-        xy_coordinates_array: an array of shape (N, 2), denoting a list of coordinate pairs (x,y) with origin at the bottom left
-                  of the image.
+        xy_coordinates_array: an array of shape (N, 2), denoting a list of coordinate pairs (x,y) with origin
+                              at the bottom left of the image.
         image_shape: shape of the image the coordinates refer to, obtained with `image.shape`
 
     Returns:
@@ -19,7 +19,7 @@ def rescale_image_coordinates(xy_coordinates_array, image_shape):
     image_dims = np.array(image_shape)[::-1]  # reversed because y~lines, x~columns
     center = (image_dims - 1) / 2.
 
-    rescaled_xy_coordinates = xy_coordinates_array - center[:, None]  # explicit casting for robustness
-    rescaled_xy_coordinates /= image_dims[:, None]
+    rescaled_xy_coordinates = xy_coordinates_array - center
+    rescaled_xy_coordinates /= image_dims
 
     return rescaled_xy_coordinates

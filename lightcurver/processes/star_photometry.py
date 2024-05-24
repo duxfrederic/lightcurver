@@ -288,8 +288,9 @@ def do_star_photometry():
                 # 1. collect the distortion keywords
                 if user_config['field_distortion']:
                     kwargs_distortion = {}
-                    for key, param in h5f[f"{frame['image_relpath']}/{psf_ref}/distortion"]:
-                        kwargs_distortion[key] = param
+                    distortion_group = h5f[f"{frame['image_relpath']}/{psf_ref}/distortion"]
+                    for key in distortion_group.keys():
+                        kwargs_distortion[key] = distortion_group[key][...]
                     # 2. collect the position of the star in the frame
                     position = h5f[f"{frame['image_relpath']}/image_pixel_coordinates/{star['gaia_id']}"][...]
                     frame_shape = h5f[f"{frame['image_relpath']}/frame_shape"]
