@@ -261,6 +261,7 @@ Then you'd have to re-run the PSF process with `redo_psf: true`.
 
 ## PSF photometry of the reference stars
 This step will, for each star
+
 - select which frames contain this star
 - eliminate frames with a poorly fit PSF (looking at the reduced chi-squared values, check the config file for how this is done)
 - jointly fit the PSF to the star in question in all the selected frames.
@@ -365,13 +366,16 @@ Nevertheless, the pipeline does have a deconvolution step that works for simple 
 
 === "Manual modelling"
 
-    We will simple create a `jupyter` notebook in the `prepared_roi_cutouts` directory.
+    For more control over the point sources and background, we can manually conduct a `STARRED` deconvolution on the cutouts we prepared.
+    Please see [this example](https://github.com/duxfrederic/lightcurver/blob/main/docs/example_starred_notebooks/example_deconvolve_roi.ipynb),
+    which is quite versatile.
+
 
 === "Combining the two"
 
     The idea is to setup the right modelling steps once, for example in a `jupyter` notebook, then save
-    the steps and call them from the pipeline.
-    (Upcoming)
+    the notebook as a python script.
+    Then, one can simply run the resulting script at the end of every execution of the pipeline.
 
 
 

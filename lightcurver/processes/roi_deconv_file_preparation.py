@@ -2,10 +2,13 @@ import h5py
 import numpy as np
 import logging
 
+from starred.psf.psf import apply_distortion
+
 from ..structure.database import get_pandas, execute_sqlite_query
 from ..utilities.footprint import get_combined_footprint_hash
 from ..utilities.chi2_selector import get_chi2_bounds
 from ..structure.user_config import get_user_config
+from ..utilities.image_coordinates import rescale_image_coordinates
 
 
 def get_frames_for_roi(combined_footprint_hash, psf_fit_chi2_min, psf_fit_chi2_max,
@@ -156,7 +159,21 @@ def prepare_roi_deconv_file():
             noisemap.append(h5f[f"{frame['image_relpath']}/noisemap/ROI"][...] / coefficient)
             mask.append(h5f[f"{frame['image_relpath']}/cosmicsmask/ROI"][...])
             psf_ref = frame['psf_ref']
-            psf.append(h5f[f"{frame['image_relpath']}/{psf_ref}/narrow_psf"][...])
+            narrow_psf = h5f[f"{frame['image_relpath']}/{psf_ref}/narrow_psf"][...]
+            # if distortion of the psf ...
+            if user_config['field_distortion']:
+                kwargs_distortion = {}
+                distortion_group = h5f[f"{frame['image_relpath']}/{psf_ref}/distortion"]
+                for key in distortion_group.keys():
+                    kwargs_distortion[key] = distortion_group[key][...]
+                # 2. collect the position of the star in the frame
+                position = h5f[f"{frame['image_relpath']}/image_pixel_coordinates/ROI"][...]
+                frame_shape = h5f[f"{frame['image_relpath']}/frame_shape"]
+                position = rescale_image_coordinates(xy_coordinates_array=position, image_shape=frame_shape)
+                # 3. get the psf at this position
+                narrow_psf = apply_distortion(narrow_psf=narrow_psf, kwargs_distortion=kwargs_distortion,
+                                              star_xy_coordinates=position)
+            psf.append(narrow_psf)
             subsampling_factors.append(h5f[f"{frame['image_relpath']}/{psf_ref}/subsampling_factor"][...])
             seeing.append(frame['seeing_arcseconds'])
             pixel_scale.append(frame['pixel_scale'])

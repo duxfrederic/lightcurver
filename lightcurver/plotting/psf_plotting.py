@@ -45,7 +45,7 @@ def plot_psf_diagnostic(datas, noisemaps, residuals, full_psf,
             ax[j, i].axis('off')
             ax[j, i].set_aspect('equal')
             if j == 0:
-                ax[j, i].imshow(datas[i], cmap=cmap)
+                ax[j, i].imshow(datas[i], cmap=cmap, origin='lower')
                 if names is not None:
                     ax[j, i].text(0.5, 0.02, names[i],
                                   horizontalalignment='center',
@@ -54,7 +54,7 @@ def plot_psf_diagnostic(datas, noisemaps, residuals, full_psf,
                                   color=text_color, fontsize=single_letter_text_size,
                                   weight='bold')
             elif j == 1:
-                ax[j, i].imshow(noisemaps[i], cmap=cmap)
+                ax[j, i].imshow(noisemaps[i], cmap=cmap, origin='lower')
                 ax[j, i].text(0.5, 0.02, 'noisemap, mask',
                               horizontalalignment='center',
                               verticalalignment='bottom',
@@ -66,7 +66,7 @@ def plot_psf_diagnostic(datas, noisemaps, residuals, full_psf,
                 if masks is not None:
                     mask = np.array(masks[i]).astype(bool)
                     res[np.where(~mask)] = np.nan
-                ax[j, i].imshow(res, cmap=cmap_residuals)
+                ax[j, i].imshow(res, cmap=cmap_residuals, origin='lower')
                 ax[j, i].text(0.5, 0.02, 'residuals',
                               horizontalalignment='center',
                               verticalalignment='bottom',
@@ -94,7 +94,7 @@ def plot_psf_diagnostic(datas, noisemaps, residuals, full_psf,
 
         ax[1, N].axis('off')
     # psf model plot
-    ax[2, N].imshow(full_psf, cmap=cmap, aspect='auto')
+    ax[2, N].imshow(full_psf, cmap=cmap, aspect='auto', origin='lower')
     ax[2, N].axis('off')
     ax[2, N].text(0.5, 0.01, 'Full PSF',
                   horizontalalignment='center',

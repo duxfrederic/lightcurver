@@ -10,6 +10,7 @@ from ..structure.database import select_stars_for_a_frame, execute_sqlite_query,
 from ..structure.user_config import get_user_config
 from ..plotting.psf_plotting import plot_psf_diagnostic
 from ..utilities.footprint import get_combined_footprint_hash
+from ..utilities.image_coordinates import rescale_image_coordinates
 
 
 def check_psf_exists(frame_id, psf_ref, combined_footprint_hash):
@@ -111,9 +112,15 @@ def model_all_psfs():
             data_group = f[f"{frame['image_relpath']}/data"]
             noisemap_group = f[f"{frame['image_relpath']}/noisemap"]
             mask_group = f[f"{frame['image_relpath']}/cosmicsmask"]
+            positions_group = f[f"{frame['image_relpath']}/image_pixel_coordinates"]
             datas = np.array([data_group[gaia_id][...] for gaia_id in list(stars['gaia_id'])])
             noisemaps = np.array([noisemap_group[name][...] for name in list(stars['gaia_id'])])
             cosmics_masks = np.array([mask_group[name][...] for name in list(stars['gaia_id'])]).astype(bool)
+            # stuff related to positions of the cutouts in the frame, for distortion
+            frame_shape = f[f"{frame['image_relpath']}/frame_shape"][...]
+            image_positions = np.array([positions_group[gaia_id][...] for gaia_id in list(stars['gaia_id'])])
+            rescaled_image_positions = rescale_image_coordinates(xy_coordinates_array=image_positions,
+                                                                 image_shape=frame_shape)
             # invert because the cosmics are marked as True, but we want the healthy pixels to be marked as True:
             cosmics_masks = ~cosmics_masks
         # now we'll prepare automatic masks (masking other objects in the field)
@@ -152,12 +159,14 @@ def model_all_psfs():
 
         # we set the initial guess for the position of the star to the center (guess_method thing)
         # because we are confident that is where the star will be (plate solving + gaia proper motions)
-        result = build_psf(datas, noisemaps, subsampling_factor=user_config['subsampling_factor'],
+        result = build_psf(image=datas, noisemap=noisemaps, subsampling_factor=user_config['subsampling_factor'],
                            n_iter_analytic=user_config['psf_n_iter_analytic'],
                            n_iter_adabelief=user_config['psf_n_iter_pixels'],
                            masks=masks,
                            guess_method_star_position='center', 
-                           guess_fwhm_pixels=frame['seeing_pixels'])
+                           guess_fwhm_pixels=frame['seeing_pixels'],
+                           field_distortion=user_config['field_distortion'],
+                           stamp_coordinates=rescaled_image_positions)
         psf_plots_dir = user_config['plots_dir'] / 'PSFs' / str(combined_footprint_hash)
         psf_plots_dir.mkdir(exist_ok=True, parents=True)
         frame_name = Path(frame['image_relpath']).stem
@@ -180,6 +189,10 @@ def model_all_psfs():
             psf_group['narrow_psf'] = np.array(result['narrow_psf'])
             psf_group['full_psf'] = np.array(result['full_psf'])
             psf_group['subsampling_factor'] = np.array([user_config['subsampling_factor']])
+            # for distortion, we have kwargs_distortion ~ {'dilation_x': array, 'dilation_y': array, ....}
+            distortion_group = psf_group.create_group('distortion')
+            for key, value in result['kwargs_psf']['kwargs_distortion'].items():
+                distortion_group[key] = value
 
         # and update the database.
         loss_index = int(0.9 * np.array(loss_history).size)
@@ -188,10 +201,11 @@ def model_all_psfs():
         relative_loss_differential = float(end_change / initial_change)
         insert_params = (frame['id'], float(result['chi2']), relative_loss_differential, psf_ref,
                          combined_footprint_hash, user_config['subsampling_factor'])
-        insert_query = "REPLACE INTO PSFs "
-        insert_query += "(frame_id, chi2, relative_loss_differential, psf_ref, combined_footprint_hash, subsampling_factor) "
-        insert_query += f"VALUES ({','.join(['?'] * len(insert_params))})"
-
+        insert_query = f"""
+        REPLACE INTO PSFs 
+        (frame_id, chi2, relative_loss_differential, psf_ref, combined_footprint_hash, subsampling_factor)
+        VALUES ({','.join(['?'] * len(insert_params))})
+        """
         execute_sqlite_query(insert_query, insert_params, is_select=False)
 
         time_taken = time() - t0
@@ -199,7 +213,7 @@ def model_all_psfs():
             f"PSF built for frame with id {frame['id']}. "
             f"The reference is {psf_ref}, that is {n_stars_before} stars available, and {n_stars_after} actually used "
             "after filtering of masked pixels. "
-            f"The reduced chi2 is {result['chi2']:.02f}, and it took us {time_taken:.01f} seconds to complete everything. "
+            f"The reduced chi2 is {result['chi2']:.02f}, and it took us {time_taken:.01f} seconds to do everything. "
         )
 
 

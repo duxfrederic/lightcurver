@@ -9,12 +9,14 @@ from starred.deconvolution.loss import Loss
 from starred.deconvolution.parameters import ParametersDeconv
 from starred.optim.optimization import Optimizer
 from starred.utils.noise_utils import propagate_noise
+from starred.psf.psf import apply_distortion
 
 from ..structure.database import execute_sqlite_query, select_stars, select_stars_for_a_frame, get_pandas
 from ..structure.user_config import get_user_config
 from ..utilities.chi2_selector import get_chi2_bounds
 from ..utilities.footprint import get_combined_footprint_hash
 from ..utilities.starred_utilities import get_flux_uncertainties
+from ..utilities.image_coordinates import rescale_image_coordinates
 from ..plotting.star_photometry_plotting import plot_joint_deconv_diagnostic
 
 
@@ -280,7 +282,24 @@ def do_star_photometry():
                                                      combined_footprint_hash=combined_footprint_hash)
                 psf_ref = 'psf_' + ''.join(sorted(stars_psf['name']))
                 mask.append(h5f[f"{frame['image_relpath']}/cosmicsmask/{star['gaia_id']}"][...])
-                psf.append(h5f[f"{frame['image_relpath']}/{psf_ref}/narrow_psf"][...])
+                narrow_psf = h5f[f"{frame['image_relpath']}/{psf_ref}/narrow_psf"][...]
+
+                # if we wish to account for distortion, then ...more steps!
+                # 1. collect the distortion keywords
+                if user_config['field_distortion']:
+                    kwargs_distortion = {}
+                    distortion_group = h5f[f"{frame['image_relpath']}/{psf_ref}/distortion"]
+                    for key in distortion_group.keys():
+                        kwargs_distortion[key] = distortion_group[key][...]
+                    # 2. collect the position of the star in the frame
+                    position = h5f[f"{frame['image_relpath']}/image_pixel_coordinates/{star['gaia_id']}"][...]
+                    frame_shape = h5f[f"{frame['image_relpath']}/frame_shape"]
+                    position = rescale_image_coordinates(xy_coordinates_array=position, image_shape=frame_shape)
+                    # 3. get the psf at this position
+                    narrow_psf = apply_distortion(narrow_psf=narrow_psf, kwargs_distortion=kwargs_distortion,
+                                                  star_xy_coordinates=position)
+                # psf ready, distortion or not
+                psf.append(narrow_psf)
             data, noisemap, mask, psf = np.array(data), np.array(noisemap), np.array(mask), np.array(psf)
             # just like for the PSF, we need to remove the NaNs ...
             isnan = np.where(np.isnan(data) * np.isnan(noisemap))

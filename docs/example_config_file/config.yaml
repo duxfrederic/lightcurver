@@ -197,6 +197,7 @@ clean_cosmics: true
 # STARRED will do it, here are some parameters you can tweak but that hopefully constitute reasonable defaults.
 redo_psf: false
 subsampling_factor: 2
+field_distortion: false
 psf_n_iter_analytic: 100 # number of iterations (l-bfgs-b) spent fitting a moffat
 psf_n_iter_pixels: 3000 # number of iterations (adabelief) spent fitting the pixel grid.
 
