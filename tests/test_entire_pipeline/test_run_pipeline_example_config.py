@@ -71,19 +71,40 @@ def test_run_workflow():
 
     os.environ['LIGHTCURVER_CONFIG'] = temp_config_path
 
+    # first run the importation
     wf_manager = WorkflowManager()
+    wf_manager.run(final_step='query_gaia_for_stars')
+
+    # for this test, we'll also pretend that one of the images does not have an astrometric solution.
+    # so, set the mode we want to test in the config:
+    with open(temp_config_path, 'r') as file:
+        config = yaml.safe_load(file)
+    # this is the mode we are testing:
+    config['plate_solving_strategy'] = 'adapt_wcs_from_reference'
+    # because we do not want to depend on astrometry.net for this test.
+    config['already_plate_solved'] = 0
+    with open(temp_config_path, 'w') as file:
+        yaml.safe_dump(config, file)
+    # ready to run:
+    wf_manager = WorkflowManager()
+    wf_manager.run(final_step='plate_solving')
+    # just before the plate solving, let us indicate that one of the images has an astrometric solution
+    db_path = os.path.join(temp_dir, 'database.sqlite3')
+    with sqlite3.connect(db_path) as conn:
+        cursor = conn.cursor()
+        cursor.execute("update frames set plate_solved = 0, attempted_plate_solve = 0 where id = 1")
+        cursor.execute("update frames set plate_solved = 1, attempted_plate_solve = 1 where id = 2")
+    # and now run the whole pipeline.
     wf_manager.run()
 
     # some basic database checks: did the psf fits go well? same for photometry.
     # do we indeed have 2 psfs?
     # do we have 2 normalization coefficients?
-    db_path = os.path.join(temp_dir, 'database.sqlite3')
     database_checks(db_path)
 
     # now, the user might want to redo the source extraction should the initial one not have
     # given the expected result. Test that it works without error here:
     source_extract_all_images()
-
 
     # now, redo everything but with the possibility of distorting the PSF. Namely, we start from the psf state by
     # removing all psfs from the database.
@@ -95,11 +116,14 @@ def test_run_workflow():
     with open(temp_config_path, 'r') as file:
         config = yaml.safe_load(file)
     config['field_distortion'] = True
+    # not redoing roi modelling to things speed up
+    config['do_ROI_model'] = False
     with open(temp_config_path, 'w') as file:
         yaml.safe_dump(config, file)
 
     # and run again without error!
     wf_manager.run()
+
 
 
 

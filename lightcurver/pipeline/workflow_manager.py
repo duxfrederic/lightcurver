@@ -14,7 +14,8 @@ from ..processes.star_photometry import do_star_photometry
 from ..processes.normalization_calculation import calculate_coefficient
 from ..processes.roi_deconv_file_preparation import prepare_roi_deconv_file
 from ..processes.roi_modelling import do_deconvolution_of_roi
-from ..processes.alternate_plate_solving_with_gaia import alternate_plate_solve
+from ..processes.alternate_plate_solving_with_gaia import alternate_plate_solve_gaia
+from ..processes.alternate_plate_solving_adapt_existing_wcs import alternate_plate_solve_adapt_ref
 from ..utilities.zeropoint_from_gaia import calculate_zeropoints
 from ..structure.exceptions import TaskWasNotSuccessful
 from .task_wrappers import (read_convert_skysub_character_catalog,
@@ -58,9 +59,12 @@ class WorkflowManager:
         if self.user_config['plate_solving_strategy'] == 'plate_solve':
             plate_solve_function = plate_solve_all_frames
         elif self.user_config['plate_solving_strategy'] == 'alternate_gaia_solve':
-            plate_solve_function = alternate_plate_solve
+            plate_solve_function = alternate_plate_solve_gaia
+        elif self.user_config['plate_solving_strategy'] == 'adapt_wcs_from_reference':
+            plate_solve_function = alternate_plate_solve_adapt_ref
         else:
-            raise AssertionError("The config's plate_solving_strategy should be plate_solve or alternate_gaia_solve")
+            raise AssertionError("The config's plate_solving_strategy should be plate_solve, "
+                                 "alternate_gaia_solve or adapt_wcs_from_reference.")
         self.task_attribution = {
             'initialize_database': initialize_database,
             'read_convert_skysub_character_catalog': read_convert_skysub_character_catalog,
@@ -124,10 +128,20 @@ class WorkflowManager:
 
         return sorted_tasks
 
-    def run(self):
+    def run(self, final_step=None):
+        """
+        Runs the whole pipeline
+        Args:
+            final_step: string, stops the pipeline when encountering this step. (for partial runs) Default None.
+
+        Returns:
+            None
+        """
         self.logger.info(f"Workflow manager: will run all tasks. Working directory:  {self.user_config['workdir']}")
         sorted_tasks = self.topological_sort()
         for task_name in sorted_tasks:
+            if final_step is not None and final_step == task_name:
+                return
             task = next((item for item in self.pipe_config['tasks'] if item['name'] == task_name), None)
             if task:
                 self.execute_task(task)

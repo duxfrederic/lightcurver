@@ -7,8 +7,38 @@ from widefield_plate_solver import plate_solve
 from widefield_plate_solver.exceptions import CouldNotSolveError
 import logging
 
-from ..structure.database import execute_sqlite_query
+from ..structure.database import execute_sqlite_query, get_pandas
 from ..utilities.footprint import database_insert_single_footprint, get_angle_wcs
+
+
+def select_frames_needing_plate_solving(user_config, logger):
+    """
+        Given the user cnofig and the state of the database, returns a pandas dataframe with the frames that need
+        plate solving.
+
+    Args:
+        user_config: dictionary, read with structure.user_config.get_user_config
+        logger: an instance of a logger, for printing messages
+
+    Returns:
+        pandas dataframe containing the frames to treat, columns id, image_relpath, sources_relpath
+    """
+    # so, we select our frames to plate solve depending on the user config.
+    if user_config['plate_solve_frames'] == 'all_not_eliminated':
+        conditions = ['eliminated = 0']
+        logger.info(f"Processing all the frames (even the ones already solved) that are not flagged as eliminated.")
+    elif user_config['plate_solve_frames'] == 'all_never_attempted':
+        conditions = ['eliminated = 0', 'attempted_plate_solve = 0']
+        logger.info(f"Processing all the frames that do not have a solve attempt yet.")
+    elif user_config['plate_solve_frames'] == 'all_not_plate_solved':
+        conditions = ['eliminated = 0', 'plate_solved = 0']
+        logger.info(f"Processing all the frames that are not plate solved, even those that were already attempted.")
+    else:
+        raise ValueError(f"Not an expected selection strategy for frames to solve: {user_config['plate_solve_frames']}")
+
+    frames_to_process = get_pandas(columns=['id', 'image_relpath', 'sources_relpath'],
+                                   conditions=conditions)
+    return frames_to_process
 
 
 def solve_one_image(image_path, sources_path, user_config):
@@ -61,6 +91,10 @@ def post_plate_solve_steps(frame_path, user_config, frame_id):
     final_header = fits.getheader(frame_path)
     # replace the wcs above with the WCS we saved in the header of the image (contains naxis)
     wcs = WCS(final_header)
+    # last check
+    if not wcs.is_celestial:
+        logger.info(f'Frame {frame_id} (path {frame_path}) does not contain a valid WCS.')
+        return  # do nothing more, this frame will not be selected later.
     in_footprint = user_config['ROI_SkyCoord'].contained_by(wcs)
     if in_footprint:
         execute_sqlite_query(query="UPDATE frames SET roi_in_footprint = ? WHERE id = ?",

@@ -16,7 +16,7 @@ import json
 from ..structure.user_config import get_user_config
 from ..structure.database import get_pandas, execute_sqlite_query
 from ..processes.frame_importation import process_new_frame
-from ..processes.plate_solving import solve_one_image_and_update_database
+from ..processes.plate_solving import solve_one_image_and_update_database, select_frames_needing_plate_solving
 from ..utilities.footprint import (calc_common_and_total_footprint, get_frames_hash,
                                    save_combined_footprints_to_db, identify_and_eliminate_bad_pointings)
 from ..plotting.footprint_plotting import plot_footprints
@@ -97,22 +97,7 @@ def plate_solve_all_frames():
 
     user_config = get_user_config()
     workdir = Path(user_config['workdir'])
-
-    # so, we select our frames to plate solve depending on the user config.
-    if user_config['plate_solve_frames'] == 'all_not_eliminated':
-        conditions = ['eliminated = 0']
-        logger.info(f"Processing all the frames (even the ones already solved) that are not flagged as eliminated.")
-    elif user_config['plate_solve_frames'] == 'all_never_attempted':
-        conditions = ['eliminated = 0', 'attempted_plate_solve = 0']
-        logger.info(f"Processing all the frames that do not have a solve attempt yet.")
-    elif user_config['plate_solve_frames'] == 'all_not_plate_solved':
-        conditions = ['eliminated = 0', 'plate_solved = 0']
-        logger.info(f"Processing all the frames that are not plate solved, even those that were already attempted.")
-    else:
-        raise ValueError(f"Not an expected selection strategy for frames to solve: {user_config['plate_solve_frames']}")
-
-    frames_to_process = get_pandas(columns=['id', 'image_relpath', 'sources_relpath'],
-                                   conditions=conditions)
+    frames_to_process = select_frames_needing_plate_solving(user_config=user_config, logger=logger)
     logger.info(f"Ready to plate solve {len(frames_to_process)} frames.")
 
     with Pool(processes=user_config['multiprocessing_cpu_count'],
