@@ -1,0 +1,58 @@
+# here we define the graph of dependencies for our pipeline.
+# each task has a description and dependencies.
+# the nature can either be:
+# - independent_each_frame -- can potentially be parallelized and executed in whatever order for all frames
+#                             that have not had this step executed yet.
+# - all_frames_at_once     -- process that has to act on all the frames at once, nothing to parallelize here.
+# - all_missing_frames_at_once -- process that has to be run on all the frames that are missing at once.
+tasks:
+  - name: initialize_database
+    description: "Just making sure the database exists, with the right schema."
+    nature: independent
+    dependencies: []
+  - name: read_convert_skysub_character_catalog
+    description: "reads the images from a directory, converts them to electrons, subtracts the sky, finds sources, measures noise, seeing, calculates ephemeris, records all to database"
+    dependencies: [initialize_database]
+    nature: independent_each_frame
+  - name: plate_solving
+    description: "Uses astrometry.net's solve-field and initial guess of plate scale provided in user config to add a reliable WCS to each image fast. If user config states that images are already plate solved, skip."
+    dependencies: [read_convert_skysub_character_catalog]
+    nature: independent_each_frame
+  - name: calculate_common_and_total_footprint
+    description: "Checks the footprint of the images, see how big the common footprint is. Detects bad pointings and flags them if it improves the size of the common footprint."
+    dependencies: [plate_solving]
+    nature: all_frames_at_once
+  - name: query_gaia_for_stars
+    description: "Given the footprints above, finds stars in gaia for PSF modelling and normalization. Will first try the common footprint, but if too small (less than 10 good stars), will expand to total footprint for more. The PSF and normalization will then be based off different stars on a frame-by-frame basis."
+    dependencies: [calculate_common_and_total_footprint]
+    nature: independent
+  - name: stamp_extraction
+    description: "Extracts stamps (size defined in user config) of all good stars and all epochs. Also extract stamps of regions of interest (ROIs) (user config, size defined per ROI). Saves the stamps to an HDF5 file, and creates automatic masks for the stars (masking any object that is not the central star.) Also cleans the cosmics using L.A.Cosmic"
+    dependencies: [query_gaia_for_stars]
+    nature: independent_each_frame
+  - name: psf_modeling
+    description: "Creates a PSF model for each frame"
+    dependencies: [stamp_extraction]
+    nature: independent_each_frame
+  - name: star_photometry
+    description: "Uses the PSF model to do PSF photometry of each star, using STARRED (joint deconvolution). The fluxes (per frame and per star) are saved somewhere to be defined" # TODO
+    dependencies: [psf_modeling]
+    nature: all_missing_frames_at_once
+  - name: calculate_normalization_coefficient
+    description: "Given the star photometry, calculates a representative relative flux for each image. This flux will be 1 for a reference image (must be user defined in config). Saves the normalization coefficient and its uncertainty in the database."
+    dependencies: [star_photometry]
+    nature: all_missing_frames_at_once
+  - name: calculate_absolute_zeropoints
+    description: "Uses Gaia magnitudes to estimate the zeropoint in our band."
+    dependencies: [star_photometry]
+    nature: all_frames_at_once
+  - name: prepare_calibrated_cutouts
+    description: "Prepares cutouts for each ROI and each frame, calibrated in flux by the normalization coefficient."
+    dependencies: [calculate_absolute_zeropoints, calculate_normalization_coefficient]
+    nature: all_frames_at_once
+  - name: model_calibrated_cutouts
+    description: "This is the final step, we jointly model all the pixels of the ROI using STARRED."
+    dependencies: [prepare_calibrated_cutouts, psf_modeling, stamp_extraction]
+    nature: all_frames_at_once
+
+
