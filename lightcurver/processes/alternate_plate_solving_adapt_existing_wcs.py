@@ -87,10 +87,10 @@ def alternate_plate_solve_adapt_ref():
                                                   target_sources=target_sources)
             success = True
         except aa.MaxIterError:
-            logger.log(f"Could not align frame {frame['id']}: max iterations reached before solution.")
+            logger.warning(f"Could not align frame {frame['id']}: max iterations reached before solution.")
             success = False
         except Exception as e:
-            logger.log(f"I frame {frame['id']}: error, {e}")
+            logger.warning(f"I frame {frame['id']}: error, {e}")
             success = False
 
         if success:
