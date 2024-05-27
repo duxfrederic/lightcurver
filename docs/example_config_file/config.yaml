@@ -93,6 +93,10 @@ already_plate_solved: 1
 # with gaia stars (`alternate_gaia_solve`)
 # I recommend the first one for most cases.
 plate_solving_strategy: 'plate_solve'
+# note that, if most of your images fail to solve, but you have at least one that succeeded, you can try another
+# strategy: 'adapt_wcs_from_reference'. Set it as plate_solving_strategy above, and fill in the database
+# frame id of the frame you would like to use as reference. (null: select 1 that is plate solved)
+reference_frame_for_wcs: null
 
 # this is a plate scale interval to speed up the plate solving, 
 # you can make it more precise if you know the plate scale of your instrument. 

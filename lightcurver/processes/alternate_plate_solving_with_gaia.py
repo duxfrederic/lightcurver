@@ -78,7 +78,7 @@ def refine_wcs_with_astroalign(sources, gaia_star_coords, wcs):
     return wcs_updated
 
 
-def alternate_plate_solve():
+def alternate_plate_solve_gaia():
     """
       This cross-matches Gaia detections with the sources in our images, given a good estimation of the pixel scale,
       rotation of the field and center of the field.
