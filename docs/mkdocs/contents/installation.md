@@ -14,8 +14,10 @@ Alternatively, you can get an API key from their [nova](https://nova.astrometry.
 
 
 So, I would suggest creating a python (3.9+, ideally 3.11) environment, say `lightcurver_env`,
-and install the present package in it:
+and install the present package in it.
 
+## The quick version
+Chances are this will work:
 ```bash
     conda activate lightcurver_env # if using conda
     source lightcurver_env/bin/activate # if using python's venv
@@ -29,6 +31,31 @@ Or for the `git` version (includes some minimal test data):
     conda activate lightcurver_env
     pip install .
 ```
+
+## If the quick version fails: list of dependencies
+Should the above fail, there might be a dependency problem requiring the manual handling of the different packages. 
+Here is the list of dependencies that need be installed:
+
+1. `numpy < 2.00`
+2. `scipy`
+3. `matplotlib`
+4. `pandas`
+5. `astropy`
+6. `astroquery`
+7. `h5py`
+8. `photutils`
+9. `astroalign`
+10. `shapely`
+11. `ephem (pyephem)`
+12. `pytest`
+13. `sep`
+14. `astroscrappy`
+15. `pyyaml`
+16. `starred-astro` - assume the latest version
+17. `widefield_plate_solver` - an astrometry.net wrapper
+
+
+## Testing your installation
 
 You can test your installation by following the [tutorial](tutorial.md).
 The automated tests also include the processing of a subset of the dataset given in the tutorial, you can thus run them
