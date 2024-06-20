@@ -109,7 +109,7 @@ and employing an automated flux calibration process, `lightcurver` achieves equa
 compared to existing pipelines, while requiring significantly less manual intervention.
 
 # Acknowledgments
-Special thanks to Martin Millon, Malte Tewes, Vivien Bonvin and Frederic Courbin for conceptualizing and creating and maintaining the `COSMOULINE` pipeline. 
+Special thanks to Martin Millon, Malte Tewes, Vivien Bonvin and Frederic Courbin for conceptualizing and creating the `COSMOULINE` pipeline. 
 While this code base it not a re-write of `COSMOULINE`, it certainly shares the philosophy of some of the processing steps.
 
 This project also made use of some of the backbone packages of scientific Python computing: NumPy [@harris2020array], SciPy [@2020SciPy-NMeth], Matplotlib [@Hunter:2007] and Pandas [@reback2020pandas; @mckinney-proc-scipy-2010]. 
