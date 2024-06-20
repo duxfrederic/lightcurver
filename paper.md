@@ -76,7 +76,7 @@ This permits sanity checks with `pyephem` [@pyephem], but also allows for an aut
 with `astroquery` [@astroquery] for suitable stars. 
 The pointings and field rotations need not be stable across epochs, as each frame is assigned its own calibration stars with the help of `shapely` [@shapely].
 
-Subsequently, cutouts of the ROI and stars are extracted using `astropy` [@astropy], masked, 
+Subsequently, cutouts of the ROI and stars are extracted using `astropy` [@astropy; @astropy:2018; @astropy:2022], masked, 
 cleaned from cosmic rays with the help of `astroscrappy` [@astroscrappy; @lacosmic], 
 and stored in an HDF5 file [@fortner1998hdf].
 The PSF model is then calculated for each frame with `STARRED` before being stored in the same HDF5 file. 
@@ -109,6 +109,9 @@ and employing an automated flux calibration process, `lightcurver` achieves equa
 compared to existing pipelines, while requiring significantly less manual intervention.
 
 # Acknowledgments
-Special thanks to Martin Millon, Malte Tewes, Vivien Bonvin and Frederic Courbin for conceptualizing and creating the `COSMOULINE` pipeline. 
+Special thanks to Martin Millon, Malte Tewes, Vivien Bonvin and Frederic Courbin for conceptualizing and creating and maintaining the `COSMOULINE` pipeline. 
 While this code base it not a re-write of `COSMOULINE`, it certainly shares the philosophy of some of the processing steps.
+
+This project also made use of some of the backbone packages of scientific Python computing: NumPy [@harris2020array], SciPy [@2020SciPy-NMeth], Matplotlib [@Hunter:2007] and Pandas [@reback2020pandas; @mckinney-proc-scipy-2010]. 
+For first guess photometry, this software also benefited from the functions of `photutils` [@photutils], and for finding transformations between frames, `astroalign` [@astroalign].
 
