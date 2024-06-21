@@ -76,7 +76,7 @@ This permits sanity checks with `pyephem` [@pyephem], but also allows for an aut
 with `astroquery` [@astroquery] for suitable stars. 
 The pointings and field rotations need not be stable across epochs, as each frame is assigned its own calibration stars with the help of `shapely` [@shapely].
 
-Subsequently, cutouts of the ROI and stars are extracted using `astropy` [@astropy; @astropy:2018; @astropy:2022], masked, 
+Subsequently, cutouts of the ROI and stars are extracted using `astropy` [@astropy_2013; @astropy_2018; @astropy_2022], masked, 
 cleaned from cosmic rays with the help of `astroscrappy` [@astroscrappy; @lacosmic], 
 and stored in an HDF5 file [@fortner1998hdf].
 The PSF model is then calculated for each frame with `STARRED` before being stored in the same HDF5 file. 
