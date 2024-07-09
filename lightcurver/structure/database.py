@@ -315,6 +315,7 @@ def initialize_database(db_path=None):
     # for absolute calibration (more reliable for some applications than gaia), we'll create a catalog photometry
     # table linked to our stars above.
     cursor.execute("""CREATE TABLE IF NOT EXISTS catalog_star_photometry (
+                      star_gaia_id TEXT,
                       catalog TEXT, -- e.g. 'panstarrs', or 'sdss', or 'legacysurveys', or 'vista' ...
                       band TEXT, -- e.g. 'r', 'g', 'i', ...
                       mag REAL,
@@ -329,7 +330,7 @@ def initialize_database(db_path=None):
     # and fill in this table once for each image, the idea being able to query which stars are available in which image.
     cursor.execute("""CREATE TABLE IF NOT EXISTS stars_in_frames (
                       frame_id INTEGER,
-                      star_gaia_id INTEGER,
+                      star_gaia_id TEXT,
                       combined_footprint_hash INTEGER,
                       FOREIGN KEY (frame_id) REFERENCES frames(id),
                       FOREIGN KEY (star_gaia_id) REFERENCES stars(gaia_id),
@@ -356,7 +357,7 @@ def initialize_database(db_path=None):
     # the table below will keep track of the fitted fluxes.
     cursor.execute("""CREATE TABLE IF NOT EXISTS star_flux_in_frame (
                       frame_id INTEGER,
-                      star_gaia_id INTEGER, 
+                      star_gaia_id TEXT, 
                       combined_footprint_hash INTEGER,
                       flux REAL, -- in e- / second
                       flux_uncertainty REAL,
