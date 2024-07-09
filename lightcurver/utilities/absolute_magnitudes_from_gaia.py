@@ -39,7 +39,7 @@ def save_gaia_catalog_photometry_to_database(gaia_id):
     FROM 
          stars
     WHERE 
-         s.gaia_id = ?
+         gaia_id = ?
     LIMIT 
          1
     """
@@ -48,14 +48,13 @@ def save_gaia_catalog_photometry_to_database(gaia_id):
     coef = coefficients[band]
     bp_rp = gaia_mags['phot_bp_mean_mag'] - gaia_mags['phot_rp_mean_mag']
     g = gaia_mags['phot_g_mean_mag']
-
     band_mag = (g - sum(coef[i] * bp_rp**i for i in range(len(coef))))[0]  # pandas series, extract 0th element
 
     # now we insert in the database:
     query = """
         INSERT OR REPLACE INTO catalog_star_photometry (catalog, band, mag, mag_err, original_catalog_id, 
                                                         star_gaia_id)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?)
     """
     params = ('gaia',
               band,

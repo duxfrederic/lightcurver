@@ -1,6 +1,8 @@
 from astroquery.mast import Catalogs
 from astropy.coordinates import SkyCoord
 from astropy import units as u
+import numpy as np
+import logging
 
 from ..structure.database import execute_sqlite_query
 from ..structure.user_config import get_user_config
@@ -20,6 +22,7 @@ def save_panstarrs_catalog_photometry_to_database(gaia_id):
        returns:
            Nothing
     """
+    logger = logging.getLogger('lightcurver.save_panstarrs_catalog_photometry_to_database')
     # 0. check whether we already have data for this star. If yes, we will not redo this step (slow).
     check_query = """
     SELECT COUNT(*) FROM catalog_star_photometry
@@ -38,12 +41,13 @@ def save_panstarrs_catalog_photometry_to_database(gaia_id):
     mag_dict = photometric_selection_heuristic(mast_results)
     if mag_dict is None:
         # no relevant information ended up being available.
+        logger.warning(f"No relevant Pan-STARRS photometry found for star {gaia_id}.")
         return
     # 3. if pan-starrs had the right information, we insert.
     query = """
         INSERT OR REPLACE INTO catalog_star_photometry (catalog, band, mag, mag_err, original_catalog_id, 
                                                         star_gaia_id)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?)
     """
     params = ('panstarrs',
               mag_dict['band'],
@@ -68,7 +72,6 @@ def search_panstarrs_around_coordinates(gaia_id):
     coord = SkyCoord(ra=ra * u.deg, dec=dec * u.deg, frame='icrs')
     radius = 1.5 * u.arcsecond  # this is generous given the magnitude of the proper motion of most stars.
     result = Catalogs.query_region(coord, radius=radius, catalog="PanSTARRS", data_release="dr2")
-
     return result
 
 
@@ -81,9 +84,19 @@ def photometric_selection_heuristic(mast_results):
     Return:
         dictionary with band, mag, mag_err, catalog ID, or None if mast_result does not contain the right information.
     """
+    # ok, now we start cleaning up. Pan-Starrs has a tendency to not properly cluster identical detections.
+    # Thus, we'll do some rough filtering on the nDetections column first.
+    if len(mast_results) > 1:
+        n_detections = mast_results['nDetections']
+        max_index = np.argmax(n_detections)
+        # in such cases, the second source will typically have been detecting one or two times max,
+        # against many times for the main (correct) one.
+        mast_results = mast_results[mast_results['nDetections'] > 0.2 * n_detections[max_index]]
+        # so, eliminate such wrongly unmerged detections.
 
-    # case 1: nothing found in pan-starrs, or multiple detections:
+    # next, either we have nothing found in pan-starrs, or still multiple detections:
     if len(mast_results) != 1:
+        # can't do anything with this danger of selecting the wrong source
         return None
 
     # now check that the detection has photometry in the right bands depending on what we need.
