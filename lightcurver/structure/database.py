@@ -383,7 +383,7 @@ def initialize_database(db_path=None):
 
     # zero points are derived from normalization coefficients and are for APPROXIMATE magnitude calibration
     # as we are going to derive them from gaia colors and band conversions.
-    cursor.execute("""CREATE TABLE IF NOT EXISTS approximate_zeropoints (
+    cursor.execute("""CREATE TABLE IF NOT EXISTS absolute_zeropoints (
                       frame_id INTEGER,
                       combined_footprint_hash INTEGER,
                       zeropoint REAL,

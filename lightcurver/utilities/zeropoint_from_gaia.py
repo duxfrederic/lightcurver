@@ -98,7 +98,7 @@ def calculate_zeropoints():
 
     # and update database
     insert_query = """
-    INSERT INTO approximate_zeropoints (frame_id, combined_footprint_hash, zeropoint, zeropoint_uncertainty)
+    INSERT INTO absolute_zeropoints (frame_id, combined_footprint_hash, zeropoint, zeropoint_uncertainty)
     VALUES (?, ?, ?, ?)
     ON CONFLICT(frame_id, combined_footprint_hash) DO UPDATE SET
     zeropoint = excluded.zeropoint,

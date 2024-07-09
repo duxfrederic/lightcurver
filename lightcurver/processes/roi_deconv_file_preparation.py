@@ -85,7 +85,7 @@ def fetch_and_adjust_zeropoints(combined_footprint_hash):
         az.zeropoint_uncertainty,
         nc.coefficient
     FROM
-        approximate_zeropoints az
+        absolute_zeropoints az
     JOIN
         normalization_coefficients nc ON az.frame_id = nc.frame_id
     AND

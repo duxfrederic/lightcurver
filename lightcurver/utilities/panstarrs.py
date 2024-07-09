@@ -56,7 +56,7 @@ def search_panstarrs_around_coordinates(gaia_id):
     ra, dec = execute_sqlite_query('SELECT ra, dec FROM stars WHERE gaia_id = ?', (gaia_id, ))[0]
 
     coord = SkyCoord(ra=ra * u.deg, dec=dec * u.deg, frame='icrs')
-    radius = 1.5 * u.arcsecond
+    radius = 1.5 * u.arcsecond  # this is generous given the magnitude of the proper motion of most stars.
     result = Catalogs.query_region(coord, radius=radius, catalog="PanSTARRS", data_release="dr2")
 
     return result
@@ -67,7 +67,7 @@ def photometric_selection_heuristic(mast_results):
     Just a helper function to eliminate bad photometry information: compares mast_result to actual band needed
     from user config
     Args:
-        mast_result: astropy table output of search_panstarrs_around_coordinates above
+        mast_results: astropy table output of search_panstarrs_around_coordinates above
     Return:
         dictionary with band, mag, mag_err, catalog ID, or None if mast_result does not contain the right information.
     """
