@@ -388,6 +388,7 @@ def initialize_database(db_path=None):
                       combined_footprint_hash INTEGER,
                       zeropoint REAL,
                       zeropoint_uncertainty REAL,
+                      source_catalog TEXT,
                       FOREIGN KEY (frame_id) REFERENCES frames(id),
                       FOREIGN KEY (combined_footprint_hash) REFERENCES combined_footprint(hash),
                       PRIMARY KEY (combined_footprint_hash, frame_id)
