@@ -85,7 +85,7 @@ def fetch_and_adjust_zeropoints(combined_footprint_hash):
         az.zeropoint_uncertainty,
         nc.coefficient
     FROM
-        approximate_zeropoints az
+        absolute_zeropoints az
     JOIN
         normalization_coefficients nc ON az.frame_id = nc.frame_id
     AND
@@ -93,7 +93,8 @@ def fetch_and_adjust_zeropoints(combined_footprint_hash):
     WHERE
         az.combined_footprint_hash = ?
     """
-    zeropoints_data = execute_sqlite_query(zeropoint_query, (combined_footprint_hash,), is_select=True, use_pandas=True)
+    zeropoints_data = execute_sqlite_query(zeropoint_query, (combined_footprint_hash,),
+                                           is_select=True, use_pandas=True)
 
     if zeropoints_data.empty:
         return None, None

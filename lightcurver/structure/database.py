@@ -35,7 +35,7 @@ def get_pandas(conditions=None, columns=None, table='frames'):
 def execute_sqlite_query(query, params=(), is_select=True, timeout=15.0, use_pandas=False):
     """
     The most used interface to our database, very simple:
-    connects to the database, and depending of whether we are selecting or inserting returns data or a row count.
+    connects to the database, and depending on whether we are selecting or inserting returns data or a row count.
     Also, if selecting, option to get back a pandas dataframe by reading the query with pandas.
     Args:
         query: string, the query
@@ -312,12 +312,25 @@ def initialize_database(db_path=None):
                       PRIMARY KEY (combined_footprint_hash, gaia_id)
                       )""")
 
+    # for absolute calibration (more reliable for some applications than gaia), we'll create a catalog photometry
+    # table linked to our stars above.
+    cursor.execute("""CREATE TABLE IF NOT EXISTS catalog_star_photometry (
+                      star_gaia_id TEXT,
+                      catalog TEXT, -- e.g. 'panstarrs', or 'sdss', or 'legacysurveys', or 'vista' ...
+                      band TEXT, -- e.g. 'r', 'g', 'i', ...
+                      mag REAL,
+                      mag_err REAL,
+                      original_catalog_id TEXT, 
+                      FOREIGN KEY (star_gaia_id) REFERENCES stars(gaia_id),
+                      PRIMARY KEY (catalog, star_gaia_id)
+                      )""")
+
     # linking stars and frame
     # again, a python process will check the footprint of each image
     # and fill in this table once for each image, the idea being able to query which stars are available in which image.
     cursor.execute("""CREATE TABLE IF NOT EXISTS stars_in_frames (
                       frame_id INTEGER,
-                      star_gaia_id INTEGER,
+                      star_gaia_id TEXT,
                       combined_footprint_hash INTEGER,
                       FOREIGN KEY (frame_id) REFERENCES frames(id),
                       FOREIGN KEY (star_gaia_id) REFERENCES stars(gaia_id),
@@ -344,7 +357,7 @@ def initialize_database(db_path=None):
     # the table below will keep track of the fitted fluxes.
     cursor.execute("""CREATE TABLE IF NOT EXISTS star_flux_in_frame (
                       frame_id INTEGER,
-                      star_gaia_id INTEGER, 
+                      star_gaia_id TEXT, 
                       combined_footprint_hash INTEGER,
                       flux REAL, -- in e- / second
                       flux_uncertainty REAL,
@@ -370,11 +383,12 @@ def initialize_database(db_path=None):
 
     # zero points are derived from normalization coefficients and are for APPROXIMATE magnitude calibration
     # as we are going to derive them from gaia colors and band conversions.
-    cursor.execute("""CREATE TABLE IF NOT EXISTS approximate_zeropoints (
+    cursor.execute("""CREATE TABLE IF NOT EXISTS absolute_zeropoints (
                       frame_id INTEGER,
                       combined_footprint_hash INTEGER,
                       zeropoint REAL,
                       zeropoint_uncertainty REAL,
+                      source_catalog TEXT,
                       FOREIGN KEY (frame_id) REFERENCES frames(id),
                       FOREIGN KEY (combined_footprint_hash) REFERENCES combined_footprint(hash),
                       PRIMARY KEY (combined_footprint_hash, frame_id)

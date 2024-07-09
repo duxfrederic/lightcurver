@@ -270,11 +270,18 @@ constraints_on_normalization_coeff:
 # by default, null --> "$workdir/prepared_roi_cutouts"
 prepared_roi_cutouts_path: null
 
-# and finally, we'll add some approximate zeropoint information to each cutout.
+# and finally, we'll add the absolute zeropoint information to each cutout.
+# First possibility (recommended) we will do it approximately (precise to 0.03 mag) with Gaia. In this case,
 # provide the closest match to your actual filter among the following possibilities:
 #   'r_sdss', 'i_sdss', 'g_sdss',
 #   'V', 'R', or 'Ic' for Johnson-Cousins,
 #   'B_T' or 'V_T' for Tycho2
+#
+# Alternatively, we can query other surveys for calibration on their system.
+# - Pan-STARRS, set the band to one of the following:
+#   'g_panstarrs', 'r_panstarrs', 'i_panstarrs', 'z_panstarrs', 'y_panstarrs', 'c_panstarrs', 'o_panstarrs'
+# where c_panstarrs and o_panstarrs are converted from the other bands using Eq. 2 of
+# https://iopscience.iop.org/article/10.1088/1538-3873/aabadf/pdf
 photometric_band: r_sdss
 
 

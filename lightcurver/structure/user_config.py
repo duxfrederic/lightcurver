@@ -54,6 +54,19 @@ def get_user_config():
     if type(config['stars_to_use_norm']) is str:
         config['stars_to_use_norm'] = [c for c in config['stars_to_use_norm']]
 
+    # photometric bands check
+    photom_band = config['photometric_band']
+    if photom_band in ['r_sdss', 'i_sdss', 'g_sdss', 'V', 'R', 'Ic', 'B_T', 'V_T']:
+        config['reference_absolute_photometric_survey'] = 'gaia'
+    elif 'panstarrs' in photom_band:
+        # check declination
+        if dec < -30.5:
+            raise RuntimeError('With this declination, '
+                               'it is unlikely you will find pan-starrs magnitudes for absolute calibration.')
+        config['reference_absolute_photometric_survey'] = 'panstarrs'
+    else:
+        raise RuntimeError(f'Config check: not a photometric band we implemented: {photom_band}')
+
     # constraints on ROI cutout prep:
     if 'constraints_on_frame_columns_for_roi' not in config:
         config['constraints_on_frame_columns_for_roi'] = {}

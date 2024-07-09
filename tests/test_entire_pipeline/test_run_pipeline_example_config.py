@@ -112,10 +112,11 @@ def test_run_workflow():
         cursor = conn.cursor()
         cursor.execute("DELETE FROM PSFs")
 
-    # set distortion to true:
+    # set distortion to true, and while we're at it a different calibration (using pan-starrs)
     with open(temp_config_path, 'r') as file:
         config = yaml.safe_load(file)
     config['field_distortion'] = True
+    config['photometric_band'] = 'r_panstarrs'
     # not redoing roi modelling to things speed up
     config['do_ROI_model'] = False
     with open(temp_config_path, 'w') as file:
