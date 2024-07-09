@@ -10,17 +10,27 @@ from ..structure.user_config import get_user_config
 """
 
 
-def save_catalog_photometry_to_database(gaia_id, combined_footprint_hash):
+def save_panstarrs_catalog_photometry_to_database(gaia_id):
     """
     Filtering the mast results: we want stars with precise PSF photometry and astrometry.
     Warning: no correction implemented for proper motion. Gaia ref epoch and pan-starrs dr2 roughly match in time frame
     though.
        Args:
            gaia_id:  gaia_id of the star as saved in the database
-           combined_footprint_hash: the other identifier of a star in the database
        returns:
            Nothing
     """
+    # 0. check whether we already have data for this star. If yes, we will not redo this step (slow).
+    check_query = """
+    SELECT COUNT(*) FROM catalog_star_photometry
+    WHERE star_gaia_id = ? AND catalog = 'panstarrs'
+    """
+    check_params = (gaia_id, )
+    result = execute_sqlite_query(check_query, check_params)
+    if result[0][0] > 0:
+        # magnitude already exists for this star, no need to proceed further
+        print(f"Data already exists for Gaia ID {gaia_id} and catalog panstarrs")
+        return
 
     # 1. query pan-starrs.
     mast_results = search_panstarrs_around_coordinates(gaia_id)
@@ -31,8 +41,8 @@ def save_catalog_photometry_to_database(gaia_id, combined_footprint_hash):
         return
     # 3. if pan-starrs had the right information, we insert.
     query = """
-        INSERT INTO catalog_star_photometry (catalog, band, mag, mag_err, original_catalog_id, 
-                                             star_gaia_id, combined_footprint_hash)
+        INSERT OR REPLACE INTO catalog_star_photometry (catalog, band, mag, mag_err, original_catalog_id, 
+                                                        star_gaia_id)
         VALUES (?, ?, ?, ?, ?, ?, ?)
     """
     params = ('panstarrs',
@@ -40,7 +50,7 @@ def save_catalog_photometry_to_database(gaia_id, combined_footprint_hash):
               mag_dict['mag'],
               mag_dict['mag_err'],
               mag_dict['catalog_ID'],
-              gaia_id, combined_footprint_hash)
+              gaia_id)
     # insert and done!
     execute_sqlite_query(query, params, is_select=False)
 

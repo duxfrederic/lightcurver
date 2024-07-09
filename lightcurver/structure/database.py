@@ -315,14 +315,13 @@ def initialize_database(db_path=None):
     # for absolute calibration (more reliable for some applications than gaia), we'll create a catalog photometry
     # table linked to our stars above.
     cursor.execute("""CREATE TABLE IF NOT EXISTS catalog_star_photometry (
-                      catalog TEXT, -- e.g. 'panstarrs', or 'sdss', or 'legacysurveys'
+                      catalog TEXT, -- e.g. 'panstarrs', or 'sdss', or 'legacysurveys', or 'vista' ...
                       band TEXT, -- e.g. 'r', 'g', 'i', ...
                       mag REAL,
                       mag_err REAL,
                       original_catalog_id TEXT, 
                       FOREIGN KEY (star_gaia_id) REFERENCES stars(gaia_id),
-                      FOREIGN KEY (combined_footprint_hash) REFERENCES combined_footprint(hash),
-                      PRIMARY KEY (combined_footprint_hash, star_gaia_id)
+                      PRIMARY KEY (catalog, star_gaia_id)
                       )""")
 
     # linking stars and frame

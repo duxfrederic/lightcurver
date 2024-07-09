@@ -1,28 +1,43 @@
 import numpy as np
+import pandas as pd
 import sqlite3
 
-from lightcurver.utilities.footprint import get_combined_footprint_hash
-from lightcurver.structure.user_config import get_user_config
-from lightcurver.structure.database import execute_sqlite_query, get_pandas
+from ..utilities.footprint import get_combined_footprint_hash
+from ..structure.user_config import get_user_config
+from ..structure.database import execute_sqlite_query, get_pandas
+from ..utilities.absolute_magnitudes_from_panstarrs import save_panstarrs_catalog_photometry_to_database
+from ..utilities.absolute_magnitudes_from_gaia import save_gaia_catalog_photometry_to_database
 
 
-def calculate_zeropoints(magnitudes_df, source_catalog):
+magnitude_calculation_functions = {
+    'gaia': save_gaia_catalog_photometry_to_database,
+    'panstarrs': save_panstarrs_catalog_photometry_to_database
+}
+
+
+def calculate_zeropoints():
     """
     Calculates zeropoints for each frame based on provided magnitudes and updates the database.
     Args:
-        magnitudes_df (pd.DataFrame): DataFrame containing star magnitudes with columns:
-                                      'gaia_id', 'catalog_mag', 'catalog_mag_err'
-                                      (mag_err not used at the moment but keep it for the future)
-        source_catalog: str, for reference, either 'gaia', 'panstarrs', ...
-
+        -
     Returns:
         None
     """
+
+    # boiler plate
+    user_config = get_user_config()
+    frames_ini = get_pandas(columns=['id'],
+                            conditions=['plate_solved = 1', 'eliminated = 0', 'roi_in_footprint = 1'])
+    combined_footprint_hash = get_combined_footprint_hash(user_config, frames_ini['id'].to_list())
+
+    # now, query the star fluxes and their reference magnitudes from our database.
+    # we also join on the table of calibrated magnitudes obtained from gaia or panstarrs, etc.
     flux_query = """
     SELECT 
          sff.frame_id, 
          sff.flux, 
-         s.gaia_id
+         s.gaia_id,
+         csp.mag as catalog_mag
     FROM 
          star_flux_in_frame sff
     JOIN 
@@ -31,34 +46,40 @@ def calculate_zeropoints(magnitudes_df, source_catalog):
          s.combined_footprint_hash = sff.combined_footprint_hash
     JOIN 
          frames f ON f.id = sff.frame_id
+    JOIN
+         catalog_star_photometry csp ON csp.star_gaia_id = s.gaia_id
     WHERE 
          sff.combined_footprint_hash = ?
+    AND 
+         csp.catalog = ?
     """
-    # boiler plate
-    user_config = get_user_config()
-    frames_ini = get_pandas(columns=['id'],
-                            conditions=['plate_solved = 1', 'eliminated = 0', 'roi_in_footprint = 1'])
-    combined_footprint_hash = get_combined_footprint_hash(user_config, frames_ini['id'].to_list())
 
     # get the fluxes measured on the frames
-    flux_data = execute_sqlite_query(flux_query, (combined_footprint_hash,), is_select=True, use_pandas=True)
+    flux_data = execute_sqlite_query(flux_query,
+                                     params=(combined_footprint_hash,
+                                             user_config['reference_absolute_photometric_survey']),
+                                     is_select=True, use_pandas=True)
     if flux_data.empty:
         return
 
-    # merge flux_data with magnitudes_df to get the magnitudes for each star
-    flux_data = flux_data.merge(magnitudes_df, on='gaia_id')
+    # now, trigger the calculation of the magnitudes of the reference stars in the band of the config
+    source_catalog = user_config['reference_absolute_photometric_survey']
+    absolute_mag_func = magnitude_calculation_functions[source_catalog]
+    for gaia_id in pd.unique(flux_data['gaia_id']):
+        absolute_mag_func(gaia_id)
 
+    # continue with zeropoint calculation now
     flux_data['instrumental_mag'] = -2.5 * np.log10(flux_data['flux'])
     flux_data['mag_difference'] = flux_data['catalog_mag'] - flux_data['instrumental_mag']
 
-    # Zeropoint and its uncertainty (std) for each frame
+    # zeropoint and uncertainty (std) for each frame
     zeropoint_results = flux_data.groupby('frame_id')['mag_difference'].agg(['median', 'std']).reset_index()
     zeropoint_results.rename(columns={'median': 'zeropoint', 'std': 'zeropoint_uncertainty'}, inplace=True)
 
     # Update database
     insert_query = """
-    INSERT INTO approximate_zeropoints (frame_id, combined_footprint_hash, zeropoint, 
-                                        zeropoint_uncertainty, source_catalog)
+    INSERT INTO absolute_zeropoints (frame_id, combined_footprint_hash, zeropoint, 
+                                     zeropoint_uncertainty, source_catalog)
     VALUES (?, ?, ?, ?, ?)
     ON CONFLICT(frame_id, combined_footprint_hash) DO UPDATE SET
     zeropoint = excluded.zeropoint,
