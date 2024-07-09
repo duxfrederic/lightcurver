@@ -16,7 +16,7 @@ from ..processes.roi_deconv_file_preparation import prepare_roi_deconv_file
 from ..processes.roi_modelling import do_deconvolution_of_roi
 from ..processes.alternate_plate_solving_with_gaia import alternate_plate_solve_gaia
 from ..processes.alternate_plate_solving_adapt_existing_wcs import alternate_plate_solve_adapt_ref
-from ..utilities.zeropoint_from_gaia import calculate_zeropoints
+from ..processes.absolute_zeropoint_calculation import calculate_zeropoints
 from ..structure.exceptions import TaskWasNotSuccessful
 from .task_wrappers import (read_convert_skysub_character_catalog,
                             plate_solve_all_frames, calc_common_and_total_footprint_and_save)

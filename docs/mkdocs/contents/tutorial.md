@@ -304,10 +304,12 @@ light curve of one of the reference stars.
 
 ## Calculating zero points and preparing calibrated cutouts of our region of interest
 All the heavy lifting having been done, we can use our Gaia stars to estimate the absolute zero point of our images.
-This is an approximate calibration only, but it is nice to have still. 
+You can also specify another survey to use for this calibration in the config file.
+
 ```python
 # assuming the path to the config file is still in the environment
-from lightcurver.utilities.zeropoint_from_gaia import calculate_zeropoints
+from lightcurver.processes.absolute_zeropoint_calculation import calculate_zeropoints
+
 calculate_zeropoints()
 ```
 Next, we use our normalization coefficient to prepare the calibrated cutouts.
