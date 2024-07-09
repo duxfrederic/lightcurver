@@ -35,7 +35,7 @@ def get_pandas(conditions=None, columns=None, table='frames'):
 def execute_sqlite_query(query, params=(), is_select=True, timeout=15.0, use_pandas=False):
     """
     The most used interface to our database, very simple:
-    connects to the database, and depending of whether we are selecting or inserting returns data or a row count.
+    connects to the database, and depending on whether we are selecting or inserting returns data or a row count.
     Also, if selecting, option to get back a pandas dataframe by reading the query with pandas.
     Args:
         query: string, the query
@@ -310,6 +310,19 @@ def initialize_database(db_path=None):
                       distance_to_roi_arcsec REAL,
                       FOREIGN KEY (combined_footprint_hash) REFERENCES combined_footprint(hash),
                       PRIMARY KEY (combined_footprint_hash, gaia_id)
+                      )""")
+
+    # for absolute calibration (more reliable for some applications than gaia), we'll create a catalog photometry
+    # table linked to our stars above.
+    cursor.execute("""CREATE TABLE IF NOT EXISTS catalog_star_photometry (
+                      catalog TEXT, -- e.g. 'panstarrs', or 'sdss', or 'legacysurveys'
+                      band TEXT, -- e.g. 'r', 'g', 'i', ...
+                      mag REAL,
+                      mag_err REAL,
+                      original_catalog_id TEXT, 
+                      FOREIGN KEY (star_gaia_id) REFERENCES stars(gaia_id),
+                      FOREIGN KEY (combined_footprint_hash) REFERENCES combined_footprint(hash),
+                      PRIMARY KEY (combined_footprint_hash, star_gaia_id)
                       )""")
 
     # linking stars and frame
