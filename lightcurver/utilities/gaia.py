@@ -3,6 +3,12 @@ from astroquery.utils.tap.core import TapPlus
 from astropy.table import Table, Column
 import numpy as np
 
+"""
+This file implements queries to Gaia, the aim being finding appropriate calibration stars in the field of interest.
+We save the astrometry and photometry of the queried stars, as the photometry can be used later for absolute
+zeropoint calibration.
+"""
+
 # 2024-04-19: Gaia archive down.
 # let us query our Gaia stars from Vizier instead.
 vizier_to_gaia_column_mapping = {
