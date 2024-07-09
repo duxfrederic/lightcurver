@@ -15,6 +15,28 @@ magnitude_calculation_functions = {
 }
 
 
+def get_gaia_ids_with_flux_in_frame(combined_footprint_hash):
+    """
+    Queries all gaia_id of stars for which there is at least one flux_in_frame
+    entry in the given combined_footprint_hash.
+
+    Args:
+        combined_footprint_hash: The combined footprint hash to filter the stars.
+
+    Returns:
+        List of gaia_id of stars.
+    """
+    query = """
+    SELECT DISTINCT star_gaia_id
+    FROM star_flux_in_frame
+    WHERE combined_footprint_hash = ?
+    """
+    params = (combined_footprint_hash,)
+    result = execute_sqlite_query(query, params)
+    gaia_ids = [row[0] for row in result]
+    return gaia_ids
+
+
 def calculate_zeropoints():
     """
     Calculates zeropoints for each frame based on provided magnitudes and updates the database.
@@ -29,6 +51,13 @@ def calculate_zeropoints():
     frames_ini = get_pandas(columns=['id'],
                             conditions=['plate_solved = 1', 'eliminated = 0', 'roi_in_footprint = 1'])
     combined_footprint_hash = get_combined_footprint_hash(user_config, frames_ini['id'].to_list())
+
+    # first, trigger the calculation of the magnitudes of the reference stars in the band of the config
+    gaia_ids = get_gaia_ids_with_flux_in_frame(combined_footprint_hash)
+    source_catalog = user_config['reference_absolute_photometric_survey']
+    absolute_mag_func = magnitude_calculation_functions[source_catalog]
+    for gaia_id in pd.unique(gaia_ids):
+        absolute_mag_func(gaia_id)
 
     # now, query the star fluxes and their reference magnitudes from our database.
     # we also join on the table of calibrated magnitudes obtained from gaia or panstarrs, etc.
@@ -61,12 +90,6 @@ def calculate_zeropoints():
                                      is_select=True, use_pandas=True)
     if flux_data.empty:
         return
-
-    # now, trigger the calculation of the magnitudes of the reference stars in the band of the config
-    source_catalog = user_config['reference_absolute_photometric_survey']
-    absolute_mag_func = magnitude_calculation_functions[source_catalog]
-    for gaia_id in pd.unique(flux_data['gaia_id']):
-        absolute_mag_func(gaia_id)
 
     # continue with zeropoint calculation now
     flux_data['instrumental_mag'] = -2.5 * np.log10(flux_data['flux'])
