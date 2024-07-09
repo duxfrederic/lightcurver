@@ -1,9 +1,9 @@
 import numpy as np
 import sqlite3
 
-from .footprint import get_combined_footprint_hash
-from ..structure.user_config import get_user_config
-from ..structure.database import execute_sqlite_query, get_pandas
+from lightcurver.utilities.footprint import get_combined_footprint_hash
+from lightcurver.structure.user_config import get_user_config
+from lightcurver.structure.database import execute_sqlite_query, get_pandas
 
 
 def calculate_zeropoints(magnitudes_df, source_catalog):
