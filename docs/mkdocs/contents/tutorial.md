@@ -20,7 +20,7 @@ wf_manager.run()
 ```
 
 Where the `config.yaml` file needs to be carefully tuned before execution. You should always start from 
-[this template](https://github.com/duxfrederic/lightcurver/blob/main/docs/example_config_file/config.yaml).
+[this template](https://github.com/duxfrederic/lightcurver/blob/main/lightcurver/pipeline/example_config_file/config.yaml).
 
 In this tutorial, we will first execute each step manually rather than executing the pipeline through the `WorkflowManager`.
 
@@ -82,7 +82,7 @@ the filter information.
 
 Now, we need to set up the configuration file of the pipeline. This file could be anywhere, but we will put it in
 our working directory. 
-I provide a [fairly generic configuration](https://github.com/duxfrederic/lightcurver/blob/main/docs/example_config_file/config.yaml) 
+I provide a [fairly generic configuration](https://github.com/duxfrederic/lightcurver/blob/main/lightcurver/pipeline/example_config_file/config.yaml) 
 which works well for this particular dataset.
 Paste the contents of the file in `$workdir/config.yaml`.
 You will most probably need to adapt these lines at least:
@@ -272,7 +272,7 @@ from lightcurver.processes.star_photometry import do_star_photometry
 do_star_photometry()
 ```
 The fitted fluxes will be saved in the `star_flux_in_frame` table, together with, again, a reduced chi-squared value that
-will be used downwstream to eliminate the badly fitted frames.
+will be used downstream to eliminate the badly fitted frames.
 Again it is a good idea to check the diagnostic plot, one of which is generated per star.
 ![starphotom_plot_example.jpg](starphotom_plot_example.jpg)
 
