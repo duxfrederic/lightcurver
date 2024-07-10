@@ -59,15 +59,13 @@ def parse_header(header):
     from astropy.time import Time
     exptime = header['exptime']
     gain = header['gain']
-    filter = header['filter']
     time = Time(parser.parse(header['obstart']))
-    return {'exptime': exptime, 'gain': gain, 'filter': filter, 'mjd': time.mjd}
+    return {'exptime': exptime, 'gain': gain, 'mjd': time.mjd}
 ```
 in this file: `$workdir/header_parser/parse_header.py`. 
 The pipeline expects to find this file at this exact location relative to your working directory.
 You will need to adapt the function to your own fits files, the point is: you must return a dictionary of the same
-structure as the one seen above. You can of course use placeholder values should you not care, for example, about
-the filter information. 
+structure as the one seen above. 
 
 !!! note "Units of your data"
 

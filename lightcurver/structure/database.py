@@ -226,7 +226,6 @@ def initialize_database(db_path=None):
     # table of frames
     column_definitions = [
         "id INTEGER PRIMARY KEY",
-        "filter TEXT",
         "mjd REAL",
         "exptime REAL",
         "gain REAL",
