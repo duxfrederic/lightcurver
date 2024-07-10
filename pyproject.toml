@@ -31,7 +31,8 @@ dependencies = [
     "h5py",
     "widefield_plate_solver", 
     "photutils",
-    "astroalign"
+    "astroalign",
+    "ruamel.yaml"
 ]
 
 [project.urls]
@@ -43,7 +44,12 @@ test = [
     "pytest"
 ]
 
+[project.scripts]
+lc_init = "lightcurver.scripts.initialize:initialize"
+lc_run = "lightcurver.scripts.run:run"
+
 [tool.setuptools]
 packages.find = {where = ["."], include = ["lightcurver*"]}
 package-dir = {"" = "."}
-package-data = {"lightcurver" = ["pipeline/*.yaml"]}
+package-data = {"lightcurver" = ["pipeline/*.yaml", "pipeline/example_config_file/config.yaml"]}
+

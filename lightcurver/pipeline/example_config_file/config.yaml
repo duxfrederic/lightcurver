@@ -29,7 +29,7 @@ trim_horizontal: 0
 
 # some processes can be parallelized, especially in the initial steps that do not use the GPU
 # limit how many subprocesses we can run in parallel here.
-multiprocessing_cpu_count: 1
+multiprocessing_cpu_count: 2
 
 
 
@@ -47,6 +47,7 @@ ROI_size: 3.5  # in arcseconds, will not consider reference stars this close
 
 # telescope information.
 # will be used to calculate airmass, distance to moon, this type of stuff.
+# remove this section entirely if you do not care about this, or if you are using multiple telescopes
 telescope:
   name: VST
   latitude: -24.6
@@ -59,7 +60,7 @@ telescope:
 
 ############################################# Background estimation ####################################################
 
-# We need to very precisley subtract the background. The quality of the photometry depends immensely on this.
+# We need to very precisely subtract the background. The quality of the photometry depends immensely on this.
 # `sep` does a great job at this, but we offer the possibility to first mask the sources before estimating the
 # background (in case of crowded fields)
 mask_sources_before_background: false

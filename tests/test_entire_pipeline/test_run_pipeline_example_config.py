@@ -39,7 +39,8 @@ def test_run_workflow():
     current_dir = os.path.dirname(os.path.abspath(__file__))
 
     # paths relative to the repository root
-    config_path = os.path.join(current_dir, '..', '..', 'docs', 'example_config_file', 'config.yaml')
+    config_path = os.path.join(current_dir, '..', '..', 'lightcurver', 'pipeline',
+                               'example_config_file', 'config.yaml')
     header_function_path = os.path.join(current_dir, '..', '..', 'docs',
                                         'example_header_parser_functions', 'parse_omegacam_header.py')
     data_path = os.path.join(current_dir, 'raw_frames')
