@@ -59,14 +59,14 @@ def process_new_frame(fits_file, user_config):
 
     header['BUNIT'] = "ELPERSEC"
 
-    # the user defines their header parser, returning a dictionary with {'mjd':, 'gain':, 'filter':, 'exptime':}
+    # the user defines their header parser, returning a dictionary with {'mjd':, 'gain':, 'exptime':}
     # it needs be located at $workdir/header_parser/parse_header.py
     # the function needs be called parse_header, and it has to accept a fits header as argument and return the
     # dictionary above.
     header_parser_function = load_custom_header_parser()
-    mjd_gain_filter_exptime_dict = header_parser_function(header)
+    mjd_gain_exptime_dict = header_parser_function(header)
     logger.info(f'  file {fits_file}: parsed header.')
-    cutout_data *= mjd_gain_filter_exptime_dict['gain'] / mjd_gain_filter_exptime_dict['exptime']
+    cutout_data *= mjd_gain_exptime_dict['gain'] / mjd_gain_exptime_dict['exptime']
     # unit: electron per second
 
     # ok, now subtract sky!
@@ -97,7 +97,7 @@ def process_new_frame(fits_file, user_config):
     do_plot = user_config.get('source_extraction_do_plots', False)
     plot_path = user_config['plots_dir'] / 'source_extraction' / f'{fits_file.stem}.jpg' if do_plot else None
     # we need a proper noise map here to correctly detect our sources.
-    exptime = mjd_gain_filter_exptime_dict['exptime']
+    exptime = mjd_gain_exptime_dict['exptime']
     cutout_data_sub_el = cutout_data_sub * exptime
     background_rms = bkg.globalrms * exptime
     variance_map = background_rms**2 + np.abs(cutout_data_sub_el)
@@ -120,7 +120,7 @@ def process_new_frame(fits_file, user_config):
     )
 
     if 'telescope' in user_config:
-        eph_dict = ephemeris(mjd=mjd_gain_filter_exptime_dict['mjd'],
+        eph_dict = ephemeris(mjd=mjd_gain_exptime_dict['mjd'],
                              ra_object=user_config['ROI_ra_deg'],
                              dec_object=user_config['ROI_dec_deg'],
                              telescope_longitude=user_config['telescope']['longitude'],
@@ -145,12 +145,11 @@ def process_new_frame(fits_file, user_config):
     add_frame_to_database(original_image_path=fits_file,
                           copied_image_relpath=copied_image_relpath,
                           sources_relpath=sources_file_relpath,
-                          mjd=mjd_gain_filter_exptime_dict['mjd'],
-                          gain=mjd_gain_filter_exptime_dict['gain'],
+                          mjd=mjd_gain_exptime_dict['mjd'],
+                          gain=mjd_gain_exptime_dict['gain'],
                           sky_level_electron_per_second=sky_level_electron_per_second,
                           background_rms_electron_per_second=background_rms_electron_per_second,
-                          filter=mjd_gain_filter_exptime_dict['filter'],
-                          exptime=mjd_gain_filter_exptime_dict['exptime'],
+                          exptime=mjd_gain_exptime_dict['exptime'],
                           seeing_pixels=seeing_pixels,
                           ellipticity=ellipticity,
                           ephemeris_dictionary=eph_dict,
@@ -162,7 +161,7 @@ def process_new_frame(fits_file, user_config):
 def add_frame_to_database(original_image_path, copied_image_relpath, sources_relpath,
                           mjd, gain,
                           sky_level_electron_per_second, background_rms_electron_per_second,
-                          filter, exptime,
+                          exptime,
                           seeing_pixels, ellipticity, user_config,
                           telescope_information=None,
                           ephemeris_dictionary=None):
@@ -176,7 +175,6 @@ def add_frame_to_database(original_image_path, copied_image_relpath, sources_rel
     :param gain: float
     :param sky_level_electron_per_second: float
     :param background_rms_electron_per_second: float
-    :param filter: string, filter of the observations
     :param exptime: float, exposure time
     :param seeing_pixels: Seeing value measured for this frame, float.
     :param ellipticity: ellipticity of the psf, calculated as 1 - b/a
@@ -187,12 +185,12 @@ def add_frame_to_database(original_image_path, copied_image_relpath, sources_rel
     """
     columns = ['original_image_path', 'image_relpath', 'sources_relpath',
                'seeing_pixels', 'mjd', 'gain', 'sky_level_electron_per_second', 'background_rms_electron_per_second',
-               'filter', 'exptime', 'ellipticity']
+               'exptime', 'ellipticity']
 
     values = [str(original_image_path), str(copied_image_relpath), str(sources_relpath),
               seeing_pixels, mjd, gain,
               sky_level_electron_per_second, background_rms_electron_per_second,
-              filter, exptime, ellipticity]
+              exptime, ellipticity]
 
     # if telescope information, add it to the columns and values
     if telescope_information is not None:
