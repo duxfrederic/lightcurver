@@ -44,6 +44,10 @@ test = [
     "pytest"
 ]
 
+[project.scripts]
+lc_init = "lightcurver.scripts.initialize:initialize"
+lc_run = "lightcurver.scripts.run:run"
+
 [tool.setuptools]
 packages.find = {where = ["."], include = ["lightcurver*"]}
 package-dir = {"" = "."}
