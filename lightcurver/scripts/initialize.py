@@ -50,7 +50,7 @@ def initialize():
     # header parser directory
     parser_dir = workdir / 'header_parser'
     parser_dir.mkdir(exist_ok=True)
-    parser_file = parser_dir / 'header_parser.py'
+    parser_file = parser_dir / 'parse_header.py'
     with open(parser_file, 'w') as ff:
         ff.write(f"""
 def parse_header(header):
