@@ -31,20 +31,20 @@ def save_gaia_catalog_photometry_to_database(gaia_id):
 
     # get the photometry from our database
     flux_query = """
-    SELECT 
-         gaia_id, 
-         gmag as phot_g_mean_mag, 
+    SELECT
+         gaia_id,
+         gmag as phot_g_mean_mag,
          bmag as phot_bp_mean_mag,
          rmag as phot_rp_mean_mag
-    FROM 
+    FROM
          stars
-    WHERE 
+    WHERE
          gaia_id = ?
-    LIMIT 
+    LIMIT
          1
     """
 
-    gaia_mags = execute_sqlite_query(flux_query, (gaia_id,), is_select=True, use_pandas=True)
+    gaia_mags = execute_sqlite_query(flux_query, (str(gaia_id),), is_select=True, use_pandas=True)
     coef = coefficients[band]
     bp_rp = gaia_mags['phot_bp_mean_mag'] - gaia_mags['phot_rp_mean_mag']
     g = gaia_mags['phot_g_mean_mag']
@@ -52,7 +52,7 @@ def save_gaia_catalog_photometry_to_database(gaia_id):
 
     # now we insert in the database:
     query = """
-        INSERT OR REPLACE INTO catalog_star_photometry (catalog, band, mag, mag_err, original_catalog_id, 
+        INSERT OR REPLACE INTO catalog_star_photometry (catalog, band, mag, mag_err, original_catalog_id,
                                                         star_gaia_id)
         VALUES (?, ?, ?, ?, ?, ?)
     """
@@ -60,7 +60,7 @@ def save_gaia_catalog_photometry_to_database(gaia_id):
               band,
               band_mag,
               0.03,  # nominal mag scatter for relations above
-              gaia_id,  # not important here
-              gaia_id)
+              str(gaia_id),  # not important here
+              str(gaia_id))
     # insert and hopefully done.
     execute_sqlite_query(query, params, is_select=False)

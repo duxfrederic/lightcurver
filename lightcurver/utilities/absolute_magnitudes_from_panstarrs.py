@@ -54,7 +54,7 @@ def save_panstarrs_catalog_photometry_to_database(gaia_id):
               mag_dict['mag'],
               mag_dict['mag_err'],
               mag_dict['catalog_ID'],
-              gaia_id)
+              str(gaia_id))
     # insert and done!
     execute_sqlite_query(query, params, is_select=False)
 

@@ -56,30 +56,30 @@ def calculate_zeropoints():
     gaia_ids = get_gaia_ids_with_flux_in_frame(combined_footprint_hash)
     source_catalog = user_config['reference_absolute_photometric_survey']
     absolute_mag_func = magnitude_calculation_functions[source_catalog]
-    for gaia_id in pd.unique(gaia_ids):
+    for gaia_id in pd.unique(np.array(gaia_ids)):
         absolute_mag_func(gaia_id)
 
     # now, query the star fluxes and their reference magnitudes from our database.
     # we also join on the table of calibrated magnitudes obtained from gaia or panstarrs, etc.
     flux_query = """
-    SELECT 
-         sff.frame_id, 
-         sff.flux, 
+    SELECT
+         sff.frame_id,
+         sff.flux,
          s.gaia_id,
          csp.mag as catalog_mag
-    FROM 
+    FROM
          star_flux_in_frame sff
-    JOIN 
+    JOIN
          stars s ON sff.star_gaia_id = s.gaia_id
     AND
          s.combined_footprint_hash = sff.combined_footprint_hash
-    JOIN 
+    JOIN
          frames f ON f.id = sff.frame_id
     JOIN
          catalog_star_photometry csp ON csp.star_gaia_id = s.gaia_id
-    WHERE 
+    WHERE
          sff.combined_footprint_hash = ?
-    AND 
+    AND
          csp.catalog = ?
     """
 
@@ -101,7 +101,7 @@ def calculate_zeropoints():
 
     # Update database
     insert_query = """
-    INSERT INTO absolute_zeropoints (frame_id, combined_footprint_hash, zeropoint, 
+    INSERT INTO absolute_zeropoints (frame_id, combined_footprint_hash, zeropoint,
                                      zeropoint_uncertainty, source_catalog)
     VALUES (?, ?, ?, ?, ?)
     ON CONFLICT(frame_id, combined_footprint_hash) DO UPDATE SET
