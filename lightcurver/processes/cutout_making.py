@@ -214,7 +214,7 @@ def extract_all_stamps():
                         del cosmic_mask[star_name]
                     cosmic_mask[star_name] = mask
                     if star_name in pixel_coord_set:
-                        del pixel_coord_set['ROI']
+                        del pixel_coord_set[star_name]
                     pixel_coord_set[star_name] = cutout_center
 
             logger.info(f"Frame with id {frame['id']}: completed making of cutouts.")
