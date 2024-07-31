@@ -27,6 +27,10 @@ raw_dirs:
 trim_vertical: 0
 trim_horizontal: 0
 
+# Index to access the header and the data in HDU format.
+hdu_index: 0
+hdu_index_header: 0
+
 # some processes can be parallelized, especially in the initial steps that do not use the GPU
 # limit how many subprocesses we can run in parallel here.
 multiprocessing_cpu_count: 2
