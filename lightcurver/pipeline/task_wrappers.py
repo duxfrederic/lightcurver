@@ -56,7 +56,7 @@ def read_convert_skysub_character_catalog():
 
     # find the new frames, we compare on file name!
     user_config = get_user_config()
-    available_frames = sum([list(raw_dir.glob('*')) for raw_dir in user_config['raw_dirs']], start=[])
+    available_frames = sum([list(raw_dir.glob('*.fits')) for raw_dir in user_config['raw_dirs']], start=[])
     df_available_frames = pd.DataFrame({'frame_name': [frame.name for frame in available_frames]})
     already_imported = get_pandas(columns=['original_image_path', 'id'])
     if not already_imported.empty:
