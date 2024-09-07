@@ -3,7 +3,7 @@ title: Installation
 weight_index: 9
 ---
 # Installation
-`LightCurver` requires several components to function:
+`lightcurver` requires several components to function:
 
 - `STARRED`: it will be installed automatically with `pip install lightcurver`, but if you want to use it with a GPU there
 might be some more setup to do. See the [installation instructions](https://cosmograil.gitlab.io/starred/installation.html#) of the package itself.

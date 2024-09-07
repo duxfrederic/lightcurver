@@ -3,7 +3,7 @@ title: Tutorial
 weight_index: 8
 ---
 
-# LightCurver tutorial
+# `lightcurver` tutorial
 <div class="annotate" markdown>
 ## Introduction
 By default, `lightcurver` is a pipeline which executes all its steps sequentially, 
@@ -15,12 +15,19 @@ import os
 os.environ['LIGHTCURVER_CONFIG'] = "/path/to/config.yaml"
 
 from lightcurver.pipeline.workflow_manager import WorkflowManager
-wf_manager = WorkflowManager()
-wf_manager.run()
+
+if __name__ == "__main__":
+    wf_manager = WorkflowManager()
+    wf_manager.run()
 ```
 
 Where the `config.yaml` file needs to be carefully tuned before execution. You should always start from 
 [this template](https://github.com/duxfrederic/lightcurver/blob/main/lightcurver/pipeline/example_config_file/config.yaml).
+
+You can also run the script above directly from the command line with the following command:
+```bash
+lc_run /path/to/config.yaml
+```
 
 In this tutorial, we will first execute each step manually rather than executing the pipeline through the `WorkflowManager`.
 
@@ -31,6 +38,14 @@ Your real life examples will most likely not be, so you should consider installi
 * Things will be excruciatingly slow if you do not have a GPU. I would consider using only 4-5 frames in this case.
 
 You can work in a jupyter notebook or just write python scripts with the commands we will execute below.
+
+!!! Warning "Running lightcurver function calls in python scripts"
+
+    On Mac and Windows computers, you would need to wrap all your function calls in a `if __name__ == "__main__"` block. 
+    These are omitted in the code snippets below for brevity, but you will get an error due to the way multiprocessing
+    spawns processes on Mac and Windows if you don't.
+
+
 ## Preparing the working directory and data
 
 The example dataset consists of a few frames from the monitoring of a lensed quasar with the VLT Survey Telescope (VST).
