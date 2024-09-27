@@ -192,6 +192,11 @@ stamp_size_stars: 24
 stamp_size_ROI: 32
 redo_stamp_extraction: false
 clean_cosmics: true
+# configuration for cosmic ray detection using astroscrappy/lacosmic
+cosmic_ray_detection:
+  sigclip: 4.5  # sigma clip threshold
+  sigfrac: 0.3  # fraction of sigma for neighboring pixels
+  objlim: 5.0   # min contrast between Laplacian and fine structure images - increase if center of bright stars masked
 
 
 
