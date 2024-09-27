@@ -172,7 +172,7 @@ min_number_stars: 6
 gaia_query_redo: false
 
 # and finally, not important unless one of the two is down ...we can either query from the gaia archive
-gaia_provider: 'vizier'  # 'gaia' or 'vizier'. ('gaia' queries the gaia archive)
+gaia_provider: 'gaia'  # 'gaia' or 'vizier'. ('gaia' queries the gaia archive)
 
 # each good star is then named with a single letter, by ascending distance from the ROI.
 # if more than 26, names will include 'aa', 'ab', etc. --> then switch to a list instead of a string.
