@@ -64,7 +64,7 @@ def extract_all_stamps():
 
 
     # for the cosmic masking
-    cosmic_masking_params = user_config['cosmics_masking_params']
+    cosmics_masking_params = user_config['cosmics_masking_params']
 
     # query frames
     frames_to_process = get_pandas(columns=['id', 'image_relpath', 'exptime', 'mjd',
