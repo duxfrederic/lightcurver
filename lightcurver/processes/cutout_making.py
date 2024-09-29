@@ -62,6 +62,10 @@ def extract_all_stamps():
     # where we'll save our stamps
     regions_file = user_config['regions_path']
 
+
+    # for the cosmic masking
+    cosmics_masking_params = user_config['cosmics_masking_params']
+
     # query frames
     frames_to_process = get_pandas(columns=['id', 'image_relpath', 'exptime', 'mjd',
                                             'background_rms_electron_per_second'],
@@ -144,7 +148,7 @@ def extract_all_stamps():
                                                                          background_rms_electron_per_second=global_rms)
                 # clean the cosmics
                 if user_config['clean_cosmics']:
-                    mask, cleaned = detect_cosmics(cutout, invar=noisemap**2)
+                    mask, cleaned = detect_cosmics(cutout, invar=noisemap**2, **cosmics_masking_params)
                 else:
                     mask = np.zeros_like(cutout, dtype=bool)
                     cleaned = cutout
@@ -197,7 +201,7 @@ def extract_all_stamps():
 
                     # again, clean the cosmics.
                     if user_config['clean_cosmics']:
-                        mask, cleaned = detect_cosmics(cutout, invar=noisemap**2)
+                        mask, cleaned = detect_cosmics(cutout, invar=noisemap**2, **cosmics_masking_params)
                     else:
                         mask = np.zeros_like(cutout, dtype=bool)
                         cleaned = cutout
