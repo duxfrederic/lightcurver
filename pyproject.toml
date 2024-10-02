@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lightcurver"
-version = "1.0.9"
+version = "1.1.0"
 authors = [{ name = "Frédéric Dux", email = "duxfrederic@gmail.com" }]
 description = "A thorough structure for precise photometry and deconvolution of time series of wide field images."
 readme = "README.md"
@@ -25,14 +25,13 @@ dependencies = [
     "astroscrappy",
     "starred-astro >= 1.4.2", 
     "pytest",
-    "matplotlib",
     "numpy",
     "scipy",
     "h5py",
-    "widefield_plate_solver", 
     "photutils",
     "astroalign",
-    "ruamel.yaml"
+    "ruamel.yaml",
+    "widefield_plate_solver"
 ]
 
 [project.urls]
