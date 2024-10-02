@@ -1,10 +1,11 @@
 <img src="docs/mkdocs/contents/lightcurver_logo.svg" alt="logo" style="width:28em;"/>
 
+[![JOSS](https://joss.theoj.org/papers/4c19a3f804d62aafd0ca23f297fce6c9/status.svg)](https://joss.theoj.org/papers/4c19a3f804d62aafd0ca23f297fce6c9)
+![tests](https://github.com/duxfrederic/lightcurver/actions/workflows/python-app.yml/badge.svg)
+[![Docs](https://img.shields.io/badge/Docs-Available-green)](https://duxfrederic.github.io/lightcurver/)
 [![python](https://img.shields.io/badge/Python-3.11-3776AB.svg?style=flat&logo=python&logoColor=white)](https://www.python.org)
 [![pypi](https://img.shields.io/pypi/v/lightcurver)](https://pypi.org/project/lightcurver/)
-![tests](https://github.com/duxfrederic/lightcurver/actions/workflows/python-app.yml/badge.svg)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
-[![Docs](https://img.shields.io/badge/Docs-Available-green)](https://duxfrederic.github.io/lightcurver/)
 
 
 # `lightcurver`
