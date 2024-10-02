@@ -100,7 +100,7 @@ Figure 1 presents the light curve of the southernmost lensed image of the quasar
 extracted from the same dataset (ESO program 0106.A-9005(A), PI Courbin) using both `COSMOULINE` and `lightcurver`. 
 The stable zeropoint across frames enables STARRED to reliably fit the constant components, in this case, two galaxies visible in the image. 
 This reliable deblending of the different flux components yields both light curves and a high resolution image, 
-te morphology of which is confirmed by comparison with Hubble Space Telescope imaging.
+the morphology of which is confirmed by comparison with Hubble Space Telescope imaging.
 
 In summary, `lightcurver` is a robust and efficient photometry pipeline designed for the semi-automatic extraction 
 of precise light curves from small, blended targets in cadenced astronomical imaging data. 
