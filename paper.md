@@ -112,6 +112,9 @@ compared to existing pipelines, while requiring significantly less manual interv
 Special thanks to Martin Millon, Malte Tewes, Vivien Bonvin and Frederic Courbin for conceptualizing and creating the `COSMOULINE` pipeline. 
 While this code base it not a re-write of `COSMOULINE`, it certainly shares the philosophy of some of the processing steps.
 
+I am grateful to the two reviewers, Tom Wilson and Benjamin Rose, for sharing their expertise in identifying and reporting potential issues in `lightcurver`,
+and to the JOSS team for making this publication platform possible.
+
 This project also made use of some of the backbone packages of scientific Python computing: NumPy [@harris2020array], SciPy [@2020SciPy-NMeth], Matplotlib [@Hunter:2007] and Pandas [@reback2020pandas; @mckinney-proc-scipy-2010]. 
 For first guess photometry, this software also benefited from the functions of `photutils` [@photutils], and for finding transformations between frames, `astroalign` [@astroalign].
 
