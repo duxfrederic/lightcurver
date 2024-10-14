@@ -35,7 +35,7 @@ This process yields light curves of the point sources and a high-resolution imag
 
 `lightcurver` aims to be maintainable, fast, and incremental in its processing approach. 
 As such, it can enable the daily photometric analysis of a large number of blended targets 
-in the context of the upcoming Rubin Observatory Legacy Survey of Space and Time (LSST: @LSST)  . 
+in the context of the upcoming Rubin Observatory Legacy Survey of Space and Time [LSST\; @LSST].
 
 # Statement of need
 
@@ -54,7 +54,7 @@ However, by its nature, it cannot include an infrastructure that makes it conven
 Particularly, `STARRED` modelling requires a very stable zeropoint across modelled epochs, 
 as it emulates the constant components of the ROI as one grid of pixels common to all epochs, 
 which it simultaneously optimizes together with the fluxes of the variables. 
-Achieving such precise relative zeropoint calibration (typically one milimag), especially in an automated manner, comes with challenges.
+Achieving such precise relative zeropoint calibration (typically one millimag), especially in an automated manner, comes with challenges.
 
 `lightcurver` addresses this challenge by automatically selecting calibration stars, modelling them, 
 and robustly combining their fluxes to calibrate the zeropoints, 
@@ -63,7 +63,7 @@ making it suitable as a daily running pipeline on a large number of ROIs.
 
 ![Light curve of a lensed image of a quasar (J0030-1525), extracted once with the existing code base (`COSMOULINE`), 
 requiring a week of investigor's time, and another time with `lightcurver`, requiring about an hour of investigator's time. 
-HST image: PI Tommaso Treu, proposal GO 15652.](plot/comparison_with_legacy_pipeline.jpg)
+HST image: PI Tommaso Treu, proposal GO 15652 [@treu2018].](plot/comparison_with_legacy_pipeline.jpg)
 
 
 # Functionality
@@ -72,7 +72,7 @@ HST image: PI Tommaso Treu, proposal GO 15652.](plot/comparison_with_legacy_pipe
 identifying the processing required at each step. 
 First, the frames undergo background subtraction, and the sources are extracted using `sep` [@Barbary2016; @sextractor]. 
 The positions of the extracted sources are then used to plate-solve each frame, primarily with `Astrometry.net` [@astrometry]. 
-This permits sanity checks with `pyephem` [@pyephem], but also allows for an automatic selection of calibration stars around the region of interest (ROI) by querying Gaia [@gaia] 
+This permits sanity checks with `pyephem` [@pyephem], but also allows for an automatic selection of calibration stars around the ROI by querying Gaia [@gaia] 
 with `astroquery` [@astroquery] for suitable stars. 
 The pointings and field rotations do not need to be stable across epochs, as each frame is assigned its own calibration stars with the help of `shapely` [@shapely].
 
