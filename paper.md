@@ -1,5 +1,5 @@
 ---
-title: '`lightcurver`: A Python Pipeline for Precise Photometry of Multiple-Epoch Wide-Field Images'
+title: 'lightcurver: A Python Pipeline for Precise Photometry of Multiple-Epoch Wide-Field Images'
 tags:
   - Python
   - astronomy
