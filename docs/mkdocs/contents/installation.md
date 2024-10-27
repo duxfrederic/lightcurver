@@ -53,6 +53,7 @@ Here is the list of dependencies that need be installed:
 15. `pyyaml` - for reading the config file
 16. `starred-astro` - assume the latest version, will install its own dependencies.
 17. `widefield_plate_solver` - an astrometry.net wrapper
+18. `ccdproc` - for identifying bad columns of pixels
 
 
 ## Testing your installation

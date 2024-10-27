@@ -31,7 +31,8 @@ dependencies = [
     "photutils",
     "astroalign",
     "ruamel.yaml",
-    "widefield_plate_solver"
+    "widefield_plate_solver",
+    "ccdproc"
 ]
 
 [project.urls]
