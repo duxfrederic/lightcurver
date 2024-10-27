@@ -49,11 +49,11 @@ def extract_stamp(data, header, exptime, sky_coord, cutout_size, background_rms_
     return data_cutout.data, noisemap_electrons / exptime, wcs_header_string, np.array(original_center_position)
 
 
-def mask_stamp(data, noisemap, do_mask_bad_columns, do_mask_cosmics, cosmics_masking_params):
+def mask_cutout(cutout_data, noisemap, do_mask_bad_columns, do_mask_cosmics, cosmics_masking_params):
     """
     Masks bad columns and cosmics.
 
-    :param data: numpy array, stamp
+    :param cutout_data: numpy array, stamp
     :param noisemap: numpy array, associated noisemap
     :param do_mask_bad_columns: bool, use ccdproc to find and mask bad columns (before masking cosmics)
     :param do_mask_cosmics: bool, should we mask cosmics with astroscrappy?
@@ -62,9 +62,9 @@ def mask_stamp(data, noisemap, do_mask_bad_columns, do_mask_cosmics, cosmics_mas
     Returns: numpy array: True for masked value, False for good pixels, same shape as data.
     """
     # 1. identifying bad columns and rows
-    row_column_mask = np.zeros_like(data, dtype=bool)
+    row_column_mask = np.zeros_like(cutout_data, dtype=bool)
     if do_mask_bad_columns:
-        ccd = CCDData(data, unit='electron/second')
+        ccd = CCDData(cutout_data, unit='electron/second')
         mask = ccdmask(ccd, findbadcolumns=True)
         # Now, ccdmask will mask anything above the noise. We have to be conservative here, let us only keep lines that
         # extend to both ends of the cutout, "bad columns or rows".
@@ -80,9 +80,9 @@ def mask_stamp(data, noisemap, do_mask_bad_columns, do_mask_cosmics, cosmics_mas
     # 2. masking cosmics
     if do_mask_cosmics:
         # not keeping the "cleaned" cutout.
-        cosmics_mask, _ = detect_cosmics(data, invar=noisemap**2, **cosmics_masking_params)
+        cosmics_mask, _ = detect_cosmics(cutout_data, invar=noisemap**2, **cosmics_masking_params)
     else:
-        cosmics_mask = np.zeros_like(data, dtype=bool)
+        cosmics_mask = np.zeros_like(cutout_data, dtype=bool)
 
     # 3. combine the two masks: True for masked value, False for good pixels.
     mask = cosmics_mask + row_column_mask
@@ -188,10 +188,10 @@ def extract_all_stamps():
                                                                          cutout_size=user_config['stamp_size_ROI'],
                                                                          background_rms_electron_per_second=global_rms)
                 # masking
-                mask = mask_stamp(data=data, noisemap=noisemap,
-                                  do_mask_bad_columns=user_config['mask_bad_rows_and_columns'],
-                                  do_mask_cosmics=user_config['clean_cosmics'],
-                                  cosmics_masking_params=cosmics_masking_params)
+                mask = mask_cutout(cutout_data=cutout, noisemap=noisemap,
+                                   do_mask_bad_columns=user_config['mask_bad_rows_and_columns'],
+                                   do_mask_cosmics=user_config['clean_cosmics'],
+                                   cosmics_masking_params=cosmics_masking_params)
 
                 if 'ROI' in data_set:
                     del data_set['ROI']
@@ -241,10 +241,10 @@ def extract_all_stamps():
                     )
 
                     # again, masking
-                    mask = mask_stamp(data=data, noisemap=noisemap,
-                                      do_mask_bad_columns=user_config['mask_bad_rows_and_columns'],
-                                      do_mask_cosmics=user_config['clean_cosmics'],
-                                      cosmics_masking_params=cosmics_masking_params)
+                    mask = mask_cutout(cutout_data=cutout, noisemap=noisemap,
+                                       do_mask_bad_columns=user_config['mask_bad_rows_and_columns'],
+                                       do_mask_cosmics=user_config['clean_cosmics'],
+                                       cosmics_masking_params=cosmics_masking_params)
 
                     if star_name in data_set:
                         del data_set[star_name]

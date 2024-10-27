@@ -29,7 +29,7 @@ trim_horizontal: 0
 
 # some processes can be parallelized, especially in the initial steps that do not use the GPU
 # limit how many subprocesses we can run in parallel here.
-multiprocessing_cpu_count: 2
+multiprocessing_cpu_count: 1
 
 
 
