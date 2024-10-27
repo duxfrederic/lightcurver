@@ -19,9 +19,9 @@ Essentially, `lightcurver` provides the infrastructure to
 
 This enables `STARRED` to model the pixels of the region of interest (ROI), 
 yielding of course high quality light curves of the point sources in the ROI, 
-but also recovering the subpixel information to provide a high signal-to-noise ratio deconvolution of the ROI itself.
+but also recovering the subpixel information to provide a high signal-to-noise ratio/resolution of the ROI itself.
 The example below shows a cutout of a wide-field image (one in a set of a hundred), 
-the model/deconvolution, and the Hubble Space Telescope image of the same region.
+the fitted high resolution model, and the Hubble Space Telescope image of the same region.
 
 ![example_deconvolution](docs/mkdocs/contents/example_deconv.png)
 
