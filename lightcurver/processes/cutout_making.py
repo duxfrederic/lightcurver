@@ -7,6 +7,7 @@ import astropy.units as u
 from astropy.coordinates import SkyCoord
 from astroscrappy import detect_cosmics
 from astropy.time import Time
+from ccdproc import CCDData, ccdmask
 import logging
 # to suppress the warnings telling us we don't have the parallax:
 # we do not care about the radial component of proper motion, we just want
@@ -26,6 +27,7 @@ def extract_stamp(data, header, exptime, sky_coord, cutout_size, background_rms_
     :param exptime: float, exposure time to convert from e-/s to e- and back.
     :param sky_coord: astropy SkyCoord: center of cutout
     :param cutout_size: int, pixels
+    :param background_rms_electron_per_second: float, found during global background model with sep: used for noisemap.
     :return: 2d cutout array, 2d cutout noisemap array, wcs string of cutout, center of cutout in original image (x,y)
     """
 
@@ -47,6 +49,46 @@ def extract_stamp(data, header, exptime, sky_coord, cutout_size, background_rms_
     return data_cutout.data, noisemap_electrons / exptime, wcs_header_string, np.array(original_center_position)
 
 
+def mask_cutout(cutout_data, noisemap, do_mask_bad_columns, do_mask_cosmics, cosmics_masking_params):
+    """
+    Masks bad columns and cosmics.
+
+    :param cutout_data: numpy array, stamp
+    :param noisemap: numpy array, associated noisemap
+    :param do_mask_bad_columns: bool, use ccdproc to find and mask bad columns (before masking cosmics)
+    :param do_mask_cosmics: bool, should we mask cosmics with astroscrappy?
+    :param cosmics_masking_params: extra arguments to pass to astroscrappy for the masking of cosmics.
+
+    Returns: numpy array: True for masked value, False for good pixels, same shape as data.
+    """
+    # 1. identifying bad columns and rows
+    row_column_mask = np.zeros_like(cutout_data, dtype=bool)
+    if do_mask_bad_columns:
+        ccd = CCDData(cutout_data, unit='electron/second')
+        mask = ccdmask(ccd, findbadcolumns=True)
+        # Now, ccdmask will mask anything above the noise. We have to be conservative here, let us only keep lines that
+        # extend to both ends of the cutout, "bad columns or rows".
+        # Bad columns: check if both top and bottom ends are masked
+        bad_columns = np.all([mask[0, :], mask[-1, :]], axis=0)
+        # bad rows: check if both left and right ends are masked
+        bad_rows = np.all([mask[:, 0], mask[:, -1]], axis=0)
+        # new mask with only full bad rows or columns
+
+        row_column_mask[:, bad_columns] = True
+        row_column_mask[bad_rows, :] = True
+
+    # 2. masking cosmics
+    if do_mask_cosmics:
+        # not keeping the "cleaned" cutout.
+        cosmics_mask, _ = detect_cosmics(cutout_data, invar=noisemap**2, **cosmics_masking_params)
+    else:
+        cosmics_mask = np.zeros_like(cutout_data, dtype=bool)
+
+    # 3. combine the two masks: True for masked value, False for good pixels.
+    mask = cosmics_mask + row_column_mask
+    return mask
+
+
 def extract_all_stamps():
     """
     This is the routine that the workflow manager will call.
@@ -61,7 +103,6 @@ def extract_all_stamps():
 
     # where we'll save our stamps
     regions_file = user_config['regions_path']
-
 
     # for the cosmic masking
     cosmics_masking_params = user_config['cosmics_masking_params']
@@ -146,15 +187,15 @@ def extract_all_stamps():
                                                                          sky_coord=user_config['ROI_SkyCoord'],
                                                                          cutout_size=user_config['stamp_size_ROI'],
                                                                          background_rms_electron_per_second=global_rms)
-                # clean the cosmics
-                if user_config['clean_cosmics']:
-                    mask, cleaned = detect_cosmics(cutout, invar=noisemap**2, **cosmics_masking_params)
-                else:
-                    mask = np.zeros_like(cutout, dtype=bool)
-                    cleaned = cutout
+                # masking
+                mask = mask_cutout(cutout_data=cutout, noisemap=noisemap,
+                                   do_mask_bad_columns=user_config['mask_bad_rows_and_columns'],
+                                   do_mask_cosmics=user_config['clean_cosmics'],
+                                   cosmics_masking_params=cosmics_masking_params)
+
                 if 'ROI' in data_set:
                     del data_set['ROI']
-                data_set['ROI'] = cleaned
+                data_set['ROI'] = cutout
                 if 'ROI' in noise_set:
                     del noise_set['ROI']
                 noise_set['ROI'] = noisemap
@@ -199,15 +240,15 @@ def extract_all_stamps():
                         background_rms_electron_per_second=global_rms
                     )
 
-                    # again, clean the cosmics.
-                    if user_config['clean_cosmics']:
-                        mask, cleaned = detect_cosmics(cutout, invar=noisemap**2, **cosmics_masking_params)
-                    else:
-                        mask = np.zeros_like(cutout, dtype=bool)
-                        cleaned = cutout
+                    # again, masking
+                    mask = mask_cutout(cutout_data=cutout, noisemap=noisemap,
+                                       do_mask_bad_columns=user_config['mask_bad_rows_and_columns'],
+                                       do_mask_cosmics=user_config['clean_cosmics'],
+                                       cosmics_masking_params=cosmics_masking_params)
+
                     if star_name in data_set:
                         del data_set[star_name]
-                    data_set[star_name] = cleaned
+                    data_set[star_name] = cutout
                     if star_name in noise_set:
                         del noise_set[star_name]
                     noise_set[star_name] = noisemap

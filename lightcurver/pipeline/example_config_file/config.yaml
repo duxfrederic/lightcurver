@@ -191,6 +191,7 @@ stars_to_use_norm: null
 stamp_size_stars: 24
 stamp_size_ROI: 32
 redo_stamp_extraction: false
+mask_bad_rows_and_columns: true
 clean_cosmics: true
 # configuration for cosmic ray detection using astroscrappy/lacosmic
 cosmics_masking_params:
