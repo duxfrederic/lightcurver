@@ -9,6 +9,7 @@ import pandas as pd
 from scipy.ndimage import shift, rotate
 from astropy.wcs import WCS
 from astropy.coordinates import SkyCoord
+from astropy.wcs.utils import pixel_to_skycoord
 from astropy import units as u
 from photutils.aperture import CircularAperture, aperture_photometry
 import logging
@@ -73,8 +74,8 @@ def do_deconvolution_of_roi():
     combined_footprint_hash = get_combined_footprint_hash(user_config, frames_ini['id'].to_list())
     deconv_file = user_config['prepared_roi_cutouts_path']
 
+    roi = user_config['roi_name']
     if deconv_file is None:
-        roi = user_config['roi_name']
         deconv_file = user_config['workdir'] / 'prepared_roi_cutouts' / f"cutouts_{combined_footprint_hash}_{roi}.h5"
 
     # load the data
@@ -102,8 +103,7 @@ def do_deconvolution_of_roi():
         logger.error(message + ' Stopping the pipeline.')
     assert np.unique(subsampling_factor).size == 1, message
     subsampling_factor = int(subsampling_factor[0])
-    im_size = data.shape[1]
-    im_size_up = subsampling_factor * im_size
+    im_size_x, im_size_y = data.shape[1:]
     epochs = data.shape[0]
 
     ps_coords = user_config['point_sources']
@@ -112,8 +112,9 @@ def do_deconvolution_of_roi():
 
     # we use the first WCS as reference.
     # so the starred rotation angles will be w.r.t. to this one as well
-    angles_to_north -= angles_to_north[0]
-    wcs_ref = WCS(wcs[0].decode('utf-8'))
+    ref_index = 0
+    angles_to_north -= angles_to_north[ref_index]
+    wcs_ref = WCS(wcs[ref_index].decode('utf-8'))
     ps_pixels = {lab: np.array(wcs_ref.world_to_pixel(SkyCoord(*val, unit=u.degree))).flatten() for lab, val in
                  ps_coords.items()}
 
@@ -131,9 +132,10 @@ def do_deconvolution_of_roi():
     aperture_fluxes = list(photometry['aperture_sum'])
 
     # ok, ready to define the STARRED model
-    offset = (im_size - 1) / 2.  # removing half image size, as starred has (0,0) = center of image
-    initial_c_x = xs - offset
-    initial_c_y = ys - offset
+    offset_x = (im_size_x - 1) / 2.  # removing half image size, as starred has (0,0) = center of image
+    offset_y = (im_size_y - 1) / 2.
+    initial_c_x = xs - offset_x
+    initial_c_y = ys - offset_y
     initial_a = list(aperture_fluxes)
     initial_a = len(data) * initial_a
     model, kwargs_init, kwargs_up, kwargs_down, kwargs_fixed = setup_model(data,
@@ -143,7 +145,7 @@ def do_deconvolution_of_roi():
                                                                            initial_c_y,
                                                                            subsampling_factor,
                                                                            initial_a)
-    # prepare for the random rotations of the pointing ...
+    # prepare for the random rotations of the pointings ...
     kwargs_init['kwargs_analytic']['alpha'] = angles_to_north
     kwargs_fixed['kwargs_analytic']['alpha'] = angles_to_north
     # if we provide a background:
@@ -199,10 +201,10 @@ def do_deconvolution_of_roi():
     roi_modeling_params = user_config.get('roi_model_regularization', {})
     if not roi_modeling_params:
         logger.warning('No background regularization params in config: using defaults.')
-    regularization_strength_scales = user_config.get('regularization_strength_scales', 1.0) 
-    regularization_strength_hf = user_config.get('regularization_strength_hf', 1.0) 
-    regularization_strength_positivity = user_config.get('regularization_strength_positivity', 100.0) 
-    regularization_strength_pts_source = user_config.get('regularization_strength_pts_source', 0.01)
+    regularization_strength_scales = roi_modeling_params.get('regularization_strength_scales', 1.0)
+    regularization_strength_hf = roi_modeling_params.get('regularization_strength_hf', 1.0)
+    regularization_strength_positivity = roi_modeling_params.get('regularization_strength_positivity', 100.0)
+    regularization_strength_pts_source = roi_modeling_params.get('regularization_strength_pts_source', 0.01)
     loss = Loss(data, model, parameters, noisemap**2,
                 regularization_terms='l1_starlet',
                 regularization_strength_scales=regularization_strength_scales,
@@ -224,10 +226,10 @@ def do_deconvolution_of_roi():
 
     out_dir = deconv_file.parent
     # the easy stuff, let's output the astrometry first:
-    x_pixels = np.array(kwargs_final['kwargs_analytic']['c_x'] + kwargs_final['kwargs_analytic']['dx'][0] + offset)
-    y_pixels = np.array(kwargs_final['kwargs_analytic']['c_y'] + kwargs_final['kwargs_analytic']['dy'][0] + offset)
-    ps_coords_post = wcs_ref.pixel_to_world_values(np.array((x_pixels, y_pixels)).T)
-    ps_coords_post = {ps: list(coord) for ps, coord in zip(ordered_ps, ps_coords_post)}
+    x_pixels = np.array(kwargs_final['kwargs_analytic']['c_x'] + kwargs_final['kwargs_analytic']['dx'][0]) + offset_x
+    y_pixels = np.array(kwargs_final['kwargs_analytic']['c_y'] + kwargs_final['kwargs_analytic']['dy'][0]) + offset_y
+    ps_coords_post = pixel_to_skycoord(x_pixels, y_pixels, wcs_ref)
+    ps_coords_post = {ps: [coord.ra.deg, coord.dec.deg] for ps, coord in zip(ordered_ps, ps_coords_post)}
     with open(out_dir / f'{combined_footprint_hash}_astrometry.json', 'w') as ff:
         json.dump(ps_coords_post, ff)
 
@@ -285,10 +287,18 @@ def do_deconvolution_of_roi():
 
     # and of course, output the fitted high-res model
     deconv, h = model.getDeconvolved(kwargs_final, 0)
+    # make a higher res wcs
+    wcs_highres = deepcopy(wcs_ref)
+    # dividing the pixel scale by the subsampling factor to match the higher resolution
+    wcs_highres.wcs.cdelt /= subsampling_factor
+    wcs_highres.wcs.crpix *= subsampling_factor
+
+    header_highres = wcs_highres.to_header()
+    header_highres['ZPT'] = float(zeropoint) if zeropoint.ndim == 0 else float(zeropoint[0])
     fits.writeto(out_dir / f'{combined_footprint_hash}_deconvolution.fits', scale * np.array(deconv),
-                 overwrite=True)
+                 overwrite=True, header=header_highres)
     fits.writeto(out_dir / f'{combined_footprint_hash}_background.fits', scale * np.array(h),
-                 overwrite=True)
+                 overwrite=True, header=header_highres)
 
     # now a diagnostic plot
     plot_deconv_dir = user_config['plots_dir'] / 'deconvolutions' / str(combined_footprint_hash)
