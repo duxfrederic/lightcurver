@@ -120,7 +120,7 @@ def do_one_deconvolution(data, noisemap, psf, subsampling_factor,
     optim.minimize(**optimiser_optax_option)
     kwargs_final = parameters.best_fit_values(as_kwargs=True)
     modelled_pixels = model.model(kwargs_final)
-    residuals = data - modelled_pixels
+    residuals = data - np.array(modelled_pixels)
     # let's calculate a chi2 in each frame!
     chi2_per_frame = np.nansum((residuals**2 / sigma_2), axis=(1, 2)) / model.image_size**2
     chi2 = np.nanmean(chi2_per_frame)
