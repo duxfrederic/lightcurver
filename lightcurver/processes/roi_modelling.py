@@ -283,7 +283,7 @@ def do_deconvolution_of_roi():
     data_no_ps = align_data_interpolation(data_no_ps, kwargs_only_ps)
     stack_no_ps = np.nanmean(data_no_ps, axis=0)
     fits.writeto(out_dir / f'{combined_footprint_hash}_stack_without_point_sources.fits', scale * stack_no_ps,
-                 overwrite=True)
+                 overwrite=True, header=wcs_ref.to_header())
 
     # and of course, output the fitted high-res model
     deconv, h = model.getDeconvolved(kwargs_final, 0)
