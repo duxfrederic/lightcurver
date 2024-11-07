@@ -94,6 +94,7 @@ def do_deconvolution_of_roi():
         pixel_scales = np.array(f['pixel_scale'])
         angles_to_north = np.array(f['angle_to_north'])
         wcs = np.array(f['wcs'])
+        sky_level_electron_per_second = np.array(f['sky_level_electron_per_second'])
 
     message = "The PSF models seem to have different subsampling factors! Incompatible with a STARRED deconvolution."
     unique_subsampling = (np.unique(subsampling_factor).size == 1)
@@ -195,12 +196,19 @@ def do_deconvolution_of_roi():
                                   kwargs_up=kwargs_up,
                                   kwargs_down=kwargs_down)
 
+    roi_modeling_params = user_config.get('roi_model_regularization', {})
+    if not roi_modeling_params:
+        logger.warning('No background regularization params in config: using defaults.')
+    regularization_strength_scales = user_config.get('regularization_strength_scales', 1.0) 
+    regularization_strength_hf = user_config.get('regularization_strength_hf', 1.0) 
+    regularization_strength_positivity = user_config.get('regularization_strength_positivity', 100.0) 
+    regularization_strength_pts_source = user_config.get('regularization_strength_pts_source', 0.01)
     loss = Loss(data, model, parameters, noisemap**2,
                 regularization_terms='l1_starlet',
-                regularization_strength_scales=1,
-                regularization_strength_hf=1.,
-                regularization_strength_positivity=100.,
-                regularization_strength_pts_source=0.01,
+                regularization_strength_scales=regularization_strength_scales,
+                regularization_strength_hf=regularization_strength_hf,
+                regularization_strength_positivity=regularization_strength_positivity,
+                regularization_strength_pts_source=regularization_strength_pts_source,
                 W=W)
 
     optim = Optimizer(loss, parameters, method='adabelief')
@@ -216,8 +224,8 @@ def do_deconvolution_of_roi():
 
     out_dir = deconv_file.parent
     # the easy stuff, let's output the astrometry first:
-    x_pixels = np.array(kwargs_final['kwargs_analytic']['c_x'] + kwargs_final['kwargs_analytic']['dx'][0])
-    y_pixels = np.array(kwargs_final['kwargs_analytic']['c_y'] + kwargs_final['kwargs_analytic']['dy'][0])
+    x_pixels = np.array(kwargs_final['kwargs_analytic']['c_x'] + kwargs_final['kwargs_analytic']['dx'][0] + offset)
+    y_pixels = np.array(kwargs_final['kwargs_analytic']['c_y'] + kwargs_final['kwargs_analytic']['dy'][0] + offset)
     ps_coords_post = wcs_ref.pixel_to_world_values(np.array((x_pixels, y_pixels)).T)
     ps_coords_post = {ps: list(coord) for ps, coord in zip(ordered_ps, ps_coords_post)}
     with open(out_dir / f'{combined_footprint_hash}_astrometry.json', 'w') as ff:
@@ -254,6 +262,8 @@ def do_deconvolution_of_roi():
             'mjd': mjds[epoch],
             'zeropoint': zeropoint,
             'reduced_chi2': chi2_per_frame[epoch],
+            'seeing': seeings[epoch],
+            'sky_level_electron_per_second': sky_level_electron_per_second[epoch]
         }
         for ps in ordered_ps:
             row[f'{ps}_flux'] = curves[ps][epoch]
@@ -273,7 +283,7 @@ def do_deconvolution_of_roi():
     fits.writeto(out_dir / f'{combined_footprint_hash}_stack_without_point_sources.fits', scale * stack_no_ps,
                  overwrite=True)
 
-    # and of course, output the deconvolution
+    # and of course, output the fitted high-res model
     deconv, h = model.getDeconvolved(kwargs_final, 0)
     fits.writeto(out_dir / f'{combined_footprint_hash}_deconvolution.fits', scale * np.array(deconv),
                  overwrite=True)
