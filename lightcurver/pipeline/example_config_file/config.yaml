@@ -26,7 +26,7 @@ raw_dirs:
 hdu_data_index: 0
 # this has to be a list: sometimes the information is spread over multiple headers. 
 # we concatenate headers.
-hdu_header_index: [0]
+hdu_header_indexes: [0]
 
 # we can trim the images upon importation, in pixels. Useful if your images are big and the ROI is
 # near the center always. Default 0 pixel trimmed.
