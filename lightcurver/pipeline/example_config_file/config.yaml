@@ -22,6 +22,10 @@ workdir: /scratch/lightcurver_tutorial
 raw_dirs:
   - /scratch/lightcurver_tutorial/raw
 
+# in what fits HDU do we look for data and header?
+hdu_data_index: 0
+hdu_header_index: 0
+
 # we can trim the images upon importation, in pixels. Useful if your images are big and the ROI is
 # near the center always. Default 0 pixel trimmed.
 trim_vertical: 0
