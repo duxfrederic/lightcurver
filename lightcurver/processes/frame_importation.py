@@ -26,29 +26,37 @@ def process_new_frame(fits_file, user_config):
     trim_horizontal = user_config.get('trim_horizontal', 0)
     copied_image_relpath = Path('frames') / f"{fits_file.stem}.fits"
     logger = logging.getLogger("lightcurver.importation")
+    hdu_data_index = user_config['hdu_data_index']
+    hdu_header_indexes = user_config['hdu_header_indexes']
 
     try:
         with fits.open(str(fits_file), mode='readonly', ignore_missing_end=False, memmap=True) as hdu:
             logger.info(f'  Importing {fits_file}.')
-            hdu_index = 1 if len(hdu) > 1 else 0
-            data_shape = hdu[hdu_index].data.shape
-            cutout_data = hdu[hdu_index].section[
+            data_shape = hdu[hdu_data_index].data.shape
+            cutout_data = hdu[hdu_data_index].section[
                           trim_vertical:data_shape[0] - trim_vertical,
                           trim_horizontal:data_shape[1] - trim_horizontal
                           ]
-            header = hdu[hdu_index].header
+            headers = [hdu[hdu_header_index].header for hdu_header_index in hdu_header_indexes]
+            header = headers[0].copy()
+            if len(headers) >  1:
+                for next_header in headers[1:]:
+                    header.update(next_header)
             logger.info(f"Read fits file at {fits_file}")
     except ValueError:
-        # then we have some memmap problems, if  bzero, bscale, or blank are in header.
+        # then we have some memmap problems, typically when bzero, bscale, or blank are in header.
         with fits.open(str(fits_file), mode='readonly') as hdu:
             logger.info(f'  Importing {fits_file}.')
-            hdu_index = 1 if len(hdu) > 1 else 0
-            data_shape = hdu[hdu_index].data.shape
-            cutout_data = hdu[hdu_index].data[
+            data_shape = hdu[hdu_data_index].data.shape
+            cutout_data = hdu[hdu_data_index].data[
                           trim_vertical:data_shape[0] - trim_vertical,
                           trim_horizontal:data_shape[1] - trim_horizontal
                           ]
-            header = hdu[hdu_index].header
+            headers = [hdu[hdu_header_index].header for hdu_header_index in hdu_header_indexes]
+            header = headers[0].copy()
+            if len(headers) >  1:
+                for next_header in headers[1:]:
+                    header.update(next_header)
             logger.warning(f"Read fits file at {fits_file}, could not use memmap!!")
     cutout_data = cutout_data.astype(float)
     wcs = WCS(header)

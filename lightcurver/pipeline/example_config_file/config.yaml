@@ -22,6 +22,15 @@ workdir: /scratch/lightcurver_tutorial
 raw_dirs:
   - /scratch/lightcurver_tutorial/raw
 
+# importing only the files matching the pattern below:
+files_match_pattern: "*.fits"
+
+# in what fits HDU do we look for data and header?
+hdu_data_index: 0
+# this has to be a list: sometimes the information is spread over multiple headers. 
+# we concatenate headers.
+hdu_header_indexes: [0]
+
 # we can trim the images upon importation, in pixels. Useful if your images are big and the ROI is
 # near the center always. Default 0 pixel trimmed.
 trim_vertical: 0
