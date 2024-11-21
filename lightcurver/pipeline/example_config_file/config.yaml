@@ -323,6 +323,14 @@ starting_background: null
 # (kinda ruining the point of the entire pipeline, but well...)
 further_optimize_background: true
 
+# the regularization of the background can be tuned here:
+roi_model_regularization:
+  regularization_strength_scales: 1.0
+  regularization_strength_hf: 1.0
+  regularization_strength_positivity: 100.0
+  regularization_strength_pts_source: 0.01
+
+
 # and these should mostly work as is, how many iterations of the optimizer do we do?
 roi_deconv_translations_iters: 300
 roi_deconv_all_iters: 2000

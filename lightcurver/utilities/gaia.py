@@ -1,4 +1,3 @@
-from astroquery.gaia import Gaia
 from astroquery.utils.tap.core import TapPlus
 from astropy.table import Table, Column
 import numpy as np
@@ -104,6 +103,12 @@ def run_query(gaia_provider, adql_query):
     Returns:
         astropy table of sources, with columns following the gaia archive labelling.
     """
+
+    # import Gaia here: on servers without an internet connection, this line waits until timeout
+    # before printing a warning. For daily runs without an internet connection, better not import
+    # Gaia when not needed.
+    from astroquery.gaia import Gaia
+
     if gaia_provider.lower() == 'gaia':
         Gaia.MAIN_GAIA_TABLE = 'gaiadr3.gaia_source'
         Gaia.ROW_LIMIT = 2000
@@ -183,6 +188,8 @@ def find_gaia_stars_in_polygon(vertices, gaia_provider='gaia', astrometric_exces
 
     Returns: astropy table of gaia sources
     """
+
+    from astroquery.gaia import Gaia
     where_conditions, query_table = construct_where_conditions(gaia_provider, astrometric_excess_noise_max,
                                                                gmag_range, min_phot_g_mean_flux_over_error)
 
