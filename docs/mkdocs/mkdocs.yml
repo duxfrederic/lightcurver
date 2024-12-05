@@ -1,4 +1,4 @@
-site_name: LightCurver
+site_name: lightcurver
 docs_dir: 'contents'
 theme:
   name: material

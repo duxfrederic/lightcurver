@@ -4,7 +4,7 @@ weight: 7
 ---
 # Cookbook and random fixes
 
-`LightCurver` will absolutely fail you a lot. Sorry, astronomical data is just too messy and such is life.
+`lightcurver` will absolutely fail you a lot. Sorry, astronomical data is just too messy and such is life.
 Here I will add example situations and how to fix them.
 
 ### Some of my images were imported, but cannot be plate solved due to low quality

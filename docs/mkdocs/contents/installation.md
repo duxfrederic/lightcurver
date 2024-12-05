@@ -3,7 +3,7 @@ title: Installation
 weight_index: 9
 ---
 # Installation
-`LightCurver` requires several components to function:
+`lightcurver` requires several components to function:
 
 - `STARRED`: it will be installed automatically with `pip install lightcurver`, but if you want to use it with a GPU there
 might be some more setup to do. See the [installation instructions](https://cosmograil.gitlab.io/starred/installation.html#) of the package itself.
@@ -53,6 +53,7 @@ Here is the list of dependencies that need be installed:
 15. `pyyaml` - for reading the config file
 16. `starred-astro` - assume the latest version, will install its own dependencies.
 17. `widefield_plate_solver` - an astrometry.net wrapper
+18. `ccdproc` - for identifying bad columns of pixels
 
 
 ## Testing your installation

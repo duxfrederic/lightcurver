@@ -2,12 +2,12 @@
 title: Introduction
 weight_index: 10
 ---
-# LightCurver Documentation
+# `lightcurver` Documentation
 <img src="lightcurver_logo.svg" alt="logo" width="300em"/>
 
-## What is `LightCurver`?
+## What is `lightcurver`?
 
-`LightCurver` is a package / pipeline leveraging `STARRED` for precise photometry of blended sources in a large number of epochs.
+`lightcurver` is a package / pipeline leveraging `STARRED` for precise photometry of blended sources in a large number of epochs.
 It specifically tackles the following type of problem:
 
 - The dataset has a large number of frames.
@@ -20,7 +20,7 @@ Doubt would also always remain: have we extracted as much signal as possible fro
 ratio of the curves be improved if we re-process everything just one last time?
 Are there systematics errors in the normalization that bias the shape of the extracted light curves?
 
-`LightCurver` aims at making the process at least semi-automatic (set it up once for a few frames, then let the pipeline
+`lightcurver` aims at making the process at least semi-automatic (set it up once for a few frames, then let the pipeline
 automatically handle any future frame), and builds up on experience of manually reducing such datasets to offer 
 a no-compromise photometric precision.
 The end goal is being able to claim that the photometric uncertainty obtained in the light curves is dominated by 
@@ -30,7 +30,7 @@ the noise levels in the original frames, and not by normalisation or deblending 
 ## Example result
 
 <div class="annotate" markdown>
-The two figures below show `LightCurver` outputs for a dataset captured by the ESO 2.2 meters telescope. (1)
+The two figures below show `lightcurver` outputs for a dataset captured by the ESO 2.2 meters telescope. (1)
 </div>
 1. ESO program `0106.A-9005(A)`, PI Courbin, La Silla Chile
 
@@ -45,7 +45,7 @@ The other product being the lightcurves of the point sources:
 <img src="example_lightcurve.png" alt="example_lightcurve" width="678em"/>
 
 ## The method
-`LightCurver` will prepare, for each frame, a precisely flux-calibrated cutout of the region of interest, together with a
+`lightcurver` will prepare, for each frame, a precisely flux-calibrated cutout of the region of interest, together with a
 ready-to-use PSF model. The cutout pixels can then be modelled with `STARRED`, in a so-called "joint-deconvolution".
 This allows us to both obtain precise light curves of the point sources modelled with the PSF, and the high resolution
 model that cumulates the signal of al the frames of the region of interest.

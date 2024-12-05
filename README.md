@@ -1,10 +1,11 @@
 <img src="docs/mkdocs/contents/lightcurver_logo.svg" alt="logo" style="width:28em;"/>
 
+[![JOSS](https://joss.theoj.org/papers/4c19a3f804d62aafd0ca23f297fce6c9/status.svg)](https://joss.theoj.org/papers/4c19a3f804d62aafd0ca23f297fce6c9)
+![tests](https://github.com/duxfrederic/lightcurver/actions/workflows/python-app.yml/badge.svg)
+[![Docs](https://img.shields.io/badge/Docs-Available-green)](https://duxfrederic.github.io/lightcurver/)
 [![python](https://img.shields.io/badge/Python-3.11-3776AB.svg?style=flat&logo=python&logoColor=white)](https://www.python.org)
 [![pypi](https://img.shields.io/pypi/v/lightcurver)](https://pypi.org/project/lightcurver/)
-![tests](https://github.com/duxfrederic/lightcurver/actions/workflows/python-app.yml/badge.svg)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
-[![Docs](https://img.shields.io/badge/Docs-Available-green)](https://duxfrederic.github.io/lightcurver/)
 
 
 # `lightcurver`
@@ -18,9 +19,9 @@ Essentially, `lightcurver` provides the infrastructure to
 
 This enables `STARRED` to model the pixels of the region of interest (ROI), 
 yielding of course high quality light curves of the point sources in the ROI, 
-but also recovering the subpixel information to provide a high signal-to-noise ratio deconvolution of the ROI itself.
+but also recovering the subpixel information to provide a high signal-to-noise ratio/resolution of the ROI itself.
 The example below shows a cutout of a wide-field image (one in a set of a hundred), 
-the model/deconvolution, and the Hubble Space Telescope image of the same region.
+the fitted high resolution model, and the Hubble Space Telescope image of the same region.
 
 ![example_deconvolution](docs/mkdocs/contents/example_deconv.png)
 
