@@ -15,7 +15,7 @@ from photutils.aperture import CircularAperture, aperture_photometry
 import logging
 
 from starred.deconvolution.deconvolution import setup_model
-from starred.deconvolution.loss import Loss
+from starred.deconvolution.loss import Loss, Prior
 from starred.optim.optimization import Optimizer
 from starred.deconvolution.parameters import ParametersDeconv
 from starred.utils.noise_utils import propagate_noise
@@ -148,6 +148,29 @@ def do_deconvolution_of_roi():
     # prepare for the random rotations of the pointings ...
     kwargs_init['kwargs_analytic']['alpha'] = angles_to_north
     kwargs_fixed['kwargs_analytic']['alpha'] = angles_to_north
+    
+    # astrometric bit! 
+    fix_astrometry = user_config['fix_point_source_astrometry']
+    astrometric_prior = None  # default
+    if type(fix_astrometry) is bool:
+        # then we either fully fix the astrometry, or not at all
+        if fix_astrometry:
+            logger.info("Fully fixing the astrometry to the config values.")
+            kwargs_fixed['kwargs_analytic']['c_x'] = initial_c_x
+            kwargs_fixed['kwargs_analytic']['c_y'] = initial_c_y
+        else:
+            logger.info("Astrometry will be fully free during optimization.")
+
+    elif type(fix_astrometry) is float:
+        # we make a prior!
+        logger.info("Setting a Gaussian astrometric prior on the astrometry: "
+                    f"sigma = {fix_astrometry:.02f} data pixels.")
+        astrometric_prior = Prior(prior_analytic=[
+            ['c_x', initial_c_x, np.array(len(initial_c_x) * [fix_astrometry])],
+            ['c_y', initial_c_y, np.array(len(initial_c_y) * [fix_astrometry])]
+        ]
+        )
+
     # if we provide a background:
     if user_config['starting_background'] is not None:
         bck_path = Path(user_config['starting_background'])
@@ -171,7 +194,7 @@ def do_deconvolution_of_roi():
                                   kwargs_up=kwargs_up,
                                   kwargs_down=kwargs_down)
 
-    loss = Loss(data, model, parameters, noisemap**2)
+    loss = Loss(data, model, parameters, noisemap**2, prior=astrometric_prior)
 
     optim = Optimizer(loss, parameters, method='l-bfgs-b')
 
@@ -189,6 +212,11 @@ def do_deconvolution_of_roi():
     del kwargs_fixed['kwargs_analytic']['c_y']
     del kwargs_fixed['kwargs_analytic']['dx']
     del kwargs_fixed['kwargs_analytic']['dy']
+
+    # same as before for the astrometry, re-fix it if desired!
+    if type(fix_astrometry) is bool and fix_astrometry:
+        kwargs_fixed['kwargs_analytic']['c_x'] = initial_c_x
+        kwargs_fixed['kwargs_analytic']['c_y'] = initial_c_y
     W = propagate_noise(model, noisemap, kwargs_init, wavelet_type_list=['starlet'],
                         method='SLIT', num_samples=500, seed=1, likelihood_type='chi2',
                         verbose=False, upsampling_factor=subsampling_factor)[0]
@@ -211,7 +239,8 @@ def do_deconvolution_of_roi():
                 regularization_strength_hf=regularization_strength_hf,
                 regularization_strength_positivity=regularization_strength_positivity,
                 regularization_strength_pts_source=regularization_strength_pts_source,
-                W=W)
+                W=W,
+                prior=astrometric_prior)
 
     optim = Optimizer(loss, parameters, method='adabelief')
     optimiser_optax_option = {

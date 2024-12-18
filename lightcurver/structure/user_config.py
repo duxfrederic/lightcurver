@@ -73,4 +73,8 @@ def get_user_config():
     if 'constraints_on_normalization_coeff' not in config:
         config['constraints_on_normalization_coeff'] = {}
 
+    # fixing the astrometry: default false
+    if 'fix_point_source_astrometry' not in config:
+        config['fix_point_source_astrometry'] = False
+
     return config

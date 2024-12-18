@@ -317,6 +317,13 @@ point_sources: #  'label: [ra, dec]'
    C: [42.203227, 19.225010]
    D: [42.203249, 19.225389]
 
+# you can also decide to fix the astrometric values above, 
+# which would be relevant if you have excellent astrometry from high resolution imaging
+# and are running this as a daily pipeline.
+# if true: fully fixed. if false: fully free.
+# if float: sigma of a gaussian prior on the astrometry, in pixels in units of the data.
+fix_point_source_astrometry: false
+
 # so, null or a path for this one (path either relative to workdir, or absolute path starting with /):
 starting_background: null
 # if null above, and false here, then you will not include a background
