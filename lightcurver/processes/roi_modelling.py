@@ -161,11 +161,10 @@ def do_deconvolution_of_roi():
     elif type(fix_astrometry) is float:
         # we make a prior!
         astrometric_prior = Prior(prior_analytic=[
-            [
-                'c_x', initial_c_x, np.array(len(initial_c_x) * [fix_astrometry])
-                'c_y', initial_c_x, np.array(len(initial_c_y) * [fix_astrometry])
-            ]
-        ])
+            ['c_x', initial_c_x, np.array(len(initial_c_x) * [fix_astrometry])],
+            ['c_y', initial_c_x, np.array(len(initial_c_y) * [fix_astrometry])]
+        ]
+        )
 
     # if we provide a background:
     if user_config['starting_background'] is not None:
