@@ -59,6 +59,7 @@ def test_run_workflow():
     config['stars_to_use_psf'] = config['stars_to_use_norm'] = 2
     config['stamp_size_stars'] = config['stamp_size_roi'] = 24
     config['multiprocessing_cpu_count'] = 2  # what GitHub gives us I think
+    config['fix_point_source_astrometry'] = 2.0  # testing the gaussian priors.
 
     # save the modified configuration to a temporary file
     temp_config_path = os.path.join(temp_dir, 'config_temp.yaml')
