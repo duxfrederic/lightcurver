@@ -76,6 +76,7 @@ def model_all_psfs():
     logger = logging.getLogger('lightcurver.psf_modelling')
     user_config = get_user_config()
     stars_to_use = user_config['stars_to_use_psf']
+    stars_to_exclude = user_config['stars_to_exclude_psf']
 
     # where we'll save our stamps
     regions_file = user_config['regions_path']
@@ -92,7 +93,8 @@ def model_all_psfs():
         t0 = time()
         stars = select_stars_for_a_frame(frame_id=frame['id'],
                                          combined_footprint_hash=combined_footprint_hash,
-                                         stars_to_use=stars_to_use)
+                                         stars_to_use=stars_to_use,
+                                         stars_to_exclude=stars_to_exclude)
         stars.sort_values(by=['name'])
         if len(stars) == 0:
             # we simply do not build a PSF. the frame will not be considered in the joint queries later.
