@@ -46,7 +46,9 @@ The other product being the lightcurves of the point sources:
 
 ## The method
 `lightcurver` will prepare, for each frame, a precisely flux-calibrated cutout of the region of interest, together with a
-ready-to-use PSF model. The cutout pixels can then be modelled with `STARRED`, in a so-called "joint-deconvolution".
+ready-to-use PSF model. The cutout pixels can then be modelled with `STARRED`, in a so-called "joint-forward-modelling".
+The process fits a high resolution model, with a constant pixelated component and a variable-flux point source component,
+to all available epochs at once, minimizing one global chi-squared.
 This allows us to both obtain precise light curves of the point sources modelled with the PSF, and the high resolution
 model that cumulates the signal of al the frames of the region of interest.
 

@@ -245,7 +245,8 @@ def do_star_photometry():
                             conditions=['plate_solved = 1', 'eliminated = 0', 'roi_in_footprint = 1'])
     combined_footprint_hash = get_combined_footprint_hash(user_config, frames_ini['id'].to_list())
     # now we can select the stars we need to do photometry of, within this footprint.
-    stars = select_stars(stars_to_use=user_config['stars_to_use_norm'], combined_footprint_hash=combined_footprint_hash)
+    stars = select_stars(stars_to_use=user_config['stars_to_use_norm'], combined_footprint_hash=combined_footprint_hash,
+                         stars_to_exclude=user_config['stars_to_exclude_norm'])
     logger.info(f"Will do PSF photometry for {len(stars)} stars.")
     # if not re-do ...select only the new frames that do not have a flux measurement yet.
     only_fluxless_frames = not user_config['redo_star_photometry']

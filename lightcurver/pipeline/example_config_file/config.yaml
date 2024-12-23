@@ -191,6 +191,10 @@ gaia_provider: 'gaia'  # 'gaia' or 'vizier'. ('gaia' queries the gaia archive)
 stars_to_use_psf: null
 stars_to_use_norm: null
 
+# we can also exclude stars, these are either null (not excluding anything), or a list of star names.
+stars_to_exclude_psf: null
+stars_to_exclude_norm: null
+
 
 
 
