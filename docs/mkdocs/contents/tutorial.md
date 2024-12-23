@@ -46,7 +46,7 @@ model_calibrated_cutouts
 The pipeline is incremental, but in certain cases it might be useful to start or stop the pipeline at given steps, 
 for example: this will run the extraction of the cutouts and the modelling of the PSF only.
 ```bash
-lc_run /path/to/config.yaml --start stamp_extraction --end psf_modeling
+lc_run /path/to/config.yaml --start stamp_extraction --stop psf_modeling
 ```
 This will only run the modelling of the ROI:
 ```bash

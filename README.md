@@ -47,7 +47,7 @@ pipeline whenever a new frame is added, providing auto-updating light curves.
     ```
    The pipeline is incremental, but in a scenario of testing, you can run specific steps only, for example:
     ```bash
-   lc_run /path/to/config.yaml --start stamp_extraction --end psf_modeling
+   lc_run /path/to/config.yaml --start stamp_extraction --stop psf_modeling
     ```
    (The names of the pipeline steps/tasks are listed upon running `lc_run -h`.)
 3. **Tutorial**: follow the [tutorial](https://duxfrederic.github.io/lightcurver/tutorial/) of the documentation, which provides a dataset you can experiment with.
