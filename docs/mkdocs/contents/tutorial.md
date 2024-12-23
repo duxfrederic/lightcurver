@@ -29,7 +29,32 @@ You can also run the script above directly from the command line with the follow
 lc_run /path/to/config.yaml
 ```
 
-In this tutorial, we will first execute each step manually rather than executing the pipeline through the `WorkflowManager`.
+`lc_run -h` will print the following list of steps performed by the pipeline:
+```initialize_database 
+read_convert_skysub_character_catalog
+plate_solving
+calculate_common_and_total_footprint
+query_gaia_for_stars
+stamp_extraction
+psf_modeling
+star_photometry
+calculate_normalization_coefficient
+calculate_absolute_zeropoints
+prepare_calibrated_cutouts
+model_calibrated_cutouts
+```
+The pipeline is incremental, but in certain cases it might be useful to start or stop the pipeline at given steps, 
+for example: this will run the extraction of the cutouts and the modelling of the PSF only.
+```bash
+lc_run /path/to/config.yaml --start stamp_extraction --end psf_modeling
+```
+This will only run the modelling of the ROI:
+```bash
+lc_run /path/to/config.yaml --start model_calibrated_cutouts
+```
+
+In this tutorial, to understand the role of the different steps, 
+we will first execute each step manually rather than executing the pipeline through the `WorkflowManager`.
 
 I will provide you with some wide field images that you can use to follow along. Note the following:
 
