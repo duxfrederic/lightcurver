@@ -128,23 +128,29 @@ class WorkflowManager:
 
         return sorted_tasks
 
-    def run(self, final_step=None):
+    def run(self, start_step=None, stop_step=None):
         """
-        Runs the whole pipeline
+        Runs the pipeline from the specified start step to the stop step.
+
         Args:
-            final_step: string, stops the pipeline when encountering this step. (for partial runs) Default None.
+            start_step (str): Task name to start from. If None, starts from the beginning.
+            stop_step (str): Task name to stop at. If None, runs to completion.
 
         Returns:
             None
         """
-        self.logger.info(f"Workflow manager: will run all tasks. Working directory:  {self.user_config['workdir']}")
+        self.logger.info(f"Workflow manager: Running tasks from {start_step or 'start'} to {stop_step or 'end'}. "
+                         f"Working directory: {self.user_config['workdir']}")
+
         sorted_tasks = self.topological_sort()
-        for task_name in sorted_tasks:
-            if final_step is not None and final_step == task_name:
-                return
+        start_index = sorted_tasks.index(start_step) if start_step else 0
+        stop_index = sorted_tasks.index(stop_step) + 1 if stop_step else len(sorted_tasks)
+
+        for task_name in sorted_tasks[start_index:stop_index]:
             task = next((item for item in self.pipe_config['tasks'] if item['name'] == task_name), None)
             if task:
                 self.execute_task(task)
+
             post_check = self.post_task_attribution.get(task_name, None)
             if post_check:
                 success, message = post_check()
