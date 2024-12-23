@@ -57,7 +57,7 @@ def test_run_workflow():
     config['already_plate_solved'] = 1
     config['ROI_disk_radius_arcseconds'] = 100
     config['stars_to_use_psf'] = config['stars_to_use_norm'] = 2
-    config['stamp_size_stars'] = config['stamp_size_roi'] = 24
+    config['stamp_size_stars'] = config['stamp_size_ROI'] = 24
     config['multiprocessing_cpu_count'] = 2  # what GitHub gives us I think
     config['fix_point_source_astrometry'] = 2.0  # testing the gaussian priors.
 

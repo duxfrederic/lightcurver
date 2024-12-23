@@ -3,9 +3,10 @@ from importlib import resources
 from collections import deque
 import logging
 from datetime import datetime
+import os
 
 
-from ..structure.user_config import get_user_config
+from ..structure.user_config import get_user_config, compare_config_with_pipeline_delivered_one
 from ..structure.database import initialize_database
 from ..processes.cutout_making import extract_all_stamps
 from ..processes.star_querying import query_gaia_stars
@@ -50,7 +51,29 @@ class WorkflowManager:
           task.
     """
     def __init__(self, logger=None):
+        # initial check: make sure this version of the pipeline doesn't have keywords in its config that the
+        # user config is missing.
+        extra_keys = compare_config_with_pipeline_delivered_one()
+        if extra := extra_keys['extra_keys_in_pipeline_config']:
+            raise RuntimeError(f"You are missing the following parameters in your config file: {extra}")
+        if extra := extra_keys['extra_keys_in_user_config']:
+            error_message = ("You have parameters in your config file that"
+                             f" are not in the latest config version: {extra}. \n"
+                             "You might want to remove them, or check against the latest config "
+                             "shipped with the pipeline.\n"
+                             "To ignore this error, set the `LIGHTCURVER_RELAX_CONFIG_CHECK` "
+                             "environment variable to 1.")
+            if 'LIGHTCURVER_RELAX_CONFIG_CHECK' in os.environ:
+                print('===== Skipped error due to LIGHTCURVER_RELAX_CONFIG_CHECK environment variable being set ======')
+                print(error_message)
+                print('===== Skipped error due to LIGHTCURVER_RELAX_CONFIG_CHECK environment variable being set ======')
+            else:
+                raise RuntimeError(error_message)
+
+        # load the actual config ...
         self.user_config = get_user_config()
+
+        # the plan: load the yaml defining the pipeline steps.
         with resources.open_text('lightcurver.pipeline', 'pipeline_dependency_graph.yaml') as file:
             self.pipe_config = yaml.safe_load(file)
         self.task_graph = {}
@@ -89,6 +112,7 @@ class WorkflowManager:
             logger = logging.getLogger(__name__)
             setup_base_logger()
         self.logger = logger
+
 
     def build_dependency_graph(self):
         for task in self.pipe_config['tasks']:
@@ -172,6 +196,4 @@ class WorkflowManager:
 
     def get_tasks(self):
         return sorted(list(self.task_attribution.keys()))
-
-
 
