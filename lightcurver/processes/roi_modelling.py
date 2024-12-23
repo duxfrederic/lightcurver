@@ -24,12 +24,12 @@ from ..structure.user_config import get_user_config
 from ..structure.database import get_pandas, execute_sqlite_query
 from ..utilities.footprint import get_combined_footprint_hash
 from ..utilities.starred_utilities import get_flux_uncertainties
-from ..plotting.star_photometry_plotting import plot_joint_deconv_diagnostic
+from ..plotting.star_photometry_plotting import plot_joint_modelling_diagnostic
 
 
 def align_data_interpolation(array, starred_kwargs):
     """
-    This is a utility function that takes in the data we use for deconvolution, and
+    This is a utility function that takes in the data we use for modelling, and
     - de-rotates it
     - 'de-translates' it -- both according to our fitted values of translation and rotation.
     It uses interoplation to do so, hence to be used as a diagnostic tool only.
@@ -53,7 +53,7 @@ def align_data_interpolation(array, starred_kwargs):
     return array_shift
 
 
-def do_deconvolution_of_roi():
+def do_modelling_of_roi():
     """
     Optionally called by the workflow manager.
     This is probably a bit too rigid given how complicated the joint modelling of 1000+ epochs of a blended ROI
@@ -72,14 +72,14 @@ def do_deconvolution_of_roi():
     frames_ini = get_pandas(columns=['id'],
                             conditions=['plate_solved = 1', 'eliminated = 0', 'roi_in_footprint = 1'])
     combined_footprint_hash = get_combined_footprint_hash(user_config, frames_ini['id'].to_list())
-    deconv_file = user_config['prepared_roi_cutouts_path']
+    roi_cutouts_file = user_config['prepared_roi_cutouts_path']
 
     roi = user_config['roi_name']
-    if deconv_file is None:
-        deconv_file = user_config['workdir'] / 'prepared_roi_cutouts' / f"cutouts_{combined_footprint_hash}_{roi}.h5"
+    if roi_cutouts_file is None:
+        roi_cutouts_file = user_config['workdir'] / 'prepared_roi_cutouts' / f"cutouts_{combined_footprint_hash}_{roi}.h5"
 
     # load the data
-    with h5py.File(deconv_file, 'r') as f:
+    with h5py.File(roi_cutouts_file, 'r') as f:
         data = np.array(f['data'])
         noisemap = np.array(f['noisemap'])
         s = np.array(f['psf'])
@@ -97,7 +97,7 @@ def do_deconvolution_of_roi():
         wcs = np.array(f['wcs'])
         sky_level_electron_per_second = np.array(f['sky_level_electron_per_second'])
 
-    message = "The PSF models seem to have different subsampling factors! Incompatible with a STARRED deconvolution."
+    message = "The PSF models seem to have different subsampling factors! Incompatible with STARRED modelling."
     unique_subsampling = (np.unique(subsampling_factor).size == 1)
     if not unique_subsampling:
         logger.error(message + ' Stopping the pipeline.')
@@ -108,7 +108,7 @@ def do_deconvolution_of_roi():
 
     ps_coords = user_config['point_sources']
     ordered_ps = sorted(ps_coords.keys())
-    logger.info(f'Jointly deconvolving {epochs} cutouts from your ROI, including {len(ordered_ps)} point sources.')
+    logger.info(f'Jointly modelling {epochs} cutouts from your ROI, including {len(ordered_ps)} point sources.')
 
     # we use the first WCS as reference.
     # so the starred rotation angles will be w.r.t. to this one as well
@@ -180,9 +180,9 @@ def do_deconvolution_of_roi():
             bck = fits.getdata(bck_path)
         else:
             bck = np.load(bck_path)
-        h = bck.flatten() / scale
-        kwargs_init['kwargs_background']['h'] = h
-        kwargs_fixed['kwargs_background']['h'] = h
+        high_res_model_background_only = bck.flatten() / scale
+        kwargs_init['kwargs_background']['h'] = high_res_model_background_only
+        kwargs_fixed['kwargs_background']['h'] = high_res_model_background_only
 
     # ok, first step: translations and fluxes
     kwargs_fixed = deepcopy(kwargs_init)
@@ -253,7 +253,7 @@ def do_deconvolution_of_roi():
     best_fit, logL_best_fit, extra_fields, runtime = optim.minimize(**optimiser_optax_option)
     kwargs_final = deepcopy(parameters.best_fit_values(as_kwargs=True))
 
-    out_dir = deconv_file.parent
+    out_dir = roi_cutouts_file.parent
     # the easy stuff, let's output the astrometry first:
     x_pixels = np.array(kwargs_final['kwargs_analytic']['c_x'] + kwargs_final['kwargs_analytic']['dx'][0]) + offset_x
     y_pixels = np.array(kwargs_final['kwargs_analytic']['c_y'] + kwargs_final['kwargs_analytic']['dy'][0]) + offset_y
@@ -315,7 +315,7 @@ def do_deconvolution_of_roi():
                  overwrite=True, header=wcs_ref.to_header())
 
     # and of course, output the fitted high-res model
-    deconv, h = model.getDeconvolved(kwargs_final, 0)
+    high_res_model, high_res_model_background_only = model.getDeconvolved(kwargs_final, 0)
     # make a higher res wcs
     wcs_highres = deepcopy(wcs_ref)
     # dividing the pixel scale by the subsampling factor to match the higher resolution
@@ -324,21 +324,21 @@ def do_deconvolution_of_roi():
 
     header_highres = wcs_highres.to_header()
     header_highres['ZPT'] = float(zeropoint) if zeropoint.ndim == 0 else float(zeropoint[0])
-    fits.writeto(out_dir / f'{combined_footprint_hash}_deconvolution.fits', scale * np.array(deconv),
+    fits.writeto(out_dir / f'{combined_footprint_hash}_high_res_model.fits', scale * np.array(high_res_model),
                  overwrite=True, header=header_highres)
-    fits.writeto(out_dir / f'{combined_footprint_hash}_background.fits', scale * np.array(h),
+    fits.writeto(out_dir / f'{combined_footprint_hash}_background.fits', scale * np.array(high_res_model_background_only),
                  overwrite=True, header=header_highres)
 
     # now a diagnostic plot
-    plot_deconv_dir = user_config['plots_dir'] / 'deconvolutions' / str(combined_footprint_hash)
-    plot_deconv_dir.mkdir(exist_ok=True, parents=True)
+    plot_modelling_dir = user_config['plots_dir'] / 'pixel_modelling' / str(combined_footprint_hash)
+    plot_modelling_dir.mkdir(exist_ok=True, parents=True)
     loss_history = optim.loss_history
     time_now = datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
-    plot_file = plot_deconv_dir / f"{time_now}_joint_deconv_roi_{roi}.jpg"
-    plot_joint_deconv_diagnostic(datas=data, noisemaps=noisemap,
-                                 residuals=residuals,
-                                 chi2_per_frame=chi2_per_frame, loss_curve=loss_history,
-                                 save_path=plot_file)
+    plot_file = plot_modelling_dir / f"{time_now}_joint_modelling_roi_{roi}.jpg"
+    plot_joint_modelling_diagnostic(datas=data, noisemaps=noisemap,
+                                    residuals=residuals,
+                                    chi2_per_frame=chi2_per_frame, loss_curve=loss_history,
+                                    save_path=plot_file)
     logger.info(f'Finished modelling the ROI. Diagnostic plot at {plot_file}. '
                 f"The global reduced chi2 was {np.mean(chi2_per_frame):.02f}. ")
 

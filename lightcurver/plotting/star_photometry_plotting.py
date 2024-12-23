@@ -2,10 +2,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-def plot_joint_deconv_diagnostic(datas, noisemaps, residuals, loss_curve, chi2_per_frame, starlet_background=None,
-                                 save_path=None):
+def plot_joint_modelling_diagnostic(datas, noisemaps, residuals, loss_curve, chi2_per_frame, starlet_background=None,
+                                    save_path=None):
     """
-    a diagnostic of how well a joint deconv went. We will plot a stack of the data, and a stack of
+    a diagnostic of how well a joint modelling went. We will plot a stack of the data, and a stack of
     the residuals. We will show how the loss behaved during optimization.
     It is important to avoid systematics, as this is the core of this package: doing precise photometry,
     so convergence when modelling the pixels is essential.

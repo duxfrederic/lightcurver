@@ -13,8 +13,8 @@ from ..processes.star_querying import query_gaia_stars
 from ..processes.psf_modelling import model_all_psfs
 from ..processes.star_photometry import do_star_photometry
 from ..processes.normalization_calculation import calculate_coefficient
-from ..processes.roi_deconv_file_preparation import prepare_roi_deconv_file
-from ..processes.roi_modelling import do_deconvolution_of_roi
+from ..processes.roi_file_preparation import prepare_roi_file
+from ..processes.roi_modelling import do_modelling_of_roi
 from ..processes.alternate_plate_solving_with_gaia import alternate_plate_solve_gaia
 from ..processes.alternate_plate_solving_adapt_existing_wcs import alternate_plate_solve_adapt_ref
 from ..processes.absolute_zeropoint_calculation import calculate_zeropoints
@@ -99,8 +99,8 @@ class WorkflowManager:
             'star_photometry': do_star_photometry,
             'calculate_normalization_coefficient': calculate_coefficient,
             'calculate_absolute_zeropoints': calculate_zeropoints,
-            'prepare_calibrated_cutouts': prepare_roi_deconv_file,
-            'model_calibrated_cutouts': do_deconvolution_of_roi,
+            'prepare_calibrated_cutouts': prepare_roi_file,
+            'model_calibrated_cutouts': do_modelling_of_roi,
         }
 
         self.post_task_attribution = {
