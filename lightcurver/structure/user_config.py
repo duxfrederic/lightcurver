@@ -55,9 +55,9 @@ def get_user_config():
     if type(config['stars_to_use_norm']) is str:
         config['stars_to_use_norm'] = [c for c in config['stars_to_use_norm']]
     if type(config['stars_to_exclude_psf']) is str:
-        config['stars_to_exclude_psf'] = [c for c in config['stars_to_use_psf']]
+        config['stars_to_exclude_psf'] = [c for c in config['stars_to_exclude_psf']]
     if type(config['stars_to_exclude_norm']) is str:
-        config['stars_to_exclude_norm'] = [c for c in config['stars_to_use_norm']]
+        config['stars_to_exclude_norm'] = [c for c in config['stars_to_exclude_norm']]
 
     # photometric bands check
     photom_band = config['photometric_band']
