@@ -25,6 +25,7 @@ from ..structure.database import get_pandas, execute_sqlite_query
 from ..utilities.footprint import get_combined_footprint_hash
 from ..utilities.starred_utilities import get_flux_uncertainties
 from ..plotting.star_photometry_plotting import plot_joint_modelling_diagnostic
+from ..utilities.lightcurves_postprocessing import convert_flux_to_magnitude, group_observations
 
 
 def align_data_interpolation(array, starred_kwargs):
@@ -51,6 +52,27 @@ def align_data_interpolation(array, starred_kwargs):
     )
 
     return array_shift
+
+
+def stack_data_without_point_sources(data, starred_kwargs, starred_model):
+    """
+    Subtracts the point sources from the data; then stacks each data frame after interpolating them
+    (rotation, translation) so they all match according to the fitted rotation and translations in starred_kwargs.
+    Parameters:
+        data: numpy array, shape (N, nx, ny)
+        starred_kwargs: dictionary of keywords parameters of the starred model.
+        starred_model: the starred Deconv class used to model the pixels.
+    Returns:
+        numpy array, shape (nx, ny)
+    """
+    kwargs_only_ps = deepcopy(starred_kwargs)
+    kwargs_only_ps['kwargs_background']['h'] *= 0.0
+
+    data_no_ps = data - starred_model.model(kwargs_only_ps)
+    data_no_ps = align_data_interpolation(data_no_ps, kwargs_only_ps)
+    stack_no_ps = np.nanmean(data_no_ps, axis=0)
+
+    return stack_no_ps
 
 
 def do_modelling_of_roi():
@@ -217,9 +239,9 @@ def do_modelling_of_roi():
     if type(fix_astrometry) is bool and fix_astrometry:
         kwargs_fixed['kwargs_analytic']['c_x'] = initial_c_x
         kwargs_fixed['kwargs_analytic']['c_y'] = initial_c_y
-    W = propagate_noise(model, noisemap, kwargs_init, wavelet_type_list=['starlet'],
-                        method='SLIT', num_samples=500, seed=1, likelihood_type='chi2',
-                        verbose=False, upsampling_factor=subsampling_factor)[0]
+    starlet_layer_propagated_weights = propagate_noise(model, noisemap, kwargs_init, wavelet_type_list=['starlet'],
+                                                       method='SLIT', num_samples=500, seed=1, likelihood_type='chi2',
+                                                       verbose=False, upsampling_factor=subsampling_factor)[0]
 
     parameters = ParametersDeconv(kwargs_init=kwargs_partial1,
                                   kwargs_fixed=kwargs_fixed,
@@ -239,7 +261,7 @@ def do_modelling_of_roi():
                 regularization_strength_hf=regularization_strength_hf,
                 regularization_strength_positivity=regularization_strength_positivity,
                 regularization_strength_pts_source=regularization_strength_pts_source,
-                W=W,
+                W=starlet_layer_propagated_weights,
                 prior=astrometric_prior)
 
     optim = Optimizer(loss, parameters, method='adabelief')
@@ -305,12 +327,8 @@ def do_modelling_of_roi():
     # ok, now some diagnostics.
     # first, subtract the point sources from the data, see what the stack looks like.
     # (helps to spot PSF model problems, or fit really gone wrong)
-    kwargs_only_ps = deepcopy(kwargs_final)
-    kwargs_only_ps['kwargs_background']['h'] *= 0.0
 
-    data_no_ps = data - model.model(kwargs_only_ps)
-    data_no_ps = align_data_interpolation(data_no_ps, kwargs_only_ps)
-    stack_no_ps = np.nanmean(data_no_ps, axis=0)
+    stack_no_ps = stack_data_without_point_sources(data=data, starred_kwargs=kwargs_final, starred_model=model)
     fits.writeto(out_dir / f'{combined_footprint_hash}_stack_without_point_sources.fits', scale * stack_no_ps,
                  overwrite=True, header=wcs_ref.to_header())
 
@@ -341,4 +359,53 @@ def do_modelling_of_roi():
                                     save_path=plot_file)
     logger.info(f'Finished modelling the ROI. Diagnostic plot at {plot_file}. '
                 f"The global reduced chi2 was {np.mean(chi2_per_frame):.02f}. ")
+
+
+def get_fluxes_dataframe_from_model(starred_model, starred_kwargs, starred_kwargs_down, starred_kwargs_up,
+                                    data, noisemap, point_sources_names, model_scale, normalization_errors,
+                                    frame_ids, mjds, seeings, zeropoint, sky_level_electron_per_second):
+    # the fluxes ...
+    fluxes = starred_kwargs['kwargs_analytic']['a']
+    # get the uncertainties on the fluxes
+    flux_photon_uncertainties = get_flux_uncertainties(kwargs=starred_kwargs, kwargs_down=starred_kwargs_down,
+                                                       kwargs_up=starred_kwargs_up,
+                                                       data=data, noisemap=noisemap, model=starred_model)
+
+    curves = {}
+    d_curves = {}
+    # let's separate the fluxes by point source
+    for i, ps in enumerate(point_sources_names):
+        curve = fluxes[i::len(point_sources_names)] * model_scale
+        curve_photon_uncertainties = flux_photon_uncertainties[i::len(point_sources_names)] * model_scale
+        # these need be compounded with the normalisation errors.
+        curve_norm_err = normalization_errors * curve
+        curves[ps] = curve
+        d_curves[ps] = (curve_photon_uncertainties ** 2 + curve_norm_err ** 2) ** 0.5
+
+    # ok, onto the chi2
+    modelled_pixels = starred_model.model(starred_kwargs)
+    residuals = data - modelled_pixels
+    chi2_per_frame = np.nansum((residuals ** 2 / noisemap ** 2), axis=(1, 2)) / starred_model.image_size ** 2
+
+    # let's fold in some info, and save!
+    df = []
+    num_epochs = len(frame_ids)
+    for epoch in range(num_epochs):
+        row = {
+            'frame_id': frame_ids[epoch],
+            'mjd': mjds[epoch],
+            'zeropoint': zeropoint,
+            'reduced_chi2': chi2_per_frame[epoch],
+            'seeing': seeings[epoch],
+            'sky_level_electron_per_second': sky_level_electron_per_second[epoch]
+        }
+        for ps in point_sources_names:
+            row[f'{ps}_flux'] = curves[ps][epoch]
+            row[f'{ps}_d_flux'] = d_curves[ps][epoch]
+        df.append(row)
+
+    df_per_epoch = pd.DataFrame(df).set_index('frame_id')
+    df_per_epoch = convert_flux_to_magnitude(df_per_epoch)
+    df_per_night = group_observations(df_per_epoch)
+    return df_per_epoch, df_per_night
 
