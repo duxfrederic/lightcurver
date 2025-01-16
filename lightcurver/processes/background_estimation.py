@@ -8,7 +8,7 @@ def subtract_background(image, mask_sources_first=False, n_boxes=10):
     basic, for complex cases do your own background subtraction.
     Background subtraction is particularly sensitive if we want to achieve
     high precision on the relative zeropoints of the images.
-    (we will not include a background in our deconvolutions, because it can always be
+    (we will not include a background in our forward modelling later down the line, because it can always be
     degenerate with other sources or the object itself).
 
     Here we will do this in two steps if mask_sources_first is True.

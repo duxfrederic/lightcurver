@@ -35,7 +35,7 @@ tasks:
     dependencies: [stamp_extraction]
     nature: independent_each_frame
   - name: star_photometry
-    description: "Uses the PSF model to do PSF photometry of each star, using STARRED (joint deconvolution). The fluxes (per frame and per star) are saved somewhere to be defined" # TODO
+    description: "Uses the PSF model to do PSF photometry of each star, using STARRED (forward modelling). The fluxes (per frame and per star) are saved in the database."
     dependencies: [psf_modeling]
     nature: all_missing_frames_at_once
   - name: calculate_normalization_coefficient

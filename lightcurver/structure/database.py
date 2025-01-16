@@ -150,9 +150,11 @@ def select_stars_for_a_frame(frame_id, combined_footprint_hash, stars_to_use=Non
 
     Useful for selecting the stars we want to use when modelling the PSF
     or calculating a normalization coefficient.
-    
-    #TODO very similar to query_stars_for_frame_and_footprint,
-    #TODO consider merging in the future.
+
+    Similar to query_all_stars_for_frame_and_footprint, but with more control on which stars we select, rather
+    than just selecting all available ones. Used for normalisation and PSF, whereas
+    query_all_stars_for_frame_and_footprint is used for extraction.
+
     Args:
         frame_id:  database frame ID
         combined_footprint_hash: hash of the footprint in which the stars were originally queried.
@@ -212,7 +214,7 @@ def select_stars_for_a_frame(frame_id, combined_footprint_hash, stars_to_use=Non
     return stars_df
 
 
-def query_stars_for_frame_and_footprint(frame_id, combined_footprint_hash=None):
+def query_all_stars_for_frame_and_footprint(frame_id, combined_footprint_hash=None):
     """
     Queries and returns all stars linked to a specific frame, optionally filtered by a specific footprint hash.
 

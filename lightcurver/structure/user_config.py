@@ -55,9 +55,9 @@ def get_user_config():
     if type(config['stars_to_use_norm']) is str:
         config['stars_to_use_norm'] = [c for c in config['stars_to_use_norm']]
     if type(config['stars_to_exclude_psf']) is str:
-        config['stars_to_exclude_psf'] = [c for c in config['stars_to_use_psf']]
+        config['stars_to_exclude_psf'] = [c for c in config['stars_to_exclude_psf']]
     if type(config['stars_to_exclude_norm']) is str:
-        config['stars_to_exclude_norm'] = [c for c in config['stars_to_use_norm']]
+        config['stars_to_exclude_norm'] = [c for c in config['stars_to_exclude_norm']]
 
     # photometric bands check
     photom_band = config['photometric_band']
@@ -103,8 +103,10 @@ def compare_config_with_pipeline_delivered_one():
 
     user_extra_keys = user_config_keys.difference(pipeline_config_keys)
     pipeline_extra_keys = pipeline_config_keys.difference(user_config_keys)
+    pipeline_extra_keys_values = {key: pipeline_config[key] for key in pipeline_extra_keys}
 
     return {
         'extra_keys_in_user_config': user_extra_keys,
-        'extra_keys_in_pipeline_config': pipeline_extra_keys
+        'extra_keys_in_pipeline_config': pipeline_extra_keys,
+        'pipeline_extra_keys_values': pipeline_extra_keys_values
     }
