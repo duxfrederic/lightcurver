@@ -11,7 +11,9 @@ from astropy.wcs import WCS
 from astropy.coordinates import SkyCoord
 from astropy.wcs.utils import pixel_to_skycoord
 from astropy import units as u
+from astropy.nddata import CCDData
 from photutils.aperture import CircularAperture, aperture_photometry
+from ccdproc import Combiner
 import logging
 
 from starred.deconvolution.deconvolution import setup_model
@@ -54,25 +56,72 @@ def align_data_interpolation(array, starred_kwargs):
     return array_shift
 
 
-def stack_data_without_point_sources(data, starred_kwargs, starred_model):
+def stack_data_ccdproc(data, noisemap, n_sigma):
     """
-    Subtracts the point sources from the data; then stacks each data frame after interpolating them
+    Using ccdproc to do average stacking with rejection.
+
+    Args:
+        data: 3D array of shape (N_epoch, nx, ny)
+        noisemap: 3D array of shape (N_epoch, nx, ny)
+        n_sigma: float, how many sigmas away from the median we clip columns of clip pixels at?
+
+    Returns:
+        2D array of shape (nx, ny)
+    """
+
+    # here the units are not ADUs, but we provide our own weights, so it should not matter.
+    ccds = [CCDData(epoch, unit=u.adu) for epoch in data]
+    combiner = Combiner(ccds)
+    # set the weights -- conservative here, not using 1/noisemap**2 even though this would maximize S/N for Gaussians
+    combiner.weights = 1.0 / noisemap
+
+    # apply sigma clipping, we don't do it iteratively, one clip should be enough for most artifacts.
+    combiner.sigma_clipping(low_thresh=n_sigma, high_thresh=n_sigma, func=np.ma.median)
+    average = combiner.average_combine()
+
+    return average.data
+
+
+def stack_data_diagnostic(data, noisemap, starred_kwargs, starred_model):
+    """
+    Stacks each data frame after interpolating them
     (rotation, translation) so they all match according to the fitted rotation and translations in starred_kwargs.
+    Does it once for the data entire dataset, once with only the point sources, and once without the point sources.
     Parameters:
         data: numpy array, shape (N, nx, ny)
+        noisemap: numpy array, shape (N, nx, ny)
         starred_kwargs: dictionary of keywords parameters of the starred model.
         starred_model: the starred Deconv class used to model the pixels.
     Returns:
-        numpy array, shape (nx, ny)
+        dictionary of 3 numpy arrays, each shape (nx, ny), with keys 'stack', 'stack_no_ps' and 'stack_no_background'
     """
     kwargs_only_ps = deepcopy(starred_kwargs)
     kwargs_only_ps['kwargs_background']['h'] *= 0.0
 
+    kwargs_no_ps = deepcopy(starred_kwargs)
+    kwargs_no_ps['kwargs_analytic']['a'] *= 0.0
+
+    # data without point sources
     data_no_ps = data - starred_model.model(kwargs_only_ps)
     data_no_ps = align_data_interpolation(data_no_ps, kwargs_only_ps)
-    stack_no_ps = np.nanmean(data_no_ps, axis=0)
 
-    return stack_no_ps
+    # data without extended component
+    data_no_background = data - starred_model.model(kwargs_no_ps)
+    data_no_background = align_data_interpolation(data_no_background, kwargs_no_ps)
+
+    # just data
+    data_original = align_data_interpolation(data, starred_kwargs)
+
+    # stacking.
+    stack_no_ps = stack_data_ccdproc(data_no_ps, noisemap)
+    stack_no_background = stack_data_ccdproc(data_no_background, noisemap)
+    stack_original = stack_data_ccdproc(data_original, noisemap)
+
+    return {
+        'stack': stack_original,
+        'stack_no_ps': stack_no_ps,
+        'stack_no_background': stack_no_background
+    }
 
 
 def do_modelling_of_roi():
@@ -284,53 +333,43 @@ def do_modelling_of_roi():
     with open(out_dir / f'{combined_footprint_hash}_astrometry.json', 'w') as ff:
         json.dump(ps_coords_post, ff)
 
-    # the fluxes ...
-    fluxes = kwargs_final['kwargs_analytic']['a']
-    # get the uncertainties on the fluxes
-    flux_photon_uncertainties = get_flux_uncertainties(kwargs=kwargs_final, kwargs_down=kwargs_down,
-                                                       kwargs_up=kwargs_up,
-                                                       data=data, noisemap=noisemap, model=model)
-    curves = {}
-    d_curves = {}
-    # let's separate the fluxes by point source
-    for i, ps in enumerate(ordered_ps):
-        curve = fluxes[i::len(ordered_ps)] * scale
-        curve_photon_uncertainties = flux_photon_uncertainties[i::len(ordered_ps)] * scale
-        # these need be compounded with the normalisation errors.
-        curve_norm_err = norm_errs * curve
-        curves[ps] = curve
-        d_curves[ps] = (curve_photon_uncertainties**2 + curve_norm_err**2)**0.5
+    # ok, now we extract the light curves from the fitted starred kwargs.
+    mags_etc_per_epoch, mags_etc_per_night, residuals = get_fluxes_dataframe_from_model(
+        starred_model=model,
+        starred_kwargs=kwargs_final,
+        starred_kwargs_down=kwargs_down,
+        starred_kwargs_up=kwargs_up,
+        data=data,
+        noisemap=noisemap,
+        point_sources_names=ordered_ps,
+        model_scale=scale,
+        normalization_errors=norm_errs,
+        frame_ids=frame_ids,
+        mjds=mjds,
+        seeings=seeings,
+        zeropoint=zeropoint,
+        sky_level_electron_per_second=sky_level_electron_per_second)
 
-    # ok, onto the chi2
-    modelled_pixels = model.model(kwargs_final)
-    residuals = data - modelled_pixels
-    chi2_per_frame = np.nansum((residuals**2 / noisemap**2), axis=(1, 2)) / model.image_size ** 2
+    mags_etc_per_epoch.to_csv(out_dir / f"{combined_footprint_hash}_{user_config['roi_name']}_photometry_per_epoch.csv")
+    mags_etc_per_night.to_csv(out_dir / f"{combined_footprint_hash}_{user_config['roi_name']}_photometry_per_night.csv")
 
-    # let's fold in some info, and save!
-    df = []
-    num_epochs = len(frame_ids)
-    for epoch in range(num_epochs):
-        row = {
-            'frame_id': frame_ids[epoch],
-            'mjd': mjds[epoch],
-            'zeropoint': zeropoint,
-            'reduced_chi2': chi2_per_frame[epoch],
-            'seeing': seeings[epoch],
-            'sky_level_electron_per_second': sky_level_electron_per_second[epoch]
-        }
-        for ps in ordered_ps:
-            row[f'{ps}_flux'] = curves[ps][epoch]
-            row[f'{ps}_d_flux'] = d_curves[ps][epoch]
-        df.append(row)
-    df = pd.DataFrame(df).set_index('frame_id')
-    df.to_csv(out_dir / f'{combined_footprint_hash}_fluxes.csv')
     # ok, now some diagnostics.
     # first, subtract the point sources from the data, see what the stack looks like.
     # (helps to spot PSF model problems, or fit really gone wrong)
+    stacks = stack_data_diagnostic(
+        data=data,
+        noisemap=noisemap,
+        starred_kwargs=kwargs_final,
+        starred_model=model
+    )
 
-    stack_no_ps = stack_data_without_point_sources(data=data, starred_kwargs=kwargs_final, starred_model=model)
-    fits.writeto(out_dir / f'{combined_footprint_hash}_stack_without_point_sources.fits', scale * stack_no_ps,
-                 overwrite=True, header=wcs_ref.to_header())
+    for stack_type, stack in stacks.items():
+        fits.writeto(
+            out_dir / f"{combined_footprint_hash}_{user_config['roi_name']}_{stack_type}.fits",
+            scale * stack,
+            overwrite=True,
+            header=wcs_ref.to_header()
+        )
 
     # and of course, output the fitted high-res model
     high_res_model, high_res_model_background_only = model.getDeconvolved(kwargs_final, 0)
@@ -342,9 +381,11 @@ def do_modelling_of_roi():
 
     header_highres = wcs_highres.to_header()
     header_highres['ZPT'] = float(zeropoint) if zeropoint.ndim == 0 else float(zeropoint[0])
-    fits.writeto(out_dir / f'{combined_footprint_hash}_high_res_model.fits', scale * np.array(high_res_model),
+    fits.writeto(out_dir / f'{combined_footprint_hash}_high_res_model.fits',
+                 scale * np.array(high_res_model),
                  overwrite=True, header=header_highres)
-    fits.writeto(out_dir / f'{combined_footprint_hash}_background.fits', scale * np.array(high_res_model_background_only),
+    fits.writeto(out_dir / f'{combined_footprint_hash}_background.fits',
+                 scale * np.array(high_res_model_background_only),
                  overwrite=True, header=header_highres)
 
     # now a diagnostic plot
@@ -353,18 +394,47 @@ def do_modelling_of_roi():
     loss_history = optim.loss_history
     time_now = datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
     plot_file = plot_modelling_dir / f"{time_now}_joint_modelling_roi_{roi}.jpg"
+    red_chi2_per_frame = np.array(mags_etc_per_epoch['reduced_chi2'])
     plot_joint_modelling_diagnostic(datas=data, noisemaps=noisemap,
                                     residuals=residuals,
-                                    chi2_per_frame=chi2_per_frame, loss_curve=loss_history,
+                                    chi2_per_frame=red_chi2_per_frame,
+                                    loss_curve=loss_history,
                                     save_path=plot_file,
                                     starlet_background=np.array(high_res_model_background_only))
     logger.info(f'Finished modelling the ROI. Diagnostic plot at {plot_file}. '
-                f"The global reduced chi2 was {np.mean(chi2_per_frame):.02f}. ")
+                f"The global reduced chi2 was {np.mean(red_chi2_per_frame):.02f}. ")
 
 
 def get_fluxes_dataframe_from_model(starred_model, starred_kwargs, starred_kwargs_down, starred_kwargs_up,
                                     data, noisemap, point_sources_names, model_scale, normalization_errors,
                                     frame_ids, mjds, seeings, zeropoint, sky_level_electron_per_second):
+    """
+    This has a lot of inputs, so it is not meant to be used outside of the do_modelling_of_roi file.
+    Instead, it helps comparimentalise what we do in the main function.
+
+    Args:
+        starred_model: the "deconvolution" starred model
+        starred_kwargs: the fitted arguments, as a dictionary of keywords.
+        starred_kwargs_down: has to be passed to starred, same as starred_kwargs but with lower bound values.
+        starred_kwargs_up: has to be passed to starred, same as starred_kwargs but with higher bound values.
+        data: 3D array, (N_epoch, nx, ny): data pixels, in units of model_scale below.
+        noisemap:  3D array, (N_epoch, nx, ny): noise map pixels, in units of model_scale below.
+        point_sources_names: for exporting, an iterable yielding strings, one per point source in the model
+        model_scale: float, scale of the data above:
+                            data and noisemaps were earlier normalised by this scale, so we undo that here
+        normalization_errors: array of shape (N_epoch,), one per frame.
+        frame_ids: array of shape (N_epoch,), one per frame.
+        mjds:  array of shape (N_epoch,), one per frame.
+        seeings:  array of shape (N_epoch,), one per frame.
+        zeropoint: float, zeropoint of the cutouts.
+        sky_level_electron_per_second:  array of shape (N_epoch,), one per frame.
+
+    Returns: tuple:
+     - data frame containing fluxes and magnitudes per epoch,
+     - data frame, fluxes and others grouped per night,
+     - residuals: 3D array of shape (N_epoch, nx, ny) containing residuals in units of the noise.
+
+    """
     # the fluxes ...
     fluxes = starred_kwargs['kwargs_analytic']['a']
     # get the uncertainties on the fluxes
@@ -408,5 +478,5 @@ def get_fluxes_dataframe_from_model(starred_model, starred_kwargs, starred_kwarg
     df_per_epoch = pd.DataFrame(df).set_index('frame_id')
     df_per_epoch = convert_flux_to_magnitude(df_per_epoch)
     df_per_night = group_observations(df_per_epoch)
-    return df_per_epoch, df_per_night
+    return df_per_epoch, df_per_night, residuals
 
