@@ -37,7 +37,7 @@ def plot_joint_modelling_diagnostic(datas, noisemaps, residuals, loss_curve, chi
     fig, ax = plt.subplots(1, ncols, figsize=(fig_size_mult * sub_size, sub_size))
     ax = ax.flatten()
     # data stack
-    ax[0].imshow(data_stack, cmap=cmap, aspect='auto')
+    ax[0].imshow(data_stack, cmap=cmap, aspect='auto', origin='lower')
     ax[0].axis('off')
     ax[0].text(0.5, 0.01, 'Data stack',
                horizontalalignment='center',
@@ -46,7 +46,7 @@ def plot_joint_modelling_diagnostic(datas, noisemaps, residuals, loss_curve, chi
                color=text_color, fontsize=text_size,
                weight='bold')
     # residuals stack
-    ax[1].imshow(residuals_stack, cmap=cmap_residuals, aspect='auto')
+    ax[1].imshow(residuals_stack, cmap=cmap_residuals, aspect='auto', origin='lower')
     ax[1].axis('off')
     ax[1].text(0.5, 0.01, 'residuals stack',
                horizontalalignment='center',
@@ -56,7 +56,7 @@ def plot_joint_modelling_diagnostic(datas, noisemaps, residuals, loss_curve, chi
                weight='bold')
 
     # rel residuals stack
-    ax[2].imshow(rel_residuals_stack, cmap=cmap_residuals, aspect='auto')
+    ax[2].imshow(rel_residuals_stack, cmap=cmap_residuals, aspect='auto', origin='lower')
     ax[2].axis('off')
     ax[2].text(0.5, 0.01, 'rel. residuals stack',
                horizontalalignment='center',
@@ -85,7 +85,7 @@ def plot_joint_modelling_diagnostic(datas, noisemaps, residuals, loss_curve, chi
                weight='bold')
     # and view of the background common to all epochs if we included one, just to make sure it isn't nonsense.
     if starlet_background is not None:
-        ax[5].imshow(starlet_background)
+        ax[5].imshow(starlet_background, origin='lower')
         ax[5].axis('off')
         ax[5].text(0.5, 0.99, 'regularized background',
                    horizontalalignment='center',

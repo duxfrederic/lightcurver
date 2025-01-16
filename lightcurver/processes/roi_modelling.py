@@ -24,7 +24,7 @@ from ..structure.user_config import get_user_config
 from ..structure.database import get_pandas, execute_sqlite_query
 from ..utilities.footprint import get_combined_footprint_hash
 from ..utilities.starred_utilities import get_flux_uncertainties
-from ..plotting.star_photometry_plotting import plot_joint_modelling_diagnostic
+from ..plotting.joint_modelling_plotting import plot_joint_modelling_diagnostic
 from ..utilities.lightcurves_postprocessing import convert_flux_to_magnitude, group_observations
 
 
@@ -356,7 +356,8 @@ def do_modelling_of_roi():
     plot_joint_modelling_diagnostic(datas=data, noisemaps=noisemap,
                                     residuals=residuals,
                                     chi2_per_frame=chi2_per_frame, loss_curve=loss_history,
-                                    save_path=plot_file)
+                                    save_path=plot_file,
+                                    starlet_background=np.array(high_res_model_background_only))
     logger.info(f'Finished modelling the ROI. Diagnostic plot at {plot_file}. '
                 f"The global reduced chi2 was {np.mean(chi2_per_frame):.02f}. ")
 

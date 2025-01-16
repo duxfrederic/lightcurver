@@ -17,7 +17,7 @@ from ..utilities.chi2_selector import get_chi2_bounds
 from ..utilities.footprint import get_combined_footprint_hash
 from ..utilities.starred_utilities import get_flux_uncertainties
 from ..utilities.image_coordinates import rescale_image_coordinates
-from ..plotting.star_photometry_plotting import plot_joint_modelling_diagnostic
+from ..plotting.joint_modelling_plotting import plot_joint_modelling_diagnostic
 
 
 def do_one_star_forward_modelling(data, noisemap, psf, subsampling_factor,
