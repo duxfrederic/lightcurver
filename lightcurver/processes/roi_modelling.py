@@ -56,14 +56,14 @@ def align_data_interpolation(array, starred_kwargs):
     return array_shift
 
 
-def stack_data_ccdproc(data, noisemap, n_sigma):
+def stack_data_ccdproc(data, noisemap, n_sigma=3):
     """
     Using ccdproc to do average stacking with rejection.
 
     Args:
         data: 3D array of shape (N_epoch, nx, ny)
         noisemap: 3D array of shape (N_epoch, nx, ny)
-        n_sigma: float, how many sigmas away from the median we clip columns of clip pixels at?
+        n_sigma: float, how many sigmas away from the median we clip columns of clip pixels at? Default 3.
 
     Returns:
         2D array of shape (nx, ny)
@@ -330,7 +330,7 @@ def do_modelling_of_roi():
     y_pixels = np.array(kwargs_final['kwargs_analytic']['c_y'] + kwargs_final['kwargs_analytic']['dy'][0]) + offset_y
     ps_coords_post = pixel_to_skycoord(x_pixels, y_pixels, wcs_ref)
     ps_coords_post = {ps: [coord.ra.deg, coord.dec.deg] for ps, coord in zip(ordered_ps, ps_coords_post)}
-    with open(out_dir / f'{combined_footprint_hash}_astrometry.json', 'w') as ff:
+    with open(out_dir / f"{combined_footprint_hash}_{roi}_astrometry.json", 'w') as ff:
         json.dump(ps_coords_post, ff)
 
     # ok, now we extract the light curves from the fitted starred kwargs.
@@ -350,8 +350,8 @@ def do_modelling_of_roi():
         zeropoint=zeropoint,
         sky_level_electron_per_second=sky_level_electron_per_second)
 
-    mags_etc_per_epoch.to_csv(out_dir / f"{combined_footprint_hash}_{user_config['roi_name']}_photometry_per_epoch.csv")
-    mags_etc_per_night.to_csv(out_dir / f"{combined_footprint_hash}_{user_config['roi_name']}_photometry_per_night.csv")
+    mags_etc_per_epoch.to_csv(out_dir / f"{combined_footprint_hash}_{roi}_photometry_per_epoch.csv")
+    mags_etc_per_night.to_csv(out_dir / f"{combined_footprint_hash}_{roi}_photometry_per_night.csv")
 
     # ok, now some diagnostics.
     # first, subtract the point sources from the data, see what the stack looks like.
@@ -365,7 +365,7 @@ def do_modelling_of_roi():
 
     for stack_type, stack in stacks.items():
         fits.writeto(
-            out_dir / f"{combined_footprint_hash}_{user_config['roi_name']}_{stack_type}.fits",
+            out_dir / f"{combined_footprint_hash}_{roi}_{stack_type}.fits",
             scale * stack,
             overwrite=True,
             header=wcs_ref.to_header()
@@ -381,10 +381,10 @@ def do_modelling_of_roi():
 
     header_highres = wcs_highres.to_header()
     header_highres['ZPT'] = float(zeropoint) if zeropoint.ndim == 0 else float(zeropoint[0])
-    fits.writeto(out_dir / f'{combined_footprint_hash}_high_res_model.fits',
+    fits.writeto(out_dir / f"{combined_footprint_hash}_{roi}_high_res_model.fits",
                  scale * np.array(high_res_model),
                  overwrite=True, header=header_highres)
-    fits.writeto(out_dir / f'{combined_footprint_hash}_background.fits',
+    fits.writeto(out_dir / f"{combined_footprint_hash}_{roi}_background.fits",
                  scale * np.array(high_res_model_background_only),
                  overwrite=True, header=header_highres)
 
@@ -409,7 +409,7 @@ def get_fluxes_dataframe_from_model(starred_model, starred_kwargs, starred_kwarg
                                     data, noisemap, point_sources_names, model_scale, normalization_errors,
                                     frame_ids, mjds, seeings, zeropoint, sky_level_electron_per_second):
     """
-    This has a lot of inputs, so it is not meant to be used outside of the do_modelling_of_roi file.
+    This has a lot of inputs, so it is not meant to be used outside the do_modelling_of_roi file.
     Instead, it helps comparimentalise what we do in the main function.
 
     Args:
@@ -436,12 +436,13 @@ def get_fluxes_dataframe_from_model(starred_model, starred_kwargs, starred_kwarg
 
     """
     # the fluxes ...
-    fluxes = starred_kwargs['kwargs_analytic']['a']
+    fluxes = np.array(starred_kwargs['kwargs_analytic']['a'])
     # get the uncertainties on the fluxes
     flux_photon_uncertainties = get_flux_uncertainties(kwargs=starred_kwargs, kwargs_down=starred_kwargs_down,
                                                        kwargs_up=starred_kwargs_up,
                                                        data=data, noisemap=noisemap, model=starred_model)
-
+    # convert to numpy to avoid problems
+    flux_photon_uncertainties = np.array(flux_photon_uncertainties)
     curves = {}
     d_curves = {}
     # let's separate the fluxes by point source
@@ -457,6 +458,8 @@ def get_fluxes_dataframe_from_model(starred_model, starred_kwargs, starred_kwarg
     modelled_pixels = starred_model.model(starred_kwargs)
     residuals = data - modelled_pixels
     chi2_per_frame = np.nansum((residuals ** 2 / noisemap ** 2), axis=(1, 2)) / starred_model.image_size ** 2
+    # to avoid problems:
+    chi2_per_frame = np.array(chi2_per_frame)
 
     # let's fold in some info, and save!
     df = []
