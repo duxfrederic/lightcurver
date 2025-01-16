@@ -103,8 +103,10 @@ def compare_config_with_pipeline_delivered_one():
 
     user_extra_keys = user_config_keys.difference(pipeline_config_keys)
     pipeline_extra_keys = pipeline_config_keys.difference(user_config_keys)
+    pipeline_extra_keys_values = {key: pipeline_config[key] for key in pipeline_extra_keys}
 
     return {
         'extra_keys_in_user_config': user_extra_keys,
-        'extra_keys_in_pipeline_config': pipeline_extra_keys
+        'extra_keys_in_pipeline_config': pipeline_extra_keys,
+        'pipeline_extra_keys_values': pipeline_extra_keys_values
     }

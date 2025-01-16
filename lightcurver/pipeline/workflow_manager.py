@@ -54,8 +54,20 @@ class WorkflowManager:
         # initial check: make sure this version of the pipeline doesn't have keywords in its config that the
         # user config is missing.
         extra_keys = compare_config_with_pipeline_delivered_one()
+        extra_values = extra_keys['pipeline_extra_keys_values']
         if extra := extra_keys['extra_keys_in_pipeline_config']:
-            raise RuntimeError(f"You are missing the following parameters in your config file: {extra}")
+            # ok, make an informative error message here
+            message = "You are missing the following parameters in your config file:\n"
+            message += f"{'Parameter':<50} {'(Default value)':<50}\n"
+            message += f"{'-' * 50} {'-' * 50}\n"
+
+            for key in extra:
+                value = extra_values[key]
+                formatted_value = "None (not set)" if value is None else str(value)
+                message += f"{key:<50} {formatted_value:<50}\n"
+
+            raise RuntimeError(message)
+
         if extra := extra_keys['extra_keys_in_user_config']:
             error_message = ("You have parameters in your config file that"
                              f" are not in the latest config version: {extra}. \n"
