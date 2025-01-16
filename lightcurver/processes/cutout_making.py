@@ -16,7 +16,7 @@ import warnings
 import erfa
 
 from ..structure.user_config import get_user_config
-from ..structure.database import get_pandas, query_stars_for_frame_and_footprint
+from ..structure.database import get_pandas, query_all_stars_for_frame_and_footprint
 from ..utilities.footprint import get_combined_footprint_hash
 
 
@@ -125,8 +125,8 @@ def extract_all_stamps():
         for i, frame in frames_to_process.iterrows():
             # check what stars need be extracted
             # here we just extract all of them, independently of which we're actually going to use (PSF and norm).
-            stars = query_stars_for_frame_and_footprint(frame_id=frame['id'],
-                                                        combined_footprint_hash=combined_footprint_hash)
+            stars = query_all_stars_for_frame_and_footprint(frame_id=frame['id'],
+                                                            combined_footprint_hash=combined_footprint_hash)
 
             # chance to skip this frame if both 'not redo' and 'all was extracted'
             if (not user_config['redo_stamp_extraction']) and (frame['image_relpath'] in reg_f.keys()):
