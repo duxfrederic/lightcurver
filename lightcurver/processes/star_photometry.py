@@ -281,6 +281,7 @@ def do_star_photometry():
                 # accepted stars in 'stars_to_use_psf'.
                 stars_psf = select_stars_for_a_frame(frame_id=frame['id'],
                                                      stars_to_use=user_config['stars_to_use_psf'],
+                                                     stars_to_exclude=user_config['stars_to_exclude_psf'],
                                                      combined_footprint_hash=combined_footprint_hash)
                 psf_ref = 'psf_' + ''.join(sorted(stars_psf['name']))
                 mask.append(h5f[f"{frame['image_relpath']}/cosmicsmask/{star['gaia_id']}"][...])
