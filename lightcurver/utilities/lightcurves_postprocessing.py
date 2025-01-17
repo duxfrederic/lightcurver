@@ -102,3 +102,4 @@ def convert_flux_to_magnitude(df):
             df[f'{ps}_scatter_mag'] = 2.5 / np.log(10) * (df[scatter_col] / df[flux_col]).abs()
 
     return df
+

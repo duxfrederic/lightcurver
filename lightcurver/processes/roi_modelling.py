@@ -479,7 +479,8 @@ def get_fluxes_dataframe_from_model(starred_model, starred_kwargs, starred_kwarg
         df.append(row)
 
     df_per_epoch = pd.DataFrame(df).set_index('frame_id')
-    df_per_epoch = convert_flux_to_magnitude(df_per_epoch)
     df_per_night = group_observations(df_per_epoch)
-    return df_per_epoch, df_per_night, residuals
+    mags_per_epoch = convert_flux_to_magnitude(df_per_epoch)
+    mags_per_night = convert_flux_to_magnitude(df_per_night)
+    return mags_per_epoch, mags_per_night, residuals
 
