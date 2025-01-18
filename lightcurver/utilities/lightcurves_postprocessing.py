@@ -115,6 +115,11 @@ def convert_flux_to_magnitude(df):
         Returns:
         - Tuple of Series: (mag, sigma_down, sigma_up)
         """
+        # safety
+        flux_values = np.array(flux_values)
+        flux_errors = np.array(flux_errors)
+        # zp never goes through the jax machinery, should be a numpy array.
+
         # nominal magnitude
         mag = -2.5 * np.log10(flux_values) + zp
         # upper and lower fluxes
