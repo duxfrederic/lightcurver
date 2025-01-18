@@ -142,7 +142,7 @@ def convert_flux_to_magnitude(df):
         df[f'{source}_{prefix}_mag_down'] = sigma_down
         df[f'{source}_{prefix}_mag_up'] = sigma_up
         # linearized mag uncertainty for comparison
-        df[f'{source}_{prefix}_mag'] = 2.5 / np.log(10) * (flux_errors / flux_values).abs()
+        df[f'{source}_{prefix}_mag'] = 2.5 / np.log(10) * np.abs(flux_errors / flux_values)
 
     for error_type in ('d', 'scatter'):
         for flux_col in flux_columns:
