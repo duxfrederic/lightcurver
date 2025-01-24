@@ -60,8 +60,7 @@ def compute_offsets(df, sources):
     # sort sources by brightness
     sorted_sources = sorted(sources, key=lambda source: source_medians[source])
 
-    offsets = {}
-    offsets[sorted_sources[0]] = 0.0
+    offsets = {sorted_sources[0]: 0.0}
     for i in range(1, len(sorted_sources)):
         prev_s = sorted_sources[i-1]
         curr_s = sorted_sources[i]
