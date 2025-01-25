@@ -23,10 +23,11 @@ from starred.deconvolution.parameters import ParametersDeconv
 from starred.utils.noise_utils import propagate_noise
 
 from ..structure.user_config import get_user_config
-from ..structure.database import get_pandas, execute_sqlite_query
+from ..structure.database import get_pandas
 from ..utilities.footprint import get_combined_footprint_hash
 from ..utilities.starred_utilities import get_flux_uncertainties
 from ..plotting.joint_modelling_plotting import plot_joint_modelling_diagnostic
+from ..plotting.html_visualisation import generate_lightcurve_html
 from ..utilities.lightcurves_postprocessing import convert_flux_to_magnitude, group_observations
 
 
@@ -352,7 +353,9 @@ def do_modelling_of_roi():
 
     mags_etc_per_epoch.to_csv(out_dir / f"{combined_footprint_hash}_{roi}_photometry_per_epoch.csv")
     mags_etc_per_night.to_csv(out_dir / f"{combined_footprint_hash}_{roi}_photometry_per_night.csv")
-
+    # make an html plot as well
+    generate_lightcurve_html(mags_etc_per_night, out_dir / f"{combined_footprint_hash}_{roi}_photometry_per_night.html")
+    
     # ok, now some diagnostics.
     # first, subtract the point sources from the data, see what the stack looks like.
     # (helps to spot PSF model problems, or fit really gone wrong)
@@ -479,7 +482,8 @@ def get_fluxes_dataframe_from_model(starred_model, starred_kwargs, starred_kwarg
         df.append(row)
 
     df_per_epoch = pd.DataFrame(df).set_index('frame_id')
-    df_per_epoch = convert_flux_to_magnitude(df_per_epoch)
     df_per_night = group_observations(df_per_epoch)
-    return df_per_epoch, df_per_night, residuals
+    mags_per_epoch = convert_flux_to_magnitude(df_per_epoch)
+    mags_per_night = convert_flux_to_magnitude(df_per_night)
+    return mags_per_epoch, mags_per_night, residuals
 

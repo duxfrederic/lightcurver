@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Light Curves Shifter</title>
+    <script src="https://cdn.jsdelivr.net/npm/vue@2"></script>
+    <script src="https://cdn.plot.ly/plotly-2.16.1.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .control-panel { margin: 20px 0; padding: 10px; border: 1px solid #ddd; }
+        .curve-control { margin: 5px 0; }
+        .curve-control.selected {
+            background: #f0f0ff;
+            border-left: 3px solid #4444ff;
+        }
+        #plot { width: 100%; height: 700px; }
+        input[type="file"] { margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <div id="app" class="container">
+        <div style="border: 1px solid #ddd; background-color: #f9f9f9; padding: 15px; margin-bottom: 20px; border-radius: 5px;">
+            <h3>Instructions</h3>
+            <ul style="margin: 0; padding-left: 20px; list-style-type: disc;">
+                <li><strong>Click:</strong> Define a rectangle to zoom in.</li>
+                <li><strong>Shift + Drag:</strong> Drag the view to pan across the plot.</li>
+                <li><strong>Ctrl + Click on a curve:</strong> Shift the curve (in time and magnitude).</li>
+            </ul>
+        </div>
+        <div v-if="curves.length > 0">
+            <div class="control-panel">
+                <h3>Control Panel</h3>
+                <div v-for="curve in curves" :key="curve.name" class="curve-control">
+                    <label>
+                        <input type="checkbox" v-model="curve.visible" @change="updatePlot">
+                        {{ curve.name }} (ΔT: {{ curve.offsetX.toFixed(1) }}, ΔM: {{ curve.offsetY.toFixed(2) }})
+                    </label>
+                    <label style="margin-left: 10px;">
+                        <input type="checkbox" v-model="curve.showErrors" @change="updatePlot">
+                        Show Errors
+                    </label>
+                </div>
+            </div>
+
+            <div id="plot"></div>
+        </div>
+    </div>
+
+    <script>
+        // CSV_DATA_PLACEHOLDER
+
+        new Vue({
+            el: '#app',
+            data: {
+                curves: [],
+                plotLayout: {
+                    title: 'Light Curves',
+                    xaxis: { title: 'MJD' },
+                    yaxis: { title: 'Magnitude', autorange: 'reversed' },
+                    showlegend: true,
+                    hovermode: 'closest'
+                },
+                draggingCurve: null,
+                dragStart: { x: 0, y: 0, offsetX: 0, offsetY: 0 },
+                isCtrlPressed: false,
+                originalDragMode: 'zoom',
+                searchDebounce: null
+            },
+            mounted() {
+                // autoload data when page loads
+                this.parseCSVData(Papa.parse(csvData, {header: true, dynamicTyping: true}).data);
+            },
+            methods: {
+                parseCSVData(data) {
+                    const mjds = data.map(row => row.mjd);
+                    const curveNames = this.extractCurveNames(data[0]);
+
+                    this.curves = curveNames.map(name => ({
+                        name,
+                        mjds: [...mjds],
+                        mags: data.map(row => row[`${name}_mag`]),
+                        errors: data.map(row => row[`${name}_d_mag`] || null),
+                        offsetX: 0,
+                        offsetY: 0,
+                        visible: true,
+                        showErrors: true
+                    }));
+
+                    // force initial plot update with proper ranges
+                    this.$nextTick(() => {
+                        this.updatePlot();
+                        Plotly.relayout('plot', {
+                            'xaxis.autorange': true,
+                            'yaxis.autorange': true
+                        });
+                    });
+                },
+
+                extractCurveNames(headerRow) {
+                    return Object.keys(headerRow)
+                        .filter(key => key.endsWith('_mag') && !['mjd', 'zeropoint'].includes(key))
+                        .map(key => key.split('_')[0])
+                        .filter((value, index, self) => self.indexOf(value) === index);
+                },
+
+                updatePlot() {
+                    const traces = this.curves
+                        .filter(c => c.visible)
+                        .map(curve => ({
+                            x: curve.mjds.map(mjd => mjd + curve.offsetX),
+                            y: curve.mags.map(mag => mag + curve.offsetY),
+                            error_y: curve.showErrors ? {
+                                type: 'data',
+                                array: curve.errors,
+                                visible: true
+                            } : null,
+                            type: 'scatter',
+                            mode: 'markers',
+                            name: `${curve.name} (ΔT: ${curve.offsetX.toFixed(1)}, ΔM: ${curve.offsetY.toFixed(2)})`
+                        }));
+
+                    Plotly.react('plot', traces, this.plotLayout)
+                        .then(() => this.setupPlotInteractions());
+                },
+
+                setupPlotInteractions() {
+                    const plotDiv = document.getElementById('plot');
+                    let isSearching = false;
+                    plotDiv.onmousedown = (e) => {
+                        if (!this.isCtrlPressed) return;
+                        if (isSearching) return;
+                        isSearching = true;
+
+                        const rect = plotDiv.getBoundingClientRect();
+                        const mouseX = e.clientX - rect.left;
+                        const mouseY = e.clientY - rect.top;
+
+                        const closest = this.findClosestCurve(mouseX, mouseY);
+                        isSearching = false;
+
+                        if (closest) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            this.startDragging(closest.curve, mouseX, mouseY);
+                        }
+                    };
+
+                    document.addEventListener('keydown', (e) => {
+                        if (e.ctrlKey || e.metaKey) {
+                            this.isCtrlPressed = true;
+                            this.originalDragMode = plotDiv.layout.dragmode;
+                            Plotly.update('plot', {}, { dragmode: 'none' });
+                        }
+                    });
+
+                    document.addEventListener('keyup', () => {
+                        if (!this.isCtrlPressed) {
+                            this.isCtrlPressed = false;
+                            Plotly.update('plot', {}, { dragmode: this.originalDragMode });
+                        }
+                    });
+
+                    plotDiv.onmousemove = (e) => {
+                        if (!this.draggingCurve) return;
+
+                        const rect = plotDiv.getBoundingClientRect();
+                        const mouseX = e.clientX - rect.left;
+                        const mouseY = e.clientY - rect.top;
+
+                        this.updateDragging(mouseX, mouseY);
+                    };
+
+                    document.addEventListener('mouseup', () => {
+                        this.stopDragging();
+                    });
+                },
+
+                startDragging(curve, startX, startY) {
+                    this.curves.forEach(c => c.selected = false);
+                    curve.selected = true;
+                    this.draggingCurve = curve;
+                    this.dragStart = {
+                        x: startX,
+                        y: startY,
+                        offsetX: curve.offsetX,
+                        offsetY: curve.offsetY
+                    };
+                },
+
+                updateDragging(mouseX, mouseY) {
+                    const plotDiv = document.getElementById('plot');
+                    const rect = plotDiv.getBoundingClientRect();
+                    const xRange = this.plotLayout.xaxis.range || [0, 1];
+                    const yRange = this.plotLayout.yaxis.range || [0, 1];
+
+                    const dx = 1.25 * (mouseX - this.dragStart.x) * (xRange[1] - xRange[0]) / rect.width;
+                    const dy = 1.25 * (mouseY - this.dragStart.y) * (yRange[1] - yRange[0]) / rect.height;
+
+                    this.draggingCurve.offsetX = this.dragStart.offsetX + dx;
+                    this.draggingCurve.offsetY = this.dragStart.offsetY - dy;
+
+                    this.updatePlot();
+                },
+
+                stopDragging() {
+                    this.draggingCurve = null;
+                },
+
+                findClosestCurve(mouseX, mouseY) {
+                    const plotDiv = document.getElementById('plot');
+                    const rect = plotDiv.getBoundingClientRect();
+
+                    const xRange = this.plotLayout.xaxis.range || [0, 1];
+                    const yRange = this.plotLayout.yaxis.range || [0, 1];
+
+                    const x = xRange[0] + (mouseX / rect.width) * (xRange[1] - xRange[0]);
+                    const y = yRange[0] + ((rect.height - mouseY) / rect.height) * (yRange[1] - yRange[0]);
+
+                    const xScale = xRange[1] - xRange[0];
+                    const yScale = yRange[1] - yRange[0];
+
+                    let minDistanceSq = Infinity;
+                    let closestCurve = null;
+
+                    this.curves.forEach(curve => {
+                        if (!curve.visible) return;
+
+                        curve.mjds.forEach((mjd, index) => {
+                            const curveX = mjd + curve.offsetX;
+                            const curveY = curve.mags[index] + curve.offsetY;
+
+                            const dx = (curveX - x) / xScale;
+                            const dy = (curveY - y) / yScale;
+                            const distanceSq = dx * dx + dy * dy;
+
+                            if (distanceSq < minDistanceSq) {
+                                minDistanceSq = distanceSq;
+                                closestCurve = { curve, distance: distanceSq };
+                            }
+                        });
+                    });
+
+                    // threshold to avoid distant selections
+                    const threshold = 0.01;
+                    return minDistanceSq <= threshold ? closestCurve : null;
+                }
+            }
+        });
+    </script>
+</body>
+</html>
