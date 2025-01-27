@@ -334,12 +334,14 @@ starting_background: null
 # (kinda ruining the point of the entire pipeline, but well...)
 further_optimize_background: true
 
-# the regularization of the background can be tuned here:
+# the regularization of the forward modelling can be tuned here:
 roi_model_regularization:
-  regularization_strength_scales: 1.0
-  regularization_strength_hf: 1.0
-  regularization_strength_positivity: 100.0
-  regularization_strength_pts_source: 0.01
+  regularization_strength_scales: 1.0   # default 1.0, but we still have scaling issues in starred. Thus, you might need
+  regularization_strength_hf: 1.0       # to lower this ...regularization is even not needed with very high S/N.
+  regularization_strength_positivity: 100.0  # avoid negative fluxes
+  regularization_strength_pts_source: 0.01   # see our starred paper, Millon 2024. Usually keep this low.
+  regularization_scatter_fluxes_pre_optim: 10.0  # prevents overfitting of background flux in first optim stage
+  regularization_scatter_fluxes_main_optim: 1.0  # same idea, but you do not want to change the chi-squared, keep low
 
 
 # and these should mostly work as is, how many iterations of the optimizer do we do?

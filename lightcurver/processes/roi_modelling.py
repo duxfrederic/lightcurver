@@ -266,7 +266,8 @@ def do_modelling_of_roi():
                                   kwargs_up=kwargs_up,
                                   kwargs_down=kwargs_down)
 
-    loss = Loss(data, model, parameters, noisemap**2, prior=astrometric_prior)
+    loss = Loss(data, model, parameters, noisemap**2, prior=astrometric_prior,
+                regularization_strength_flux_uniformity=user_config['regularization_scatter_fluxes_pre_optim'])
 
     optim = Optimizer(loss, parameters, method='l-bfgs-b')
 
@@ -311,8 +312,12 @@ def do_modelling_of_roi():
                 regularization_strength_hf=regularization_strength_hf,
                 regularization_strength_positivity=regularization_strength_positivity,
                 regularization_strength_pts_source=regularization_strength_pts_source,
+                regularization_strength_flux_uniformity=user_config['regularization_scatter_fluxes_main_optim'],
                 W=starlet_layer_propagated_weights,
                 prior=astrometric_prior)
+    if regul_scatter := user_config['regularization_scatter_fluxes_main_optim'] > 0.0:
+        logger.warning("From config: regularisation on flux scatter in final optimisation -- "
+                       f"regularization_scatter_fluxes_main_optim = {regul_scatter:.01f}")
 
     optim = Optimizer(loss, parameters, method='adabelief')
     optimiser_optax_option = {
