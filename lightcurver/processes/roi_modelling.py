@@ -266,8 +266,14 @@ def do_modelling_of_roi():
                                   kwargs_up=kwargs_up,
                                   kwargs_down=kwargs_down)
 
+    roi_modeling_params = user_config.get('roi_model_regularization', {})
+    if not roi_modeling_params:
+        logger.warning('No background regularization params in config: using defaults.')
+
+    regularization_scatter_fluxes_pre_optim = roi_modeling_params.get('regularization_scatter_fluxes_pre_optim', 10.0)
+
     loss = Loss(data, model, parameters, noisemap**2, prior=astrometric_prior,
-                regularization_strength_flux_uniformity=user_config['regularization_scatter_fluxes_pre_optim'])
+                regularization_strength_flux_uniformity=regularization_scatter_fluxes_pre_optim)
 
     optim = Optimizer(loss, parameters, method='l-bfgs-b')
 
@@ -299,25 +305,23 @@ def do_modelling_of_roi():
                                   kwargs_up=kwargs_up,
                                   kwargs_down=kwargs_down)
 
-    roi_modeling_params = user_config.get('roi_model_regularization', {})
-    if not roi_modeling_params:
-        logger.warning('No background regularization params in config: using defaults.')
     regularization_strength_scales = roi_modeling_params.get('regularization_strength_scales', 1.0)
     regularization_strength_hf = roi_modeling_params.get('regularization_strength_hf', 1.0)
     regularization_strength_positivity = roi_modeling_params.get('regularization_strength_positivity', 100.0)
     regularization_strength_pts_source = roi_modeling_params.get('regularization_strength_pts_source', 0.01)
+    regularization_scatter_fluxes_main_optim = roi_modeling_params.get('regularization_scatter_fluxes_main_optim', 10.0)
     loss = Loss(data, model, parameters, noisemap**2,
                 regularization_terms='l1_starlet',
                 regularization_strength_scales=regularization_strength_scales,
                 regularization_strength_hf=regularization_strength_hf,
                 regularization_strength_positivity=regularization_strength_positivity,
                 regularization_strength_pts_source=regularization_strength_pts_source,
-                regularization_strength_flux_uniformity=user_config['regularization_scatter_fluxes_main_optim'],
+                regularization_strength_flux_uniformity=regularization_scatter_fluxes_main_optim,
                 W=starlet_layer_propagated_weights,
                 prior=astrometric_prior)
-    if regul_scatter := user_config['regularization_scatter_fluxes_main_optim'] > 0.0:
+    if regularization_scatter_fluxes_main_optim > 0.0:
         logger.warning("From config: regularisation on flux scatter in final optimisation -- "
-                       f"regularization_scatter_fluxes_main_optim = {regul_scatter:.01f}")
+                       f"regularization_scatter_fluxes_main_optim = {regularization_scatter_fluxes_main_optim:.01f}")
 
     optim = Optimizer(loss, parameters, method='adabelief')
     optimiser_optax_option = {
