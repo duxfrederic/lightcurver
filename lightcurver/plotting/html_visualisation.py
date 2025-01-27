@@ -10,7 +10,7 @@ def generate_lightcurve_html(df, output_file="lightcurves.html"):
         output_file: Path for output HTML file
     """
 
-    csv_data = df.to_csv(index=False, float_format="%.6f")
+    csv_data = df.to_csv(index=False, float_format="%.6f").strip()
 
     template = resources.read_text("lightcurver.plotting", "plot_curves_template.html")
     # inject light curves
