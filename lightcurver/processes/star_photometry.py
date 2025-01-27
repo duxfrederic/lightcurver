@@ -98,8 +98,9 @@ def do_one_star_forward_modelling(data, noisemap, psf, subsampling_factor,
         'param_class': parameters,
         'sigma_2': sigma_2,
         'regularization_terms': 'l1_starlet',
-        'regularization_strength_scales': 3,
-        'regularization_strength_hf': 3
+        'regularization_strength_scales': 3.0,
+        'regularization_strength_hf': 3.0,
+        'regularization_strength_flux_uniformity': 0.,
     }
     if starlet_global_background:
         # passing a ton of arguments, not really necessary, but at least we know what we are doing
