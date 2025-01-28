@@ -6,8 +6,8 @@
     <script src="https://cdn.plot.ly/plotly-2.16.1.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        .container { max-width: 1200px; margin: 0 auto; }
+        body { font-family: Arial, sans-serif; margin: 20px; height: 100%; }
+        .container { max-width: 100%; margin: 0 auto; }
         .control-panel { margin: 20px 0; padding: 10px; border: 1px solid #ddd; }
         .curve-control { margin: 5px 0; }
         .curve-control.selected {
@@ -59,7 +59,13 @@
                     xaxis: { title: 'MJD' },
                     yaxis: { title: 'Magnitude', autorange: 'reversed' },
                     showlegend: true,
-                    hovermode: 'closest'
+                    hovermode: 'closest',
+                    margin: {
+                        l: 40,
+                        r: 10,
+                        t: 40,
+                        b: 40
+                    }
                 },
                 draggingCurve: null,
                 dragStart: { x: 0, y: 0, offsetX: 0, offsetY: 0 },
@@ -113,10 +119,13 @@
                             error_y: curve.showErrors ? {
                                 type: 'data',
                                 array: curve.errors,
-                                visible: true
+                                visible: true,
+                                color: 'gray',
+                                thickness: 0.5
                             } : null,
                             type: 'scatter',
                             mode: 'markers',
+                            marker: {size: 4},
                             name: `${curve.name} (ΔT: ${curve.offsetX.toFixed(1)}, ΔM: ${curve.offsetY.toFixed(2)})`
                         }));
 
@@ -159,6 +168,10 @@
                             this.isCtrlPressed = false;
                             Plotly.update('plot', {}, { dragmode: this.originalDragMode });
                         }
+                    });
+
+                    window.addEventListener('resize', () => {
+                        Plotly.Plots.resize(document.getElementById('plot'));
                     });
 
                     plotDiv.onmousemove = (e) => {
