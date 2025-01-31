@@ -23,7 +23,7 @@ dependencies = [
     "astroquery",
     "h5py",
     "astroscrappy",
-    "starred-astro >= 1.4.6",
+    "starred-astro >= 1.4.7",
     "pytest",
     "numpy",
     "scipy",
