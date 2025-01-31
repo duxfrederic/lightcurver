@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lightcurver"
-version = "1.2.2"
+version = "1.2.3"
 authors = [{ name = "Frédéric Dux", email = "duxfrederic@gmail.com" }]
 description = "A thorough structure for precise photometry and forward modelling of time series of wide field images."
 readme = "README.md"
