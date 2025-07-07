@@ -81,19 +81,22 @@ def get_count_based_on_conditions(conditions, table='frames'):
     return cursor.execute(request).fetchone()[0]
 
 
-def select_stars(combined_footprint_hash, stars_to_use=None):
+def select_stars(combined_footprint_hash, stars_to_use=None, stars_to_exclude=None):
     """
     Selects all the stars, either
      -- top 10 closest stars to ROI if stars_to_use is None
      -- top 'stars_to_use' closest stars to ROI if star s_to_use is int
      -- stars whose name is in 'stars_to_use' if stars_to_use is a list.
+    if stars_to_exclude (a list of star names) is provided, filters them out after querying.
 
     Useful for selecting the stars we want to use when calculating a normalization coefficient.
 
     Args:
-        combined_footprint_hash: since the stars were queried in a footprint, specify which. (or might get duplicates or stars
-                        that are not in the current footprint)
+        combined_footprint_hash: since the stars were queried in a footprint, specify which. (or might get duplicates or
+                        stars that are not in the current footprint)
         stars_to_use:   None or int or list, see docstring
+        stars_to_exclude:   list of strings, stars to avoid selecting. if string: assumes names of length 1, each char
+                    becomes a name. e.g.: 'abc' --> ['a', 'b', 'c']
 
     Returns:
         a pandas dataframe containing our stars (name, id coordinates ...)
@@ -119,25 +122,45 @@ def select_stars(combined_footprint_hash, stars_to_use=None):
     else:
         raise RuntimeError(f'stars_to_use argument: expected types None, int or list, got: {type(stars_to_use)}')
 
-    return execute_sqlite_query(query, params, use_pandas=True)
+    # do the query ...
+    stars_df = execute_sqlite_query(query, params, use_pandas=True)
+
+    # and only after querying, eliminate anything that's in stars_to_exclude. So, stars_to_exclude takes precedence over
+    # stars_to_use.
+    if stars_to_exclude:
+        if isinstance(stars_to_exclude, str):
+            # convert string to list of single-character strings
+            stars_to_exclude = list(stars_to_exclude)
+        if isinstance(stars_to_exclude, list):
+            stars_df = stars_df[~stars_df['name'].isin(stars_to_exclude)]
+        else:
+            raise RuntimeError('stars_to_exclude argument: expected types None, str, or list, "'
+                               f'got: {type(stars_to_exclude)}')
+
+    return stars_df
 
 
-def select_stars_for_a_frame(frame_id, combined_footprint_hash, stars_to_use=None):
+def select_stars_for_a_frame(frame_id, combined_footprint_hash, stars_to_use=None, stars_to_exclude=None):
     """
     Selects all the stars available in a given frame, either
      -- top 10 closest stars to ROI if stars_to_use is None
      -- top 'stars_to_use' closest stars to ROI if stars_to_use is int
      -- stars whose name is in 'stars_to_use' if stars_to_use is a list.
+    if stars_to_exclude (a list of star names) is provided, filters them out after querying.
 
     Useful for selecting the stars we want to use when modelling the PSF
     or calculating a normalization coefficient.
-    
-    #TODO very similar to query_stars_for_frame_and_footprint,
-    #TODO consider merging in the future.
+
+    Similar to query_all_stars_for_frame_and_footprint, but with more control on which stars we select, rather
+    than just selecting all available ones. Used for normalisation and PSF, whereas
+    query_all_stars_for_frame_and_footprint is used for extraction.
+
     Args:
         frame_id:  database frame ID
         combined_footprint_hash: hash of the footprint in which the stars were originally queried.
         stars_to_use:   None or int or list, see docstring
+        stars_to_exclude:   list of strings, stars to avoid selecting. if string: assumes names of length 1, each char
+                            becomes a name. e.g.: 'abc' --> ['a', 'b', 'c']
 
     Returns:
         a pandas dataframe containing our stars (name, id coordinates ...)
@@ -173,10 +196,25 @@ def select_stars_for_a_frame(frame_id, combined_footprint_hash, stars_to_use=Non
     else:
         raise RuntimeError(f'stars_to_use argument: expected types None, int or list, got: {type(stars_to_use)}')
 
-    return execute_sqlite_query(query, params, use_pandas=True)
+    # do the query ...
+    stars_df = execute_sqlite_query(query, params, use_pandas=True)
+
+    # and only after querying, eliminate anything that's in stars_to_exclude. So, stars_to_exclude takes precedence over
+    # stars_to_use.
+    if stars_to_exclude:
+        if isinstance(stars_to_exclude, str):
+            # convert string to list of single-character strings
+            stars_to_exclude = list(stars_to_exclude)
+        if isinstance(stars_to_exclude, list):
+            stars_df = stars_df[~stars_df['name'].isin(stars_to_exclude)]
+        else:
+            raise RuntimeError('stars_to_exclude argument: expected types None, str, or list, "'
+                               f'got: {type(stars_to_exclude)}')
+
+    return stars_df
 
 
-def query_stars_for_frame_and_footprint(frame_id, combined_footprint_hash=None):
+def query_all_stars_for_frame_and_footprint(frame_id, combined_footprint_hash=None):
     """
     Queries and returns all stars linked to a specific frame, optionally filtered by a specific footprint hash.
 

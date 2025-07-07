@@ -28,7 +28,7 @@ the fitted high resolution model, and the Hubble Space Telescope image of the sa
 ## Features
 * **Plate solving:** uses [Astrometry.net](https://astrometry.net/) to establish the footprint of each frame.
 * **_Gaia_ reference stars:** leverages _Gaia_ information to select the right reference stars in the field of view of each frame.
-* **Preserves sub-pixel information**: never interpolates, essential to preserve the sub-pixel information that can be recovered by `STARRED` in a multi-epoch deconvolution.
+* **Preserves sub-pixel information**: never interpolates, essential to preserve the sub-pixel information that can be recovered by `STARRED` in a multi-epoch forward modelling.
 * **Incremental:** uses `SQL` queries to dynamically determine which process needs be executed on which frame. 
 * **Semi-automatic:** create a `yaml` configuration file once for the first few frames, then run the 
 pipeline whenever a new frame is added, providing auto-updating light curves.
@@ -40,13 +40,23 @@ pipeline whenever a new frame is added, providing auto-updating light curves.
     pip install lightcurver
     ```
    [The slightly longer version](https://duxfrederic.github.io/lightcurver/installation/), in case you plan on using a GPU or the plate solving.
-2. **Tutorial**: follow the [tutorial](https://duxfrederic.github.io/lightcurver/tutorial/) of the documentation, which provides a dataset you can experiment with.
+2. **Usage**:
+    Adapt the [yaml config file template](https://github.com/duxfrederic/lightcurver/blob/main/lightcurver/pipeline/example_config_file/config.yaml), then run the pipeline with
+    ```bash
+   lc_run /path/to/config.yaml
+    ```
+   The pipeline is incremental, but in a scenario of testing, you can run specific steps only, for example:
+    ```bash
+   lc_run /path/to/config.yaml --start stamp_extraction --stop psf_modeling
+    ```
+   (The names of the pipeline steps/tasks are listed upon running `lc_run -h`.)
+3. **Tutorial**: follow the [tutorial](https://duxfrederic.github.io/lightcurver/tutorial/) of the documentation, which provides a dataset you can experiment with.
+    You can also test your installation with a subset of the dataset provided in the tutorial:
+   ```bash
+   cd /clone/of/lightcurver
+   pytest .
+   ```
 
-You can also test your installation with a subset of the dataset provided in the tutorial:
-```bash
-cd /clone/of/lightcurver
-pytest .
-```
 
 ## Contributing
 If you're encountering problems, then I would like to hear about them and will try to fix them. Feel free to create an issue

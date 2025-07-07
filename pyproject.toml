@@ -4,11 +4,11 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lightcurver"
-version = "1.1.1"
+version = "1.2.3"
 authors = [{ name = "Frédéric Dux", email = "duxfrederic@gmail.com" }]
-description = "A thorough structure for precise photometry and deconvolution of time series of wide field images."
+description = "A thorough structure for precise photometry and forward modelling of time series of wide field images."
 readme = "README.md"
-keywords = ["photometry", "astronomy", "deconvolution", "PSF", "pipeline"]  
+keywords = ["photometry", "astronomy", "forward modelling", "PSF", "pipeline"]
 classifiers = [] 
 dependencies = [
     "pyyaml",
@@ -23,7 +23,7 @@ dependencies = [
     "astroquery",
     "h5py",
     "astroscrappy",
-    "starred-astro >= 1.4.2", 
+    "starred-astro >= 1.4.7",
     "pytest",
     "numpy",
     "scipy",
@@ -51,5 +51,5 @@ lc_run = "lightcurver.scripts.run:run"
 [tool.setuptools]
 packages.find = {where = ["."], include = ["lightcurver*"]}
 package-dir = {"" = "."}
-package-data = {"lightcurver" = ["pipeline/*.yaml", "pipeline/example_config_file/config.yaml"]}
+package-data = {"lightcurver" = ["pipeline/*.yaml", "pipeline/example_config_file/config.yaml", "plotting/plot_curves_template.html"]}
 

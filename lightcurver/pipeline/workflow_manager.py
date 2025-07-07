@@ -3,17 +3,18 @@ from importlib import resources
 from collections import deque
 import logging
 from datetime import datetime
+import os
 
 
-from ..structure.user_config import get_user_config
+from ..structure.user_config import get_user_config, compare_config_with_pipeline_delivered_one
 from ..structure.database import initialize_database
 from ..processes.cutout_making import extract_all_stamps
 from ..processes.star_querying import query_gaia_stars
 from ..processes.psf_modelling import model_all_psfs
 from ..processes.star_photometry import do_star_photometry
 from ..processes.normalization_calculation import calculate_coefficient
-from ..processes.roi_deconv_file_preparation import prepare_roi_deconv_file
-from ..processes.roi_modelling import do_deconvolution_of_roi
+from ..processes.roi_file_preparation import prepare_roi_file
+from ..processes.roi_modelling import do_modelling_of_roi
 from ..processes.alternate_plate_solving_with_gaia import alternate_plate_solve_gaia
 from ..processes.alternate_plate_solving_adapt_existing_wcs import alternate_plate_solve_adapt_ref
 from ..processes.absolute_zeropoint_calculation import calculate_zeropoints
@@ -50,7 +51,41 @@ class WorkflowManager:
           task.
     """
     def __init__(self, logger=None):
+        # initial check: make sure this version of the pipeline doesn't have keywords in its config that the
+        # user config is missing.
+        extra_keys = compare_config_with_pipeline_delivered_one()
+        extra_values = extra_keys['pipeline_extra_keys_values']
+        if extra := extra_keys['extra_keys_in_pipeline_config']:
+            # ok, make an informative error message here
+            message = "You are missing the following parameters in your config file:\n"
+            message += f"{'Parameter':<50} {'(Default value)':<50}\n"
+            message += f"{'-' * 50} {'-' * 50}\n"
+
+            for key in extra:
+                value = extra_values[key]
+                formatted_value = "None (not set)" if value is None else str(value)
+                message += f"{key:<50} {formatted_value:<50}\n"
+
+            raise RuntimeError(message)
+
+        if extra := extra_keys['extra_keys_in_user_config']:
+            error_message = ("You have parameters in your config file that"
+                             f" are not in the latest config version: {extra}. \n"
+                             "You might want to remove them, or check against the latest config "
+                             "shipped with the pipeline.\n"
+                             "To ignore this error, set the `LIGHTCURVER_RELAX_CONFIG_CHECK` "
+                             "environment variable to 1.")
+            if 'LIGHTCURVER_RELAX_CONFIG_CHECK' in os.environ:
+                print('===== Skipped error due to LIGHTCURVER_RELAX_CONFIG_CHECK environment variable being set ======')
+                print(error_message)
+                print('===== Skipped error due to LIGHTCURVER_RELAX_CONFIG_CHECK environment variable being set ======')
+            else:
+                raise RuntimeError(error_message)
+
+        # load the actual config ...
         self.user_config = get_user_config()
+
+        # the plan: load the yaml defining the pipeline steps.
         with resources.open_text('lightcurver.pipeline', 'pipeline_dependency_graph.yaml') as file:
             self.pipe_config = yaml.safe_load(file)
         self.task_graph = {}
@@ -76,8 +111,8 @@ class WorkflowManager:
             'star_photometry': do_star_photometry,
             'calculate_normalization_coefficient': calculate_coefficient,
             'calculate_absolute_zeropoints': calculate_zeropoints,
-            'prepare_calibrated_cutouts': prepare_roi_deconv_file,
-            'model_calibrated_cutouts': do_deconvolution_of_roi,
+            'prepare_calibrated_cutouts': prepare_roi_file,
+            'model_calibrated_cutouts': do_modelling_of_roi,
         }
 
         self.post_task_attribution = {
@@ -89,6 +124,7 @@ class WorkflowManager:
             logger = logging.getLogger(__name__)
             setup_base_logger()
         self.logger = logger
+
 
     def build_dependency_graph(self):
         for task in self.pipe_config['tasks']:
@@ -128,23 +164,29 @@ class WorkflowManager:
 
         return sorted_tasks
 
-    def run(self, final_step=None):
+    def run(self, start_step=None, stop_step=None):
         """
-        Runs the whole pipeline
+        Runs the pipeline from the specified start step to the stop step.
+
         Args:
-            final_step: string, stops the pipeline when encountering this step. (for partial runs) Default None.
+            start_step (str): Task name to start from. If None, starts from the beginning.
+            stop_step (str): Task name to stop at. If None, runs to completion.
 
         Returns:
             None
         """
-        self.logger.info(f"Workflow manager: will run all tasks. Working directory:  {self.user_config['workdir']}")
+        self.logger.info(f"Workflow manager: Running tasks from {start_step or 'start'} to {stop_step or 'end'}. "
+                         f"Working directory: {self.user_config['workdir']}")
+
         sorted_tasks = self.topological_sort()
-        for task_name in sorted_tasks:
-            if final_step is not None and final_step == task_name:
-                return
+        start_index = sorted_tasks.index(start_step) if start_step else 0
+        stop_index = sorted_tasks.index(stop_step) + 1 if stop_step else len(sorted_tasks)
+
+        for task_name in sorted_tasks[start_index:stop_index]:
             task = next((item for item in self.pipe_config['tasks'] if item['name'] == task_name), None)
             if task:
                 self.execute_task(task)
+
             post_check = self.post_task_attribution.get(task_name, None)
             if post_check:
                 success, message = post_check()
@@ -166,6 +208,4 @@ class WorkflowManager:
 
     def get_tasks(self):
         return sorted(list(self.task_attribution.keys()))
-
-
 

@@ -29,7 +29,32 @@ You can also run the script above directly from the command line with the follow
 lc_run /path/to/config.yaml
 ```
 
-In this tutorial, we will first execute each step manually rather than executing the pipeline through the `WorkflowManager`.
+`lc_run -h` will print the following list of steps performed by the pipeline:
+```initialize_database 
+read_convert_skysub_character_catalog
+plate_solving
+calculate_common_and_total_footprint
+query_gaia_for_stars
+stamp_extraction
+psf_modeling
+star_photometry
+calculate_normalization_coefficient
+calculate_absolute_zeropoints
+prepare_calibrated_cutouts
+model_calibrated_cutouts
+```
+The pipeline is incremental, but in certain cases it might be useful to start or stop the pipeline at given steps, 
+for example: this will run the extraction of the cutouts and the modelling of the PSF only.
+```bash
+lc_run /path/to/config.yaml --start stamp_extraction --stop psf_modeling
+```
+This will only run the modelling of the ROI:
+```bash
+lc_run /path/to/config.yaml --start model_calibrated_cutouts
+```
+
+In this tutorial, to understand the role of the different steps, 
+we will first execute each step manually rather than executing the pipeline through the `WorkflowManager`.
 
 I will provide you with some wide field images that you can use to follow along. Note the following:
 
@@ -328,8 +353,8 @@ calculate_zeropoints()
 Next, we use our normalization coefficient to prepare the calibrated cutouts.
 ```python
 # assuming the path to the config file is still in the environment
-from lightcurver.processes.roi_deconv_file_preparation import prepare_roi_deconv_file
-prepare_roi_deconv_file()
+from lightcurver.processes.roi_file_preparation import prepare_roi_file
+prepare_roi_file()
 ```
 You will find your calibrated cutouts in the `prepared_roi_cutouts`, relative to the working directory.
 
@@ -337,10 +362,10 @@ You will find your calibrated cutouts in the `prepared_roi_cutouts`, relative to
 
 ## Modelling the ROI
 The last and most satisfying step!
-As a reminder, `STARRED` jointly deconvolves all your epochs at once. It does so by modelling the data
+As a reminder, `STARRED` jointly models all your epochs at once. It does so by modelling the data
 as the sum of point sources (whose flux can vary from epoch to epoch) and a pixelated background regularized by wavelets.
-This part is highly non-linear, and you could follow one of the `STARRED` tutorials to deconvolve your cutouts yourself.
-Nevertheless, the pipeline does have a deconvolution step that works for simple cases, so we can also take a look at the available parameters.
+This part is highly non-linear, and you could follow one of the `STARRED` tutorials to model your cutouts yourself.
+Nevertheless, the pipeline does have a modelling step that works for simple cases, so we can also take a look at the available parameters.
 
 
 === "Simple cases: pipeline script"
@@ -366,8 +391,8 @@ Nevertheless, the pipeline does have a deconvolution step that works for simple 
     ```
     When you are satisfied with the settings, run the modelling step:
     ```python
-      from lightcurver.processes.roi_modelling import do_deconvolution_of_roi
-      do_deconvolution_of_roi()
+      from lightcurver.processes.roi_modelling import do_modelling_of_roi
+      do_modelling_of_roi()
     ```
  
     And now, in the `prepared_roi_cutouts` directory you should have 
@@ -376,13 +401,13 @@ Nevertheless, the pipeline does have a deconvolution step that works for simple 
     as well as additional information (MJD, seeing, reduced chi-squared, zeropoint so you can convert the fluxes to magnitudes, database ID
     of the frame),
     - a `json` file containing the astrometry of the point sources,
-    - two fits files containing the deconvolution product, once with point sources and once with the background only.
+    - two fits files containing the fitted high resolution model product, once with point sources and once with the background only.
 
 
 === "Manual modelling"
 
-    For more control over the point sources and background, we can manually conduct a `STARRED` deconvolution on the cutouts we prepared.
-    Please see [this example](https://github.com/duxfrederic/lightcurver/blob/main/docs/example_starred_notebooks/example_deconvolve_roi.ipynb),
+    For more control over the point sources and background, we can manually conduct a `STARRED` modelling on the cutouts we prepared.
+    Please see [this example](https://github.com/duxfrederic/lightcurver/blob/main/docs/example_starred_notebooks/example_roi_modelling.ipynb),
     which is quite versatile.
 
 
@@ -406,7 +431,7 @@ the best seeing frame with `ds9` and measure their coordinates. You only have to
 pixelated background in a `.fits` or `.npy` file, and provide it here. 
 5. Whether the pipeline attempts to further refine the background. In a scenario where new frames are incoming
 regularly, I would set `false` for this one provided that you did provide a good quality background just above.
-I would set `true` with manual supervision, if the aim is set more on the deconvolved product than auto-updating light curves.
+I would set `true` with manual supervision, if the aim is set more on the fitted high-resolution model than auto-updating light curves.
 6. These values should mostly work. Take a look at the loss curve in the plots after running the pipeline to make sure
 the optimization converged.
 7. Since our images are already plate solved, this will only execute the post plate solving steps.

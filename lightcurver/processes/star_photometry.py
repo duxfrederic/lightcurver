@@ -17,14 +17,15 @@ from ..utilities.chi2_selector import get_chi2_bounds
 from ..utilities.footprint import get_combined_footprint_hash
 from ..utilities.starred_utilities import get_flux_uncertainties
 from ..utilities.image_coordinates import rescale_image_coordinates
-from ..plotting.star_photometry_plotting import plot_joint_deconv_diagnostic
+from ..plotting.joint_modelling_plotting import plot_joint_modelling_diagnostic
 
 
-def do_one_deconvolution(data, noisemap, psf, subsampling_factor,
-                         n_iter=2000, uniform_background_per_epoch=False, starlet_global_background=True):
+def do_one_star_forward_modelling(data, noisemap, psf, subsampling_factor,
+                                  n_iter=2000, uniform_background_per_epoch=False, starlet_global_background=True):
     """
-    Joint 'deconvolution' of N stamps of a star (in data), with noisemap, and associated PSF at each slice.
-    the subsampling factor is that used for building the psf model.
+    Joint forward modelling of the pixels of N stamps of a star (in data), with noisemap,
+    and associated PSF at each slice.
+    The subsampling factor is that used for building the psf model.
     Equivalent to PSF photometry of all slices.
     Args:
         data: numpy array (N, nx, ny) containing the epochs of the star
@@ -97,8 +98,9 @@ def do_one_deconvolution(data, noisemap, psf, subsampling_factor,
         'param_class': parameters,
         'sigma_2': sigma_2,
         'regularization_terms': 'l1_starlet',
-        'regularization_strength_scales': 3,
-        'regularization_strength_hf': 3
+        'regularization_strength_scales': 3.0,
+        'regularization_strength_hf': 3.0,
+        'regularization_strength_flux_uniformity': 0.,
     }
     if starlet_global_background:
         # passing a ton of arguments, not really necessary, but at least we know what we are doing
@@ -132,7 +134,7 @@ def do_one_deconvolution(data, noisemap, psf, subsampling_factor,
     fluxes_uncertainties = scale * flux_uncertainties
 
     # and in case we included a background, return it:
-    deconv, h = model.getDeconvolved(kwargs_final, 0)
+    fitted_high_res_model, fitted_high_res_model_background_only = model.getDeconvolved(kwargs_final, 0)
 
     result = {
         'scale': scale,
@@ -143,8 +145,8 @@ def do_one_deconvolution(data, noisemap, psf, subsampling_factor,
         'chi2_per_frame': np.array(chi2_per_frame),
         'loss_curve': optim.loss_history,
         'residuals': scale * residuals,
-        'deconvolved_image': deconv,
-        'starlet_background': h
+        'deconvolved_image': scale * fitted_high_res_model,
+        'starlet_background': scale * fitted_high_res_model_background_only
     }
     return result
 
@@ -245,7 +247,8 @@ def do_star_photometry():
                             conditions=['plate_solved = 1', 'eliminated = 0', 'roi_in_footprint = 1'])
     combined_footprint_hash = get_combined_footprint_hash(user_config, frames_ini['id'].to_list())
     # now we can select the stars we need to do photometry of, within this footprint.
-    stars = select_stars(stars_to_use=user_config['stars_to_use_norm'], combined_footprint_hash=combined_footprint_hash)
+    stars = select_stars(stars_to_use=user_config['stars_to_use_norm'], combined_footprint_hash=combined_footprint_hash,
+                         stars_to_exclude=user_config['stars_to_exclude_norm'])
     logger.info(f"Will do PSF photometry for {len(stars)} stars.")
     # if not re-do ...select only the new frames that do not have a flux measurement yet.
     only_fluxless_frames = not user_config['redo_star_photometry']
@@ -279,6 +282,7 @@ def do_star_photometry():
                 # accepted stars in 'stars_to_use_psf'.
                 stars_psf = select_stars_for_a_frame(frame_id=frame['id'],
                                                      stars_to_use=user_config['stars_to_use_psf'],
+                                                     stars_to_exclude=user_config['stars_to_exclude_psf'],
                                                      combined_footprint_hash=combined_footprint_hash)
                 psf_ref = 'psf_' + ''.join(sorted(stars_psf['name']))
                 mask.append(h5f[f"{frame['image_relpath']}/cosmicsmask/{star['gaia_id']}"][...])
@@ -313,7 +317,7 @@ def do_star_photometry():
             # ok now that everything is ready let's get out of the context manager, also to close the file.
 
         # ready to "deconvolve" using starred!
-        result = do_one_deconvolution(
+        result = do_one_star_forward_modelling(
             data=data, noisemap=noisemap, psf=psf,
             subsampling_factor=user_config['subsampling_factor'],
             n_iter=user_config['star_deconv_n_iter'],
@@ -339,7 +343,7 @@ def do_star_photometry():
         if user_config['star_photometry_starlet_global_background']:
             logger.info(f"This PSF photometry (star {star['name']}) included a pixelated background.")
             kwargs_plot['starlet_background'] = np.array(result['starlet_background'])
-        plot_joint_deconv_diagnostic(**kwargs_plot)
+        plot_joint_modelling_diagnostic(**kwargs_plot)
 
         # now we can insert our results in our dedicated database table.
         loss_index = int(0.9 * np.array(loss_history).size)

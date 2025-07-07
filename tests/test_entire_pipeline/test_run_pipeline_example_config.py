@@ -57,8 +57,9 @@ def test_run_workflow():
     config['already_plate_solved'] = 1
     config['ROI_disk_radius_arcseconds'] = 100
     config['stars_to_use_psf'] = config['stars_to_use_norm'] = 2
-    config['stamp_size_stars'] = config['stamp_size_roi'] = 24
+    config['stamp_size_stars'] = config['stamp_size_ROI'] = 24
     config['multiprocessing_cpu_count'] = 2  # what GitHub gives us I think
+    config['fix_point_source_astrometry'] = 2.0  # testing the gaussian priors.
 
     # save the modified configuration to a temporary file
     temp_config_path = os.path.join(temp_dir, 'config_temp.yaml')
@@ -74,7 +75,7 @@ def test_run_workflow():
 
     # first run the importation
     wf_manager = WorkflowManager()
-    wf_manager.run(final_step='query_gaia_for_stars')
+    wf_manager.run(stop_step='query_gaia_for_stars')
 
     # for this test, we'll also pretend that one of the images does not have an astrometric solution.
     # so, set the mode we want to test in the config:
@@ -88,7 +89,7 @@ def test_run_workflow():
         yaml.safe_dump(config, file)
     # ready to run:
     wf_manager = WorkflowManager()
-    wf_manager.run(final_step='plate_solving')
+    wf_manager.run(stop_step='plate_solving')
     # just before the plate solving, let us indicate that one of the images has an astrometric solution
     db_path = os.path.join(temp_dir, 'database.sqlite3')
     with sqlite3.connect(db_path) as conn:
@@ -124,7 +125,7 @@ def test_run_workflow():
         yaml.safe_dump(config, file)
 
     # and run again without error!
-    wf_manager.run()
+    wf_manager.run(start_step="psf_modeling")
 
 
 

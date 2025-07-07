@@ -37,5 +37,5 @@ markdown_extensions:
 plugins:
   - search
   - mkdocs-nav-weight
-copyright: Copyright &copy; 2024 Frédéric Dux
+copyright: Copyright &copy; 2024, 2025 Frédéric Dux
 repo_url: https://github.com/duxfrederic/lightcurver/

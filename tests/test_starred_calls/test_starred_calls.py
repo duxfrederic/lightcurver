@@ -2,7 +2,7 @@ import unittest
 import numpy as np
 from starred.procedures.psf_routines import build_psf
 
-from lightcurver.processes.star_photometry import do_one_deconvolution
+from lightcurver.processes.star_photometry import do_one_star_forward_modelling
 
 
 class TestStarredCalls(unittest.TestCase):
@@ -17,9 +17,9 @@ class TestStarredCalls(unittest.TestCase):
         self.subsampling_factor = 1
         self.n_iter = 50
 
-    def test_do_one_deconvolution(self):
+    def test_do_one_star_forward_modelling(self):
         # call
-        result = do_one_deconvolution(self.data, self.noisemap, self.psf, self.subsampling_factor, self.n_iter)
+        result = do_one_star_forward_modelling(self.data, self.noisemap, self.psf, self.subsampling_factor, self.n_iter)
 
         self.assertIsInstance(result, dict)
 

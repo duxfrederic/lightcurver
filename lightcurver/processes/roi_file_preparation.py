@@ -114,7 +114,7 @@ def fetch_and_adjust_zeropoints(combined_footprint_hash):
     return global_zp, zp_scatter_normalized
 
 
-def prepare_roi_deconv_file():
+def prepare_roi_file():
     """
     This is called by the workflow manager.
     Given the previous steps, selects the frames that have the necessary quantities calculated
@@ -124,7 +124,7 @@ def prepare_roi_deconv_file():
     Returns:
         Nothing
     """
-    logger = logging.getLogger('lightcurver.roi_deconv_file_preparation')
+    logger = logging.getLogger('lightcurver.roi_file_preparation')
     user_config = get_user_config()
 
     frames_ini = get_pandas(columns=['id'],
