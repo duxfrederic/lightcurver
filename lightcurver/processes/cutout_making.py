@@ -45,6 +45,8 @@ def extract_stamp(data, header, exptime, sky_coord, cutout_size, background_rms_
     noisemap_electrons = ((exptime * background_rms_electron_per_second)**2 + np.abs(data_cutout_electrons))**0.5
     # remove zeros if there are any ...
     noisemap_electrons[noisemap_electrons < 1e-7] = 1e-7
+    data_cutout.data = data_cutout.data.astype(np.float32)
+    noisemap_electrons = noisemap_electrons.astype(np.float32)
 
     return data_cutout.data, noisemap_electrons / exptime, wcs_header_string, np.array(original_center_position)
 
