@@ -1,8 +1,6 @@
 import unittest
 import pandas as pd
 import numpy as np
-from copy import deepcopy
-import warnings
 
 from lightcurver.utilities.lightcurves_postprocessing import convert_flux_to_magnitude
 

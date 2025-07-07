@@ -19,7 +19,7 @@ def plot_image(image, wcs=None, save_path=None, colorbar=False, **imshow_kwargs)
     else:
         ax = plt.subplot()
     norm = ImageNormalize(image,
-                          interval=ZScaleInterval(contrast=0.1),
+                          interval=ZScaleInterval(contrast=0.4),
                           stretch=AsinhStretch()
                           )
     ax.imshow(image, cmap='gray', origin='lower', norm=norm, **imshow_kwargs)
