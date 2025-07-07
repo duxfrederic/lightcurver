@@ -47,12 +47,17 @@ def calc_common_and_total_footprint(list_of_footprints):
     wcs_footprints = list_of_footprints
 
     polygons = [Polygon(footprint) for footprint in wcs_footprints]
+    try:
+        common_footprint = reduce(lambda x, y: x.intersection(y), polygons)
+        common_footprint = common_footprint.simplify(tolerance=0.001, preserve_topology=True)
+    except TypeError:
+        # we might have no common footprint?
+        common_footprint = None
 
-    common_footprint = reduce(lambda x, y: x.intersection(y), polygons)
     largest_footprint = reduce(lambda x, y: x.union(y), polygons)
+    largest_footprint = largest_footprint.simplify(tolerance=0.001, preserve_topology=True)
 
-    return (common_footprint.simplify(tolerance=0.001, preserve_topology=True),
-            largest_footprint.simplify(tolerance=0.001, preserve_topology=True))
+    return common_footprint, largest_footprint
 
 
 def database_insert_single_footprint(frame_id, footprint_array):
