@@ -86,20 +86,20 @@ def process_new_frame(fits_file, user_config):
     logger.info(f'  file {fits_file}: background estimated.')
 
     # before we write, let's keep as much as we can from our previous header
-    new_header = wcs.to_header()
+    new_header = header.copy()
     # then copy non-WCS entries from the original header
-    for key in header:
-        if key not in new_header and not key.startswith('WCSAXES') and not key.startswith(
-                'CRPIX') and not key.startswith('CRVAL') and not key.startswith('CDELT') and not key.startswith(
-                'CTYPE') and not key.startswith('CUNIT') and not key.startswith('CD') and key not in ['COMMENT',
-                                                                                                      'HISTORY']:
-            if key.strip():  # some headers are weird
-                new_header[key] = header[key]
+    # for key in header:
+    #     if key not in new_header and not key.startswith('WCSAXES') and not key.startswith(
+    #             'CRPIX') and not key.startswith('CRVAL') and not key.startswith('CDELT') and not key.startswith(
+    #             'CTYPE') and not key.startswith('CUNIT') and not key.startswith('CD') and key not in ['COMMENT',
+    #                                                                                                   'HISTORY']:
+    #         if key.strip():  # some headers are weird
+    #             new_header[key] = header[key]
     # now we can write the file
     write_file = user_config['workdir'] / copied_image_relpath
     logger.info(f'    Writing file: {write_file}')
     fits.writeto(write_file, cutout_data_sub.astype(np.float32),
-                 header=new_header, overwrite=True)
+                 header=new_header, overwrite=True, output_verify="silentfix")
     # and find sources
     # (do plots if toggle set)
     do_plot = user_config.get('source_extraction_do_plots', False)
