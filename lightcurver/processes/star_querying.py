@@ -2,6 +2,7 @@ import logging
 from astropy.coordinates import SkyCoord
 import json
 import numpy as np
+import pandas as pd
 
 from ..utilities.footprint import load_combined_footprint_from_db, get_frames_hash
 from ..structure.user_config import get_user_config
@@ -120,5 +121,9 @@ def query_gaia_stars():
     results = execute_sqlite_query(query)
     polygon_list = [np.array(json.loads(result[1])) for result in results]
     save_path = user_config['plots_dir'] / 'footprints_with_gaia_stars.jpg'
-    plot_footprints_with_stars(footprint_arrays=polygon_list, stars=stars_table.to_pandas(), save_path=save_path)
+    stars_table = stars_table.to_pandas()
+    roi_coord = user_config['ROI_SkyCoord']
+    roi_row = {'name': 'roi', 'ra': roi_coord.ra.value, 'dec': roi_coord.dec.value}
+    stars_table = pd.concat([stars_table, pd.DataFrame([roi_row])], ignore_index=True)
+    plot_footprints_with_stars(footprint_arrays=polygon_list, stars=stars_table, save_path=save_path)
     logger.info(f'Plot of the queried reference Gaia stars saved at {save_path}.')

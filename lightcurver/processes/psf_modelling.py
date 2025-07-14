@@ -173,12 +173,17 @@ def model_all_psfs():
         psf_plots_dir.mkdir(exist_ok=True, parents=True)
         frame_name = Path(frame['image_relpath']).stem
         seeing = frame['seeing_pixels'] * frame['pixel_scale']
+        # what's the fitted fwhm here?
+        kwargs_moffat = result['kwargs_psf']['kwargs_moffat']
+        fwhm_moffat_arcseconds = 0.5 * (kwargs_moffat['fwhm_x'] + kwargs_moffat['fwhm_y']) * frame['pixel_scale']
+        fwhm_moffat_arcseconds = float(fwhm_moffat_arcseconds.item()) # from jax array to float
         loss_history = result['adabelief_extra_fields']['loss_history']
+        diagnostic_text = f"{frame_name}\nseeing estimation: {seeing:.02f}\nseeing moffat: {fwhm_moffat_arcseconds:.02f}"
         plot_psf_diagnostic(datas=datas, noisemaps=noisemaps, residuals=result['residuals'],
                             full_psf=result['full_psf'],
                             loss_curve=loss_history,
                             masks=masks, names=names,
-                            diagnostic_text=f"{frame_name}\nseeing: {seeing:.02f}",
+                            diagnostic_text=diagnostic_text,
                             save_path=psf_plots_dir / f"{frame['id']}_{frame_name}.jpg")
 
         # now we can do the bookkeeping stuff
@@ -202,10 +207,11 @@ def model_all_psfs():
         end_change = np.nanmax(loss_history[loss_index:]) - np.nanmin(loss_history[loss_index:])
         relative_loss_differential = float(end_change / initial_change)
         insert_params = (frame['id'], float(result['chi2']), relative_loss_differential, psf_ref,
-                         combined_footprint_hash, user_config['subsampling_factor'])
+                         combined_footprint_hash, user_config['subsampling_factor'], fwhm_moffat_arcseconds)
         insert_query = f"""
         REPLACE INTO PSFs 
-        (frame_id, chi2, relative_loss_differential, psf_ref, combined_footprint_hash, subsampling_factor)
+           (frame_id, chi2, relative_loss_differential, psf_ref, 
+            combined_footprint_hash, subsampling_factor, fwhm_moffat_arcseconds)
         VALUES ({','.join(['?'] * len(insert_params))})
         """
         execute_sqlite_query(insert_query, insert_params, is_select=False)
