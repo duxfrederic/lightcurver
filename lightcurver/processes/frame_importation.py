@@ -77,10 +77,16 @@ def process_new_frame(fits_file, user_config):
     cutout_data *= mjd_gain_exptime_dict['gain'] / mjd_gain_exptime_dict['exptime']
     # unit: electron per second
 
-    # ok, now subtract sky!
+    # ok, now estimate and subtract sky!
     cutout_data_sub, bkg = subtract_background(cutout_data,
                                                mask_sources_first=user_config['mask_sources_before_background'],
                                                n_boxes=user_config['background_estimation_n_boxes'])
+    # we keep doing this because it is a nice way of getting the background RMS.
+    # however, if the user specifies that the background is already subtracted, just use the 
+    # original data.
+    if not user_config['do_background_subtraction']:
+        cutout_data_sub = cutout_data
+    # read the background stats:
     sky_level_electron_per_second = float(bkg.globalback)
     background_rms_electron_per_second = float(bkg.globalrms)
     logger.info(f'  file {fits_file}: background estimated.')
