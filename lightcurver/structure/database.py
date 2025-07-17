@@ -385,6 +385,7 @@ def initialize_database(db_path=None):
                       psf_ref TEXT, -- convention: sorted concatenation of all star names used in the model.
                       subsampling_factor INTEGER,  -- we do starred (pixelated) PSFs.
                       relative_loss_differential REAL, -- absolute change in last 10% of the iterations vs beginning
+                      fwhm_moffat_arcseconds REAL DEFAULT NULL, -- keeping track of image quality
                       FOREIGN KEY (frame_id) REFERENCES frames(id),
                       FOREIGN KEY (combined_footprint_hash) REFERENCES combined_footprint(hash),
                       PRIMARY KEY (combined_footprint_hash, frame_id, psf_ref)

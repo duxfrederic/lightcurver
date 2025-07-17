@@ -108,8 +108,12 @@ def fetch_and_adjust_zeropoints(combined_footprint_hash):
     zp_scatter_normalized = zeropoints_data['adjusted_zeropoint'].std()
     global_zp = zeropoints_data['adjusted_zeropoint'].median()
 
-    message = "The scatter in zeropoints before normalizing is lower than after normalizing? Not normal, investigate."
-    #assert zp_scatter_normalized < zp_scatter_not_normalized, message
+    if zp_scatter_normalized > zp_scatter_not_normalized:
+        # This shouldn't happen in well controlled case. (normalising should result in a very stable zeropoint)
+        # If might happen harmlessly for very low frame numbers.
+        message = "The scatter in zeropoints before normalizing is lower than after normalizing? Not normal, investigate."
+        logger = logging.getLogger('lightcurver.roi_file_preparation')
+        logger.warning(message)
 
     return global_zp, zp_scatter_normalized
 
