@@ -208,7 +208,7 @@ def find_gaia_stars_in_polygon(vertices, gaia_provider='gaia', astrometric_exces
     where_clause = " AND ".join(where_conditions)
 
     adql_query = f"""
-    SELECT * FROM {Gaia.MAIN_GAIA_TABLE}
+    SELECT * FROM {query_table}
     WHERE {where_clause}
     """
 

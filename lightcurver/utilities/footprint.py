@@ -22,7 +22,7 @@ def get_combined_footprint_hash(user_config, frames_id_list):
     """
     if user_config['star_selection_strategy'] != 'ROI_disk':
         # then it depends on the frames we're considering.
-        frames_hash = get_frames_hash(frames_id_list)
+        return get_frames_hash(frames_id_list)
     else:
         # if ROI_disk, it does not depend on the frames: unique region defined by its radius.
         return hash(user_config['ROI_disk_radius_arcseconds'])
