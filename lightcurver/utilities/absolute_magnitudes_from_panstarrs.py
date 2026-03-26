@@ -69,9 +69,17 @@ def search_panstarrs_around_coordinates(gaia_id):
     """
     ra, dec = execute_sqlite_query('SELECT ra, dec FROM stars WHERE gaia_id = ?', (gaia_id, ))[0]
 
+    logger = logging.getLogger('lightcurver.search_panstarrs_around_coordinates')
     coord = SkyCoord(ra=ra * u.deg, dec=dec * u.deg, frame='icrs')
     radius = 1.5 * u.arcsecond  # this is generous given the magnitude of the proper motion of most stars.
-    result = Catalogs.query_region(coord, radius=radius, catalog="PanSTARRS", data_release="dr2")
+    try:
+        result = Catalogs.query_region(coord, radius=radius, catalog="PanSTARRS", data_release="dr2")
+    except ValueError as e:
+        # The MAST API occasionally returns 'None' strings in float columns, which astroquery
+        # fails to convert. Treat this as no result found.
+        logger.warning(f"PanSTARRS query failed for ra={ra}, dec={dec} with error: {e}. Returning empty result.")
+        from astropy.table import Table
+        return Table()
     return result
 
 

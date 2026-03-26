@@ -174,7 +174,7 @@ def do_modelling_of_roi():
     if not unique_subsampling:
         logger.error(message + ' Stopping the pipeline.')
     assert np.unique(subsampling_factor).size == 1, message
-    subsampling_factor = int(subsampling_factor[0])
+    subsampling_factor = int(np.unique(subsampling_factor)[0])
     im_size_x, im_size_y = data.shape[1:]
     epochs = data.shape[0]
 
