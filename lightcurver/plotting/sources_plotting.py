@@ -96,6 +96,8 @@ def plot_footprints_with_stars(footprint_arrays, stars, save_path=None):
     """
     fig, ax = plot_footprints(footprint_arrays, common_footprint=None, largest_footprint=None, save_path=None)
     for _, star in stars.iterrows():
+        if star['name'] == 'roi':
+            ax.plot(star['ra'], star['dec'], 'o', color='red', markersize=10, mfc='None')
         ax.plot(star['ra'], star['dec'], 'o', color='red', markersize=5, mfc='None')
         ax.text(star['ra'], star['dec'], star['name'], fontsize=8, ha='right')
 

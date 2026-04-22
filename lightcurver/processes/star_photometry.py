@@ -231,9 +231,9 @@ def update_star_fluxes(flux_data):
 
 def do_star_photometry():
     """
-    Here we do a joint deconvolution of all the frames at once, for each star.
+    Here we do a joint modelling of all the frames at once, for each star.
     This is equivalent to PSF photometry, but we do it in the same way
-    as the final deconvolution to eliminate potential systematics.
+    as the final modelling to eliminate potential systematics.
     Returns:
 
     """
@@ -325,11 +325,11 @@ def do_star_photometry():
             starlet_global_background=user_config['star_photometry_starlet_global_background']
         )
         # ok, plot the diagnostic
-        plot_deconv_dir = user_config['plots_dir'] / 'deconvolutions' / str(combined_footprint_hash)
-        plot_deconv_dir.mkdir(exist_ok=True, parents=True)
+        plot_star_modelling_dir = user_config['plots_dir'] / 'star_modelling' / str(combined_footprint_hash)
+        plot_star_modelling_dir.mkdir(exist_ok=True, parents=True)
         loss_history = result['loss_curve']
 
-        plot_file = plot_deconv_dir / f"{time_now}_joint_deconv_star_{star['name']}.jpg"
+        plot_file = plot_star_modelling_dir / f"{time_now}_joint_modelling_star_{star['name']}.jpg"
 
         kwargs_plot = {
             'datas': data,

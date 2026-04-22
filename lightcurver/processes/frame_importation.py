@@ -77,29 +77,47 @@ def process_new_frame(fits_file, user_config):
     cutout_data *= mjd_gain_exptime_dict['gain'] / mjd_gain_exptime_dict['exptime']
     # unit: electron per second
 
-    # ok, now subtract sky!
+    # ok, now estimate and subtract sky!
     cutout_data_sub, bkg = subtract_background(cutout_data,
                                                mask_sources_first=user_config['mask_sources_before_background'],
                                                n_boxes=user_config['background_estimation_n_boxes'])
+    # we keep doing this because it is a nice way of getting the background RMS.
+    # however, if the user specifies that the background is already subtracted, just use the 
+    # original data.
+    if not user_config['do_background_subtraction']:
+        cutout_data_sub = cutout_data
+    # read the background stats:
     sky_level_electron_per_second = float(bkg.globalback)
     background_rms_electron_per_second = float(bkg.globalrms)
     logger.info(f'  file {fits_file}: background estimated.')
 
-    # before we write, let's keep as much as we can from our previous header
-    new_header = wcs.to_header()
-    # then copy non-WCS entries from the original header
-    for key in header:
-        if key not in new_header and not key.startswith('WCSAXES') and not key.startswith(
-                'CRPIX') and not key.startswith('CRVAL') and not key.startswith('CDELT') and not key.startswith(
-                'CTYPE') and not key.startswith('CUNIT') and not key.startswith('CD') and key not in ['COMMENT',
-                                                                                                      'HISTORY']:
-            if key.strip():  # some headers are weird
-                new_header[key] = header[key]
+    new_header = header.copy()
+    # here we branch: if already plate solved, we keep the header intact.
+    # if not, we delete wcs keywords and populate an initial one from astropy
+    if not user_config['already_plate_solved']:
+        wcs_header = wcs.to_header()
+        # then copy non-WCS entries from the original header
+        for key in header:
+            if (
+                     key in wcs_header
+                  or key.startswith('WCSAXES')
+                  or key.startswith('CRPIX')
+                  or key.startswith('CRVAL')
+                  or key.startswith('CDELT')
+                  or key.startswith('CTYPE')
+                  or key.startswith('CUNIT')
+                  or key.startswith('CD')
+                  or key.startswith('A_')
+                  or key.startswith('B_')
+            ):
+                del new_header[key]
+        #
+        new_header.update(wcs_header)
     # now we can write the file
     write_file = user_config['workdir'] / copied_image_relpath
     logger.info(f'    Writing file: {write_file}')
     fits.writeto(write_file, cutout_data_sub.astype(np.float32),
-                 header=new_header, overwrite=True)
+                 header=new_header, overwrite=True, output_verify="silentfix")
     # and find sources
     # (do plots if toggle set)
     do_plot = user_config.get('source_extraction_do_plots', False)

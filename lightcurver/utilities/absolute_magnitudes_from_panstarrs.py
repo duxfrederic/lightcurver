@@ -73,7 +73,7 @@ def search_panstarrs_around_coordinates(gaia_id):
     coord = SkyCoord(ra=ra * u.deg, dec=dec * u.deg, frame='icrs')
     radius = 1.5 * u.arcsecond  # this is generous given the magnitude of the proper motion of most stars.
     try:
-        result = Catalogs.query_region(coord, radius=radius, catalog="PanSTARRS", data_release="dr2")
+        result = Catalogs.query_region(coord, radius=radius, catalog="PanSTARRS", data_release="dr1")
     except ValueError as e:
         # The MAST API occasionally returns 'None' strings in float columns, which astroquery
         # fails to convert. Treat this as no result found.
