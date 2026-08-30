@@ -62,7 +62,7 @@ pipeline whenever a new frame is added, providing auto-updating light curves.
 If you're encountering problems, then I would like to hear about them and will try to fix them. Feel free to create an issue
 in this repository.
 If you're finding this package useful and want to contribute, please create a pull request after forking the repository.
-If you need general help, feel free to [reach out](mailto:frederic.dux@epfl.ch)!
+If you need general help, feel free to [reach out](mailto:duxfrederic@gmail.com)!
 
 ## License
 `lightcurver` is licensed under the GPL v3.0 License. See the [LICENSE](LICENSE) file for more details.
